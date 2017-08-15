@@ -1,0 +1,13 @@
+digraph G {
+	"MAL_TOP.orpsoc_or1200_top0_or1200_cpu.supv" [shape=trapezium, label="MAL_TOP.orpsoc_or1200_top0_or1200_cpu.supv[0:0]"]; /* Output */
+	"MAL_TOP.orpsoc_or1200_top0_or1200_cpu.n_1105" [shape=ellipse, label="MAL_TOP.orpsoc_or1200_top0_or1200_cpu.n_1105[0:0]"];
+	"MAL_TOP.orpsoc_or1200_top0_or1200_cpu.n_1105" -> "MAL_TOP.orpsoc_or1200_top0_or1200_cpu.supv"[label="[0:0]->[0:0]"];
+	"MAL_TOP.orpsoc_or1200_top0_or1200_cpu.PRECTS_FE_OFC233_TO_PAD_sr_out.Y" [shape=trapezium, label="MAL_TOP.orpsoc_or1200_top0_or1200_cpu.PRECTS_FE_OFC233_TO_PAD_sr_out.Y[0:0]"]; /* Output */
+	"MAL_TOP.orpsoc_or1200_top0_or1200_cpu.PRECTS_FE_OFC233_TO_PAD_sr_out.Y" -> "MAL_TOP.orpsoc_or1200_top0_or1200_cpu.n_1105"[label="[0:0]->[0:0]"];
+	"MAL_TOP.orpsoc_or1200_top0_or1200_cpu.PRECTS_FE_OFC233_TO_PAD_sr_out.A" [shape=invtrapezium, label="MAL_TOP.orpsoc_or1200_top0_or1200_cpu.PRECTS_FE_OFC233_TO_PAD_sr_out.A[0:0]"]; /* Input */
+	"MAL_TOP.orpsoc_or1200_top0_or1200_cpu.PRECTS_FE_OFC233_TO_PAD_sr_out.A" -> "MAL_TOP.orpsoc_or1200_top0_or1200_cpu.PRECTS_FE_OFC233_TO_PAD_sr_out.Y"[label="[0:0]->[0:0]"];
+	"MAL_TOP.orpsoc_or1200_top0_or1200_cpu.POSCTS_FE_PHC2913_FE_OFN235_TO_PAD_sr_out.Y" [shape=trapezium, label="MAL_TOP.orpsoc_or1200_top0_or1200_cpu.POSCTS_FE_PHC2913_FE_OFN235_TO_PAD_sr_out.Y[0:0]"]; /* Output */
+	"MAL_TOP.orpsoc_or1200_top0_or1200_cpu.POSCTS_FE_PHC2913_FE_OFN235_TO_PAD_sr_out.Y" -> "MAL_TOP.orpsoc_or1200_top0_or1200_cpu.PRECTS_FE_OFC233_TO_PAD_sr_out.A"[label="[0:0]->[0:0]"];
+	"MAL_TOP.orpsoc_or1200_top0_or1200_cpu.FE_PHN2913_FE_OFN235_TO_PAD_sr_out" [shape=ellipse, label="MAL_TOP.orpsoc_or1200_top0_or1200_cpu.FE_PHN2913_FE_OFN235_TO_PAD_sr_out[0:0]"];
+	"MAL_TOP.orpsoc_or1200_top0_or1200_cpu.FE_PHN2913_FE_OFN235_TO_PAD_sr_out" -> "MAL_TOP.orpsoc_or1200_top0_or1200_cpu.PRECTS_FE_OFC233_TO_PAD_sr_out.A"[label="[0:0]->[0:0]"];
+}
