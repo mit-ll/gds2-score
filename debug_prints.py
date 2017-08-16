@@ -36,3 +36,7 @@ def debug_print_boundary_obj(boundary_obj):
 	print "		plex:       ", boundary_obj.plex
 	print "		properties: ", boundary_obj.properties
 	print
+
+# def debug_print_layer_map(layer_map):
+# 	print "Layer Map:"
+# 	for layer_num in 
