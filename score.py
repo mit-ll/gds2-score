@@ -1,5 +1,6 @@
 # Import Custom Modules
 import load_files   as load 
+import lef          as lef
 import debug_prints as dbg
 
 # Import GDSII Library
@@ -93,7 +94,10 @@ def main():
 	gdsii_lib      = load.load_gdsii_library('gds/MAL_TOP.all.netname.gds')
 
 	# Load layer map
-	layer_map 	   = load.load_layer_map('gds/tech_nominal_25c_3_20_30_00_00_02_LB.map')
+	layer_map 	   = load.load_layer_map('gds/tech_nominal_25c_3_20_20_00_00_02_LB.map')
+
+	# Load LEF file
+	lef_info 	   = lef.LEF('gds/tech_nominal_25c_3_20_20_00_00_02_LB.lef')
 
 	# Extract critical circuit paths
 	critical_paths = extract_critical_paths(gdsii_lib, critical_nets)

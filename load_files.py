@@ -62,24 +62,26 @@ def load_layer_map(map_fname):
 	layer_map = {}
 
 	# Open GDSII File
-	with open(gdsii_fname, 'rb') as stream:
+	with open(map_fname, 'rb') as stream:
 	    for line in stream:
-	    	line = line.rstrip()
-	    	line_list = line.split(' ')
+	    	# Do not process comment lines
+	    	if (len(line) > 0) and (line[0] != "#"):
+		    	line = line.rstrip()
+		    	line_list = line.split(' ')
 
-	    	# Check if layer map file is the correct format
-	    	# Correct Line Format: <Cadence Layer Name> | <layer purpose> | <layer number> | <data type>
-	    	if len(line_list) != 4:
-	    		print "ERROR <load_layer_map>: layer map file format not recognized."
-	    		sys.exit(1)
-	    	cad_layer_name = line_list[0]
-	    	layer_num 	   = int(line_list[2])
-	    	data_type      = int(line_list[3])
-	    	if layer_num not in layer_map:
-	    		layer_map[layer_num] = {data_type: cad_layer_name}
-	    	else:
-	    		if data_type not in layer_map[layer_num]:
-	    			layer_map[layer_num][data_type] = cad_layer_name
+		    	# Check if layer map file is the correct format
+		    	# Correct Line Format: <Cadence Layer Name> | <layer purpose> | <layer number> | <data type>
+		    	if len(line_list) != 4:
+		    		print "ERROR <load_layer_map>: layer map file format not recognized."
+		    		sys.exit(1)
+		    	cad_layer_name = line_list[0]
+		    	layer_num 	   = int(line_list[2])
+		    	data_type      = int(line_list[3])
+		    	if layer_num not in layer_map:
+		    		layer_map[layer_num] = {data_type: cad_layer_name}
+		    	else:
+		    		if data_type not in layer_map[layer_num]:
+		    			layer_map[layer_num][data_type] = cad_layer_name
 	    	
 	# Close GDSII File
 	stream.close()  
