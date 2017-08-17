@@ -9,45 +9,15 @@ from gdsii.elements import *
 
 # Other Imports
 import time
+import sys
 import pprint
 
 DEBUG_PRINTS = True
 
-# ---------------------------------------------
-# Technology Specific Layers
-# THIS MUST BE HAND DEFINED BY USER ... for now
-# ---------------------------------------------
-tech_net_layers = {
-	1  : "m1",
-	2  : "m2",
-	3  : "m3",
-	4  : "c1",
-	5  : "c2",
-	6  : "b1",
-	7  : "b2",
-	8  : "ua",
-	9  : "ub",
-	10 : "lb"
-}
-
-tech_via_layers = {
-	1  : "v1",
-	2  : "v2",
-	3  : "ay",
-	4  : "a1",
-	5  : "w0",
-	6  : "w1",
-	7  : "ta",
-	8  : "ga",
-	9  : "vv"
-}
-# ---------------------------------------------
-
-# def gdsii_layer_num_2_logical_num(layer_map, tech_net_layers):
-
-# def is_via_layer():
-
-# def is_net_layer():
+# Possible ERROR Codes:
+# 1 = Error loading input load_files
+# 2 = Unknown GDSII object attributes/attribute types
+# 3 = Unhandled feature
 
 def extract_critical_paths(gdsii_lib, critical_nets):
 	print "Extracting critical GDSII paths (nets)..."
@@ -67,9 +37,29 @@ def extract_critical_paths(gdsii_lib, critical_nets):
 					path_basename = path_name.split('/')[-1]
 					if path_basename in critical_nets.values():
 						critical_paths[path_name] = [element]
-			# elif isinstance(element, Boundary):
-			# 	dbg.debug_print_boundary_obj(element)
-			
+
+	print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
+	print "----------------------------------------------"
+	return critical_paths
+
+def gds_layer_2_logical_layer(element_obj, lef_info, layer_map):
+	layer_name = layer_map[element_obj.layer][element_obj.data_type]
+	return lef_info.layers[layer_name].layer_num
+
+def compute_bb(element_obj):
+	if isinstance(element_obj, Path):
+		if element_obj.path_type == 0:
+			print "ERROR <compute_bb>: Path object path_type 0 not handled."
+			sys.exit(3)
+		elif element_obj.path_type == 1:
+			continue
+		elif element_obj.path_type == 2:
+		elif element_obj.path_type == 4:
+		else:
+			print "ERROR <compute_bb>: unknown Path object path_type."
+			sys.exit(2)
+
+def analyze_critical_path_connection_points(critical_paths, lef_info, gdsii_lib, layer_map):
 	# Debug Prints
 	if DEBUG_PRINTS:
 		print
@@ -77,21 +67,29 @@ def extract_critical_paths(gdsii_lib, critical_nets):
 		pprint.pprint(critical_paths.keys())
 		print
 
-	print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
-	print "----------------------------------------------"
-	return critical_paths
-
-def analyze_critical_paths(critical_paths):
 	for path_name in critical_paths.keys():
+		print "Analying Critical Net: ", path_name
 		for path_obj in critical_paths[path_name]:
-			dbg.debug_print_path_obj(path_obj)
+			path_segment_counter = 1
+			if DEBUG_PRINTS:
+				dbg.debug_print_path_obj(path_obj)
+			# Report Path Segment Condition
+			print "Analyzing path segment ", path_segment_counter
+			print "	Layer: ", gds_layer_2_logical_layer(path_obj, lef_info, layer_map)
+			print "	Layer: ", gds_layer_2_logical_layer(path_obj, lef_info, layer_map)
+			# Check NORTH
+			# Check EAST
+			# Check SOUTH
+			# Check WEST
+			# Check ABOVE
+			# Check BELOW
 
 def main():
 	# Load critical nets
 	critical_nets  = load.load_dot_file('graphs/MAL_TOP_par.supv_2.dot')
 
 	# Load GDSII layout
-	gdsii_lib      = load.load_gdsii_library('gds/MAL_TOP.all.netname.gds')
+	# gdsii_lib      = load.load_gdsii_library('gds/MAL_TOP.all.netname.gds')
 
 	# Load layer map
 	layer_map 	   = load.load_layer_map('gds/tech_nominal_25c_3_20_20_00_00_02_LB.map')
@@ -103,7 +101,7 @@ def main():
 	critical_paths = extract_critical_paths(gdsii_lib, critical_nets)
 
 	# Analyze security critical paths in GDSII
-	analyze_critical_paths(critical_paths)
+	analyze_critical_paths(critical_paths, lef_info, gdsii_lib, layer_map)
 
 if __name__ == "__main__":
     main()

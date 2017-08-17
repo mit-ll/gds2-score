@@ -54,7 +54,7 @@ def load_gdsii_library(gdsii_fname):
 
 # Loads entire layer map file for technology node. 
 # Returns a dictionary of the following format:
-# Key<layer number> --> Value< Key<data type> --> Value <layer name> >
+# Key<gdsii layer number> --> Value< Key<data type> --> Value <layer name> >
 def load_layer_map(map_fname):
 	print "Loading layer map file ..."
 	start_time = time.time()

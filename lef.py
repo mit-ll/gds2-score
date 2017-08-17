@@ -5,12 +5,12 @@ class LEF:
 	def __init__(self):
 		self.database_units     = 0
 		self.manufacturing_grid = 0
-		self.layers             = []
+		self.layers             = {}
 
 	def __init__(self, lef_fname):
 		self.database_units     = 0
 		self.manufacturing_grid = 0
-		self.layers             = []
+		self.layers             = {}
 		self.load_lef_file(lef_fname)
 
 	def load_lef_file(self, lef_fname):
@@ -90,7 +90,7 @@ class LEF:
 												range_max = float(line_list.pop(0))
 												spacing[-1].append((range_min, range_max))
 									line = stream.next().rstrip(' ;\n').lstrip()
-								self.layers.append(Routing_Layer(layer_name, layer_index, direction, pitch, offset, min_width, max_width, width, spacing))
+								self.layers[layer_name] = Routing_Layer(layer_name, layer_index, direction, pitch, offset, min_width, max_width, width, spacing)
 								layer_index += 1
 							# Via Layer
 							# elif "CUT" in layer_type:
@@ -106,7 +106,7 @@ class LEF:
 		print "LEF File Definitions:"
 		print "	DATABASE UNITS:     %5d"  % (self.database_units)
 		print "	MANUFACTURING GRID: %.4f" % (self.manufacturing_grid)
-		for layer in self.layers:
+		for layer in sorted(self.layers.values(), key=lambda x:x.layer_num):
 			layer.debug_print_attrs()
 		return
 
