@@ -1,3 +1,4 @@
+# Other Imports
 import sys
 import time
 
@@ -101,6 +102,21 @@ class LEF:
 		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
 		print "----------------------------------------------"
 		return
+
+	# Returns the layer name associated with a given 
+	# GDSII layer number and data type.
+	def get_layer_name(self, gds_layer_num, gds_data_type, layer_map):
+		return layer_map[gds_layer_num][gds_data_type]
+
+	# Returns the logical layer number associated with a given 
+	# GDSII layer number and data type.
+	def get_layer_num(self, gds_layer_num, gds_data_type, layer_map):
+		layer_name = self.get_layer_name(gds_layer_num, gds_data_type, layer_map)
+		return self.layers[layer_name].layer_num
+
+	def get_routing_layer_direction(self, gds_layer_num, gds_data_type, layer_map):
+		layer_name = self.get_layer_name(gds_layer_num, gds_data_type, layer_map)
+		return self.layers[layer_name].direction
 
 	def debug_print_attrs(self):
 		print "LEF File Definitions:"

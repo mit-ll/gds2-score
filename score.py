@@ -1,6 +1,6 @@
 # Import Custom Modules
+import net          as net
 import load_files   as load 
-import lef          as lef
 import debug_prints as dbg
 
 # Import GDSII Library
@@ -9,6 +9,7 @@ from gdsii.elements import *
 
 # Other Imports
 import time
+import inspect
 import sys
 import pprint
 
@@ -19,89 +20,85 @@ DEBUG_PRINTS = True
 # 2 = Unknown GDSII object attributes/attribute types
 # 3 = Unhandled feature
 
-def extract_critical_paths(gdsii_lib, critical_nets):
-	print "Extracting critical GDSII paths (nets)..."
-	start_time = time.time()
+# Returns true if the XY coordinate is inside or
+# touching the bounding box provided. BB is formatted as
+# [(LL_x, LL_y), (UR_x, UR_y)], and coord is formatted 
+# as [X, Y].
+def is_inside_bb(bb, coord):
+	LL = 0
+	UR = 1
+	X  = 0
+	Y  = 1
+	if coord[X] >= bb[LL][X] and coord[X] <= bb[UR][X]:
+		if coord[Y] >= bb[LL][Y] and coord[Y] <= bb[UR][Y]:
+			return True
+	return False
 
-	critical_paths = {}
+# def check_north_blockage(path_obj, lef_info, gdsii_lib, layer_map):
+# 	if is_path_type_supported(path_obj):
+# 		path_obj_bb   = compute_path_bb(path_obj)
+# 		curr_x_coord  = path_obj_bb[0][0]
+# 		north_y_coord = path_obj_bb[1][1]
 
-	# Extract path structures from GDSII file
-	for structure in gdsii_lib:
-		for element in structure:
-			if isinstance(element, Path):
-				path_name = element.properties[0][1] # property 1 of Path element is the net name
-				if path_name in critical_paths:
-					critical_paths[path_name].append(element)
-				else:
-					# Check if path is critical or not
-					path_basename = path_name.split('/')[-1]
-					if path_basename in critical_nets.values():
-						critical_paths[path_name] = [element]
+# 		while curr_x_coord < path_obj_bb[1][0]:
+# 			if path_direction(path_obj) == "V":
+# 				# Path is Vertical
+# 				if lef_info.get_routing_layer_direction(path_obj.layer, path_obj.data_type, layer_map) == "V":
+# 					# Routing Direction is Vertical
+# 					print "Vertical Path"
+# 				else:
+# 					# Routing Direction is Horizontal
+# 					print "UNSUPPORTED %s: vertical paths on horizontal routing layer not supported." % (inspect.stack()[0][3])
+# 					sys.exit(3)
+# 			elif path_direction(path_obj) == "H":
+# 				# Path is Horizontal
+# 				if lef_info.get_routing_layer_direction(path_obj.layer, path_obj.data_type, layer_map) == "H":
+# 					# Routing Direction is Horizontal
+# 					while curr_x_coord <= path_obj_bb[1][0]
+# 				else:
+# 					# Routing Direction is Vertical
+# 					print "UNSUPPORTED %s: horizontal paths on vertical routing layer not supported." % (inspect.stack()[0][3])
+# 					sys.exit(3):
 
-	print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
-	print "----------------------------------------------"
-	return critical_paths
+# def analyze_critical_path_connection_points(critical_paths, lef_info, gdsii_lib, layer_map):
+# 	# Debug Prints
+# 	if DEBUG_PRINTS:
+# 		print
+# 		print "Critical paths (nets):"
+# 		pprint.pprint(critical_paths.keys())
+# 		print
 
-def gds_layer_2_logical_layer(element_obj, lef_info, layer_map):
-	layer_name = layer_map[element_obj.layer][element_obj.data_type]
-	return lef_info.layers[layer_name].layer_num
+# 	for path_name in critical_paths.keys():
+# 		print "Analying Critical Net: ", path_name
+# 		for path_obj in critical_paths[path_name]:
+# 			path_segment_counter = 1
+# 			if DEBUG_PRINTS:
+# 				dbg.debug_print_path_obj(path_obj)
+# 			# Report Path Segment Condition
+# 			print "Analyzing path segment ", path_segment_counter
+# 			print "	Layer:        ", lef_info.get_layer_num(path_obj.layer, path_obj.data_type, layer_map)
+# 			print "	Bounding Box: ", compute_path_bb(path_obj)
 
-def compute_bb(element_obj):
-	if isinstance(element_obj, Path):
-		if element_obj.path_type == 0:
-			print "ERROR <compute_bb>: Path object path_type 0 not handled."
-			sys.exit(3)
-		elif element_obj.path_type == 1:
-			continue
-		elif element_obj.path_type == 2:
-		elif element_obj.path_type == 4:
-		else:
-			print "ERROR <compute_bb>: unknown Path object path_type."
-			sys.exit(2)
-
-def analyze_critical_path_connection_points(critical_paths, lef_info, gdsii_lib, layer_map):
-	# Debug Prints
-	if DEBUG_PRINTS:
-		print
-		print "Critical paths (nets):"
-		pprint.pprint(critical_paths.keys())
-		print
-
-	for path_name in critical_paths.keys():
-		print "Analying Critical Net: ", path_name
-		for path_obj in critical_paths[path_name]:
-			path_segment_counter = 1
-			if DEBUG_PRINTS:
-				dbg.debug_print_path_obj(path_obj)
-			# Report Path Segment Condition
-			print "Analyzing path segment ", path_segment_counter
-			print "	Layer: ", gds_layer_2_logical_layer(path_obj, lef_info, layer_map)
-			print "	Layer: ", gds_layer_2_logical_layer(path_obj, lef_info, layer_map)
-			# Check NORTH
-			# Check EAST
-			# Check SOUTH
-			# Check WEST
-			# Check ABOVE
-			# Check BELOW
+# 			# Check NORTH
+# 			# check_north_blockage(path_obj, lef_info, gdsii_lib, layer_map)
+# 			break
+# 			# Check EAST
+# 			# Check SOUTH
+# 			# Check WEST
+# 			# Check ABOVE
+# 			# Check BELOW
 
 def main():
-	# Load critical nets
-	critical_nets  = load.load_dot_file('graphs/MAL_TOP_par.supv_2.dot')
+	INPUT_LEF_FILE_PATH       = 'gds/tech_nominal_25c_3_20_20_00_00_02_LB.lef'
+	INPUT_LAYER_MAP_FILE_PATH = 'gds/tech_nominal_25c_3_20_20_00_00_02_LB.map'
+	INPUT_GDSII_FILE_PATH 	  = 'gds/MAL_TOP.all.netname.gds'
+	INPUT_DOT_FILE_PATH       = 'graphs/MAL_TOP_par.supv_2.dot'
 
-	# Load GDSII layout
-	# gdsii_lib      = load.load_gdsii_library('gds/MAL_TOP.all.netname.gds')
-
-	# Load layer map
-	layer_map 	   = load.load_layer_map('gds/tech_nominal_25c_3_20_20_00_00_02_LB.map')
-
-	# Load LEF file
-	lef_info 	   = lef.LEF('gds/tech_nominal_25c_3_20_20_00_00_02_LB.lef')
-
-	# Extract critical circuit paths
-	critical_paths = extract_critical_paths(gdsii_lib, critical_nets)
+	# Load layout and critical nets
+	layout = load.Layout(INPUT_LEF_FILE_PATH, INPUT_LAYER_MAP_FILE_PATH, INPUT_GDSII_FILE_PATH, INPUT_DOT_FILE_PATH)
 
 	# Analyze security critical paths in GDSII
-	analyze_critical_paths(critical_paths, lef_info, gdsii_lib, layer_map)
+	# analyze_critical_path_connection_points(critical_paths, lef_info, gdsii_lib, layer_map)
 
 if __name__ == "__main__":
     main()
