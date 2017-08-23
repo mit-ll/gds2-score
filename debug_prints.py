@@ -37,6 +37,65 @@ def debug_print_boundary_obj(boundary_obj):
 	print "	properties: ", boundary_obj.properties
 	print
 
-# def debug_print_layer_map(layer_map):
-# 	print "Layer Map:"
-# 	for layer_num in 
+def debug_print_box_obj(box_obj):
+	print "Box Object:"
+	print "	layer:      ", box_obj.layer
+	print "	box_type:   ", box_obj.box_type
+	print "	XY:         ", box_obj.xy
+	print "	elflags:    ", box_obj.elflags
+	print "	plex:       ", box_obj.plex
+	print "	properties: ", box_obj.properties
+	print
+
+def debug_print_node_obj(node_obj):
+	print "Node Object:"
+	print "	layer:      ", node_obj.layer
+	print "	node_type:  ", node_obj.node_type
+	print "	XY:         ", node_obj.xy
+	print "	elflags:    ", node_obj.elflags
+	print "	plex:       ", node_obj.plex
+	print "	properties: ", node_obj.properties
+	print
+
+def debug_print_sref_obj(sref_obj):
+	print "SRef Object:"
+	print "	struct_name: ", sref_obj.struct_name
+	print "	XY:          ", sref_obj.xy
+	print "	elflags:     ", sref_obj.elflags
+	print "	strans:      ", sref_obj.strans
+	print "	mag:         ", sref_obj.mag
+	print "	angle:       ", sref_obj.angle
+	print "	properties:  ", sref_obj.properties
+	print
+
+def debug_print_aref_obj(aref_obj):
+	print "ARef Object:"
+	print "	struct_name: ", aref_obj.struct_name
+	print "	cols:        ", aref_obj.cols
+	print "	rows:        ", aref_obj.rows
+	print "	XY:          ", aref_obj.xy
+	print "	elflags:     ", aref_obj.elflags
+	print "	plex:        ", aref_obj.plex
+	print "	strans:      ", aref_obj.strans
+	print "	mag:         ", aref_obj.mag
+	print "	angle:       ", aref_obj.angle
+	print "	properties:  ", aref_obj.properties
+	print
+
+def debug_print_text_obj(text_obj):
+	print "Text Object:"
+	print "	layer:        ", text_obj.layer
+	print "	text_type:    ", text_obj.text_type
+	print "	XY:           ", text_obj.xy
+	print "	string:       ", text_obj.string
+	print "	elflags:      ", text_obj.elflags
+	print "	plex:         ", text_obj.plex
+	print "	presentation: ", text_obj.presentation
+	print "	path_type:    ", text_obj.path_type
+	print "	width:        ", text_obj.width
+	print "	strans:       ", text_obj.strans
+	print "	mag:          ", text_obj.mag
+	print "	angle:        ", text_obj.angle 
+	print "	properties:   ", text_obj.properties
+	print
+

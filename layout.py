@@ -6,6 +6,7 @@ from gdsii.library import Library
 from gdsii.elements import *
 
 # Import Custom Modules
+from bbox import *
 import lef
 import net
 
@@ -137,3 +138,57 @@ class Layout():
 		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
 		print "----------------------------------------------"
 		return layer_map
+
+	# Returns true if the XY coordinate is inside or
+	# touching the bounding box provided.
+	def is_inside_bb(self, element, x_coord, y_coord, gdsii_layer):
+		if   isinstance(element, Path):
+			if gdsii_layer == element.layer:
+				bbox = compute_gdsii_path_bbox(element)
+			else:
+				return False
+		elif isinstance(element, Boundary):
+			if gdsii_layer == element.layer:
+				bbox = compute_gdsii_boundary_bbox(element)
+			else:
+				return False
+		elif isinstance(element, Box):
+			if gdsii_layer == element.layer:
+				bbox = compute_gdsii_box_bbox(element)
+			else:
+				return False
+		elif isinstance(element, Node):
+			if gdsii_layer == element.layer:
+				bbox = compute_gdsii_node_bbox(element)
+			else:
+				return False
+		elif isinstance(element, SRef):
+			# bbox = compute_gdsii_sref_bbox(element)
+			pass
+		elif isinstance(element, ARef):
+			# bbox = compute_gdsii_aref_bbox(element)
+			pass
+		elif isinstance(element, Text):
+			# bbox = compute_gdsii_text_bbox(element)
+			pass
+
+		return False
+		# if x_coord >= bbox.ll_x_coord and x_coord <= bbox.ur_x_coord:
+		# 	if y_coord >= bbox.ll_y_coord and y_coord <= bbox.ur_y_coord:
+		# 		return True
+		# return False
+
+	# Searches the GDSII design to see if the provided point falls
+	# inside the bounding box of another object. Returns True if 
+	# the point lies inside the bounding box of another GDSII element.
+	def is_point_blocked(self, x_coord, y_coord, gdsii_layer):
+		for structure in self.gdsii_lib:
+			for element in structure:
+				if self.is_inside_bb(element, x_coord, y_coord, gdsii_layer):
+					return True
+		return False
+
+
+
+
+

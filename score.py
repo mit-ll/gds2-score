@@ -1,7 +1,7 @@
 # Import Custom Modules
-import net          as net
-import load_files   as load 
 import debug_prints as dbg
+from net    import *
+from layout import *
 
 # Import GDSII Library
 from gdsii.library import Library
@@ -11,7 +11,6 @@ from gdsii.elements import *
 import time
 import inspect
 import sys
-import pprint
 
 DEBUG_PRINTS = True
 
@@ -20,73 +19,72 @@ DEBUG_PRINTS = True
 # 2 = Unknown GDSII object attributes/attribute types
 # 3 = Unhandled feature
 
-# Returns true if the XY coordinate is inside or
-# touching the bounding box provided. BB is formatted as
-# [(LL_x, LL_y), (UR_x, UR_y)], and coord is formatted 
-# as [X, Y].
-def is_inside_bb(bb, coord):
-	LL = 0
-	UR = 1
-	X  = 0
-	Y  = 1
-	if coord[X] >= bb[LL][X] and coord[X] <= bb[UR][X]:
-		if coord[Y] >= bb[LL][Y] and coord[Y] <= bb[UR][Y]:
-			return True
-	return False
+def check_north_blockage(net_segment, layout):
+	curr_x_coord      = net_segment.ll_x_coord
+	north_y_coord     = net_segment.ur_y_coord
+	routing_direction = layout.lef.layers[net_segment.layer_name].direction 
+	check_distance    = layout.lef.layers[net_segment.layer_name].pitch * layout.lef.database_units
+	num_units_blocked = 0
 
-# def check_north_blockage(path_obj, lef_info, gdsii_lib, layer_map):
-# 	if is_path_type_supported(path_obj):
-# 		path_obj_bb   = compute_path_bb(path_obj)
-# 		curr_x_coord  = path_obj_bb[0][0]
-# 		north_y_coord = path_obj_bb[1][1]
+	print "Num Cols to Check = ", (net_segment.ur_x_coord - curr_x_coord)
+	while curr_x_coord < net_segment.ur_x_coord:
+		if layout.is_point_blocked(curr_x_coord, north_y_coord + check_distance, net_segment.gdsii_path.layer):
+			num_units_blocked += 1
+		return 0
+		curr_x_coord += 1
+		# if net_segment.direction == "V":
+		# 	# Path is Vertical
+		# 	if routing_direction == "V":
+		# 		# Routing Direction is Vertical
+		# 		print "Vertical Path"
+		# 		break
+		# 	else:
+		# 		# Routing Direction is Horizontal
+		# 		print "UNSUPPORTED %s: vertical paths on horizontal routing layer not supported." % (inspect.stack()[0][3])
+		# 		sys.exit(3)
+		# else:
+		# 	# Path is Horizontal
+		# 	if routing_direction == "H":
+		# 		# Routing Direction is Horizontal
+		# 		print "Horizontal Path"
+		# 		break
+		# 	else:
+		# 		# Routing Direction is Vertical
+		# 		print "UNSUPPORTED %s: horizontal paths on vertical routing layer not supported." % (inspect.stack()[0][3])
+		# 		sys.exit(3)
+	
+def analyze_critical_path_connection_points(layout):
+	# Debug Prints
+	if DEBUG_PRINTS:
+		print
+		print "Critical paths (nets):"
+		for net in layout.critical_nets:
+			print net.fullname
+		print
 
-# 		while curr_x_coord < path_obj_bb[1][0]:
-# 			if path_direction(path_obj) == "V":
-# 				# Path is Vertical
-# 				if lef_info.get_routing_layer_direction(path_obj.layer, path_obj.data_type, layer_map) == "V":
-# 					# Routing Direction is Vertical
-# 					print "Vertical Path"
-# 				else:
-# 					# Routing Direction is Horizontal
-# 					print "UNSUPPORTED %s: vertical paths on horizontal routing layer not supported." % (inspect.stack()[0][3])
-# 					sys.exit(3)
-# 			elif path_direction(path_obj) == "H":
-# 				# Path is Horizontal
-# 				if lef_info.get_routing_layer_direction(path_obj.layer, path_obj.data_type, layer_map) == "H":
-# 					# Routing Direction is Horizontal
-# 					while curr_x_coord <= path_obj_bb[1][0]
-# 				else:
-# 					# Routing Direction is Vertical
-# 					print "UNSUPPORTED %s: horizontal paths on vertical routing layer not supported." % (inspect.stack()[0][3])
-# 					sys.exit(3):
+	for net in layout.critical_nets:
+		print "Analying Net: ", net.fullname
+		for net_segment in net.segments:
+			path_segment_counter = 1
+			top_bottom_perimeter = net_segment.ur_x_coord - net_segment.ll_x_coord
+			left_right_perimeter = net_segment.ur_y_coord - net_segment.ll_y_coord
+			perimeter            = (2 * top_bottom_perimeter) + (2 * left_right_perimeter)
+			if DEBUG_PRINTS:
+				dbg.debug_print_path_obj(net_segment.gdsii_path)
+			# Report Path Segment Condition
+			print "	Analyzing Net Segment ", path_segment_counter
+			print "		Layer:        ", net_segment.layer_num
+			print "		Bounding Box: ", net_segment.get_bbox()
+			print "		Perimeter:    ", perimeter
 
-# def analyze_critical_path_connection_points(critical_paths, lef_info, gdsii_lib, layer_map):
-# 	# Debug Prints
-# 	if DEBUG_PRINTS:
-# 		print
-# 		print "Critical paths (nets):"
-# 		pprint.pprint(critical_paths.keys())
-# 		print
-
-# 	for path_name in critical_paths.keys():
-# 		print "Analying Critical Net: ", path_name
-# 		for path_obj in critical_paths[path_name]:
-# 			path_segment_counter = 1
-# 			if DEBUG_PRINTS:
-# 				dbg.debug_print_path_obj(path_obj)
-# 			# Report Path Segment Condition
-# 			print "Analyzing path segment ", path_segment_counter
-# 			print "	Layer:        ", lef_info.get_layer_num(path_obj.layer, path_obj.data_type, layer_map)
-# 			print "	Bounding Box: ", compute_path_bb(path_obj)
-
-# 			# Check NORTH
-# 			# check_north_blockage(path_obj, lef_info, gdsii_lib, layer_map)
-# 			break
-# 			# Check EAST
-# 			# Check SOUTH
-# 			# Check WEST
-# 			# Check ABOVE
-# 			# Check BELOW
+			# Check NORTH
+			north_perimeter_blocked = check_north_blockage(net_segment, layout)
+			print "		N-Perimeter Blocked: ", north_perimeter_blocked
+			# Check EAST
+			# Check SOUTH
+			# Check WEST
+			# Check ABOVE
+			# Check BELOW
 
 def main():
 	INPUT_LEF_FILE_PATH       = 'gds/tech_nominal_25c_3_20_20_00_00_02_LB.lef'
@@ -95,10 +93,16 @@ def main():
 	INPUT_DOT_FILE_PATH       = 'graphs/MAL_TOP_par.supv_2.dot'
 
 	# Load layout and critical nets
-	layout = load.Layout(INPUT_LEF_FILE_PATH, INPUT_LAYER_MAP_FILE_PATH, INPUT_GDSII_FILE_PATH, INPUT_DOT_FILE_PATH)
+	layout = Layout(INPUT_LEF_FILE_PATH, \
+		INPUT_LAYER_MAP_FILE_PATH, \
+		INPUT_GDSII_FILE_PATH, \
+		INPUT_DOT_FILE_PATH)
+
+	if DEBUG_PRINTS:
+		dbg.debug_print_lib_obj(layout.gdsii_lib)
 
 	# Analyze security critical paths in GDSII
-	# analyze_critical_path_connection_points(critical_paths, lef_info, gdsii_lib, layer_map)
+	analyze_critical_path_connection_points(layout)
 
 if __name__ == "__main__":
     main()
