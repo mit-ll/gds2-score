@@ -142,41 +142,50 @@ class Layout():
 	# Returns true if the XY coordinate is inside or
 	# touching the bounding box provided.
 	def is_inside_bb(self, element, x_coord, y_coord, gdsii_layer):
-		if   isinstance(element, Path):
+		# Compute bounding-box of gdsii element
+		if isinstance(element, Path):
+			# dbg.debug_print_path_obj(element)
+			# return False
 			if gdsii_layer == element.layer:
 				bbox = compute_gdsii_path_bbox(element)
 			else:
 				return False
 		elif isinstance(element, Boundary):
+			# dbg.debug_print_boundary_obj(element)
+			# return False
 			if gdsii_layer == element.layer:
 				bbox = compute_gdsii_boundary_bbox(element)
 			else:
 				return False
 		elif isinstance(element, Box):
+			# dbg.debug_print_box_obj(element)
+			# return False
 			if gdsii_layer == element.layer:
 				bbox = compute_gdsii_box_bbox(element)
 			else:
 				return False
 		elif isinstance(element, Node):
+			# dbg.debug_print_node_obj(element)
+			# return False
 			if gdsii_layer == element.layer:
 				bbox = compute_gdsii_node_bbox(element)
 			else:
 				return False
 		elif isinstance(element, SRef):
 			# bbox = compute_gdsii_sref_bbox(element)
-			pass
+			return False
 		elif isinstance(element, ARef):
 			# bbox = compute_gdsii_aref_bbox(element)
-			pass
+			return False
 		elif isinstance(element, Text):
 			# bbox = compute_gdsii_text_bbox(element)
-			pass
+			return False
 
+		# Check if XY coord is inside another element's bounding box
+		if x_coord >= bbox.ll_x_coord and x_coord <= bbox.ur_x_coord:
+			if y_coord >= bbox.ll_y_coord and y_coord <= bbox.ur_y_coord:
+				return True
 		return False
-		# if x_coord >= bbox.ll_x_coord and x_coord <= bbox.ur_x_coord:
-		# 	if y_coord >= bbox.ll_y_coord and y_coord <= bbox.ur_y_coord:
-		# 		return True
-		# return False
 
 	# Searches the GDSII design to see if the provided point falls
 	# inside the bounding box of another object. Returns True if 
@@ -187,8 +196,4 @@ class Layout():
 				if self.is_inside_bb(element, x_coord, y_coord, gdsii_layer):
 					return True
 		return False
-
-
-
-
 

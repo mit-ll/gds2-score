@@ -91,24 +91,20 @@ def compute_gdsii_path_bbox(path):
 		
 		return BBox(ll_corner[X], ll_corner[Y], ur_corner[X], ur_corner[Y])
 
-def compute_gdsii_boundary_bbox(element):
-	if is_boundary_type_supported(element):
-		sorted_coords = sorted(element.xy, key=lambda x: (x[0], x[1]))
+def compute_gdsii_boundary_bbox(boundary):
+	if is_boundary_type_supported(boundary):
+		sorted_coords = sorted(boundary.xy, key=lambda x: (x[0], x[1]))
 		return BBox(sorted_coords[0][0], sorted_coords[0][1], sorted_coords[2][0], sorted_coords[2][1])
 
-def compute_gdsii_box_bbox(element):
-	dbg.debug_print_box_obj(element)
+def compute_gdsii_box_bbox(box):
 	return None
 
-def compute_gdsii_node_bbox(element):
-	dbg.debug_print_node_obj(element)
+def compute_gdsii_node_bbox(node):
 	return None
 
-def compute_gdsii_sref_bbox(element):
-	dbg.debug_print_sref_obj(element)
+def compute_gdsii_sref_bbox(sref):
 	return None
 
-def compute_gdsii_aref_bbox(element):
-	dbg.debug_print_aref_obj(element)
+def compute_gdsii_aref_bbox(aref):
 	return None
 	

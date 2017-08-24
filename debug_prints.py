@@ -1,3 +1,7 @@
+# Import GDSII Library
+from gdsii.library import Library
+from gdsii.elements import *
+
 def debug_print_lib_obj(lib_obj):
 	print "Lib Object:"
 	print "	version:       ", lib_obj.version
@@ -98,4 +102,68 @@ def debug_print_text_obj(text_obj):
 	print "	angle:        ", text_obj.angle 
 	print "	properties:   ", text_obj.properties
 	print
+
+def debug_print_gdsii_stats(gdsii_lib):
+	# Compute number/type of elements in GDSII
+	# Structures
+	num_structures = 0
+	# Elements
+	num_paths 	   = 0
+	num_boundaries = 0
+ 	num_nodes 	   = 0
+	num_boxes 	   = 0
+	num_srefs 	   = 0
+	num_arefs 	   = 0
+	num_texts 	   = 0
+	for structure in gdsii_lib:
+		num_structures += 1
+		for element in structure:
+			if isinstance(element, Path):
+				num_paths += 1
+			elif isinstance(element, Boundary):
+				num_boundaries += 1
+			elif isinstance(element, Box):
+				num_boxes += 1
+			elif isinstance(element, Node):
+				num_nodes += 1
+			elif isinstance(element, SRef):
+				num_srefs += 1
+			elif isinstance(element, ARef):
+				num_arefs += 1
+			elif isinstance(element, Text):
+				num_texts += 1
+
+	# Print stats
+	print "GDSII Stats:"
+	print "---------------------"
+	print " Structures: ", num_structures
+	print "---------------------"
+	print " Paths:      ", num_paths
+	print " Boundaries: ", num_boundaries
+	print " Boxes:      ", num_boxes
+	print " Nodes:      ", num_nodes
+	print " SRefs:      ", num_srefs
+	print " ARefs:      ", num_arefs
+	print " Texts:      ", num_texts
+
+def debug_print_gdsii_hierarchy(gdsii_lib):
+	print "GDSII Hierarchy:"
+	for structure in gdsii_lib:
+		print "Structure: ", structure.name
+		for element in structure:
+			if isinstance(element, Path):
+				print "	Path"
+			elif isinstance(element, Boundary):
+				print "	Boundary"
+			elif isinstance(element, Box):
+				print "	Box"
+			elif isinstance(element, Node):
+				print "	Node"
+			elif isinstance(element, SRef):
+				print "	SRef"
+			elif isinstance(element, ARef):
+				print "	ARef"
+			elif isinstance(element, Text):
+				print "	Text"
+
 
