@@ -21,6 +21,17 @@ class BBox():
 		self.ur_x_coord = ur_x_coord
 		self.ur_y_coord = ur_y_coord
 
+# ------------------------------
+# GDSII Structure BB Functions
+# ------------------------------
+def compute_gdsii_structure_bbox(structure):
+	for element in structure:
+		if 
+		
+# ------------------------------
+# GDSII Element BB Functions
+# ------------------------------
+
 # Returns True if the Path type is currently supported by 
 # this tool. Else, script exits with error code 3.
 # @TODO: Handle more than two coordinate pairs
