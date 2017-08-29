@@ -96,7 +96,7 @@ def analyze_critical_path_connection_points(layout):
 def main():
 	INPUT_LEF_FILE_PATH       = 'gds/tech_nominal_25c_3_20_20_00_00_02_LB.lef'
 	INPUT_LAYER_MAP_FILE_PATH = 'gds/tech_nominal_25c_3_20_20_00_00_02_LB.map'
-	INPUT_GDSII_FILE_PATH 	  = 'gds/MAL_TOP.all.netname.gds'
+	INPUT_GDSII_FILE_PATH 	  = 'gds/MAL_TOP.merged.gds'
 	INPUT_DOT_FILE_PATH       = 'graphs/MAL_TOP_par.supv_2.dot'
 
 	# Load layout and critical nets
@@ -108,7 +108,7 @@ def main():
 	if DEBUG_PRINTS:
 		dbg.debug_print_lib_obj(layout.gdsii_lib)
 		dbg.debug_print_gdsii_stats(layout.gdsii_lib)
-		dbg.debug_print_gdsii_hierarchy(layout.gdsii_lib)
+		# dbg.debug_print_gdsii_hierarchy(layout.gdsii_lib)
 
 	# Analyze security critical paths in GDSII
 	analyze_critical_path_connection_points(layout)

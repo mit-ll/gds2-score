@@ -27,7 +27,7 @@ class BBox():
 def compute_gdsii_structure_bbox(structure):
 	for element in structure:
 		if 
-		
+
 # ------------------------------
 # GDSII Element BB Functions
 # ------------------------------
@@ -67,8 +67,8 @@ def compute_gdsii_path_bbox(path):
 		# @TODO: Handle non-straight paths
 		if coord_1[X] == coord_2[X]:
 			# Path is Vertical
-			ll_corner = (coord_1[X], coord_1[Y]) if coord_1[Y] < coord_2[Y] else (coord_2[X], coord_2[Y])
-			ur_corner = (coord_2[X], coord_2[Y]) if coord_1[Y] < coord_2[Y] else (coord_1[X], coord_1[Y])
+			ll_corner  = (coord_1[X], coord_1[Y]) if coord_1[Y] < coord_2[Y] else (coord_2[X], coord_2[Y])
+			ur_corner  = (coord_2[X], coord_2[Y]) if coord_1[Y] < coord_2[Y] else (coord_1[X], coord_1[Y])
 			half_width = path.width / 2
 			if path.path_type == 2:
 				# Square-ended path that extends past endpoints
@@ -84,8 +84,8 @@ def compute_gdsii_path_bbox(path):
 				ur_corner  = (ur_corner[X] + half_width, ur_corner[Y] + half_width)
 		elif coord_1[Y] == coord_2[Y]:
 			# Path is Horizontal
-			ll_corner = (coord_1[X], coord_1[Y]) if coord_1[X] < coord_2[X] else (coord_2[X], coord_2[Y])
-			ur_corner = (coord_2[X], coord_2[Y]) if coord_1[X] < coord_2[X] else (coord_1[X], coord_1[Y])
+			ll_corner  = (coord_1[X], coord_1[Y]) if coord_1[X] < coord_2[X] else (coord_2[X], coord_2[Y])
+			ur_corner  = (coord_2[X], coord_2[Y]) if coord_1[X] < coord_2[X] else (coord_1[X], coord_1[Y])
 			half_width = path.width / 2
 			if path.path_type == 2:
 				# Square-ended path that extends past endpoints
