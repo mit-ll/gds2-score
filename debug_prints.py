@@ -103,6 +103,22 @@ def debug_print_text_obj(text_obj):
 	print "	properties:   ", text_obj.properties
 	print
 
+def debug_print_gdsii_element(element):
+	if isinstance(element, Path):
+		debug_print_path_obj(element)
+	elif isinstance(element, Boundary):
+		debug_print_boundary_obj(element)
+	elif isinstance(element, Box):
+		debug_print_box_obj(element)
+	elif isinstance(element, Node):
+		debug_print_node_obj(element)
+	elif isinstance(element, SRef):
+		debug_print_sref_obj(element)
+	elif isinstance(element, ARef):
+		debug_print_aref_obj(element)
+	elif isinstance(element, Text):
+		debug_print_text_obj(element)
+
 def debug_print_gdsii_stats(gdsii_lib):
 	# Compute number/type of elements in GDSII
 	# Structures

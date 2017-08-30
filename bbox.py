@@ -24,9 +24,9 @@ class BBox():
 # ------------------------------
 # GDSII Structure BB Functions
 # ------------------------------
-def compute_gdsii_structure_bbox(structure):
-	for element in structure:
-		if 
+# def compute_gdsii_structure_bbox(structure):
+# 	for element in structure:
+# 		if 
 
 # ------------------------------
 # GDSII Element BB Functions
@@ -107,15 +107,4 @@ def compute_gdsii_boundary_bbox(boundary):
 		sorted_coords = sorted(boundary.xy, key=lambda x: (x[0], x[1]))
 		return BBox(sorted_coords[0][0], sorted_coords[0][1], sorted_coords[2][0], sorted_coords[2][1])
 
-def compute_gdsii_box_bbox(box):
-	return None
-
-def compute_gdsii_node_bbox(node):
-	return None
-
-def compute_gdsii_sref_bbox(sref):
-	return None
-
-def compute_gdsii_aref_bbox(aref):
-	return None
 	

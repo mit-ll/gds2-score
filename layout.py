@@ -13,19 +13,47 @@ import net
 # Other Imports
 import time
 import sys
+import pprint
 
 class Layout():
 	def __init__(self):
-		self.lef           = None
-		self.layer_map     = None
-		self.gdsii_lib     = None
-		self.critical_nets = None
+		self.top_level_name      = None  
+		self.lef                 = None
+		self.layer_map           = None
+		self.gdsii_lib           = None
+		self.gdsii_structures    = {}
+		self.top_gdsii_structure = None
+		self.top_gdsii_elements  = None
+		self.critical_nets       = None
 
-	def __init__(self, lef_fname, layer_map_fname, gdsii_fname, dot_fname):
-		self.lef           = lef.LEF(lef_fname)
-		self.layer_map     = self.load_layer_map(layer_map_fname)
-		self.gdsii_lib     = self.load_gdsii_library(gdsii_fname)
-		self.critical_nets = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname)) 
+	def __init__(self, top_name, lef_fname, layer_map_fname, gdsii_fname, dot_fname):
+		self.top_level_name      = top_name 
+		self.lef                 = lef.LEF(lef_fname)
+		self.layer_map           = self.load_layer_map(layer_map_fname)
+		self.gdsii_lib           = self.load_gdsii_library(gdsii_fname)
+		self.gdsii_structures    = self.index_gdsii_structures_by_name()
+		self.top_gdsii_structure = self.gdsii_structures[top_name]
+		self.top_gdsii_elements  = None
+		self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname)) 
+		
+	# Loads GDSII structures elements into a dictionary
+	# keyed by structure name to allow for efficient
+	# structure object lookups.
+	def index_gdsii_structures_by_name(self):
+		# Check that GDSII library has been loaded
+		if self.gdsii_lib == None:
+			print "ERROR %s: must load GDSII library before indexing GDSII structures." % (inspect.stack()[0][3])
+			sys.exit(1)
+
+		# Load GDSII structures in a dictionary
+		gdsii_structures_index = {}
+		for structure in self.gdsii_lib:
+			if structure.name not in gdsii_structures_index.keys():
+				gdsii_structures_index[structure.name] = structure
+			else:
+				print "ERROR %s: encountered multiple GDSII structures with the same name (%s)." % (inspect.stack()[0][3], structure.struct_name)
+				sys.exit(2)
+		return gdsii_structures_index
 
 	# Cross references the critical nets identified with the 
 	# Nemo tool, to all path objects declared in the GDSII file.
@@ -39,16 +67,18 @@ class Layout():
 
 		# Extract path structures from GDSII file
 		for structure in self.gdsii_lib:
-			for element in structure:
-				if isinstance(element, Path):
-					path_name = element.properties[0][1] # property 1 of Path element is the net name
-					if path_name in critical_paths:
-						critical_paths[path_name].append(element)
-					else:
-						# Check if path is critical or not
-						path_basename = path_name.split('/')[-1]
-						if path_basename in critical_net_names.values():
-							critical_paths[path_name] = [element]
+			if structure.name == self.top_level_name:
+				for element in structure:
+					if isinstance(element, Path):
+						path_name = element.properties[0][1] # property 1 of Path element is the net name
+						if path_name in critical_paths:
+							critical_paths[path_name].append(element)
+						else:
+							# Check if path is critical or not
+							path_basename = path_name.split('/')[-1]
+							if path_basename in critical_net_names.values():
+								critical_paths[path_name] = [element]
+				break
 
 		# Initialize Net Objects
 		for net_name in critical_paths.keys():
@@ -141,49 +171,45 @@ class Layout():
 
 	# Returns true if the XY coordinate is inside or
 	# touching the bounding box provided.
-	def is_inside_bb(self, element, x_coord, y_coord, gdsii_layer):
+	def is_inside_bb(self, element, x_coord, y_coord, gdsii_layer, offset_x, offset_y):
 		# Compute bounding-box of gdsii element
 		if isinstance(element, Path):
-			# dbg.debug_print_path_obj(element)
-			# return False
 			if gdsii_layer == element.layer:
 				bbox = compute_gdsii_path_bbox(element)
 			else:
 				return False
 		elif isinstance(element, Boundary):
-			# dbg.debug_print_boundary_obj(element)
-			# return False
 			if gdsii_layer == element.layer:
 				bbox = compute_gdsii_boundary_bbox(element)
 			else:
 				return False
 		elif isinstance(element, Box):
-			# dbg.debug_print_box_obj(element)
-			# return False
-			if gdsii_layer == element.layer:
-				bbox = compute_gdsii_box_bbox(element)
-			else:
-				return False
+			print "UNSUPPORTED %s: GDSII Box elements are not supported." % (inspect.stack()[1][3])
+			sys.exit(3)
 		elif isinstance(element, Node):
-			# dbg.debug_print_node_obj(element)
-			# return False
-			if gdsii_layer == element.layer:
-				bbox = compute_gdsii_node_bbox(element)
-			else:
-				return False
+			print "UNSUPPORTED %s: GDSII Node elements are not supported." % (inspect.stack()[1][3])
+			sys.exit(3)
 		elif isinstance(element, SRef):
-			# bbox = compute_gdsii_sref_bbox(element)
-			return False
+			if element.struct_name in self.gdsii_structures:
+				for sub_element in self.gdsii_structures[element.struct_name]:
+					if self.is_inside_bb(sub_element, x_coord, y_coord, gdsii_layer, sub_element.xy[0][0], sub_element.xy[0][1]):
+						return True
+				return False
+			else:
+				# print "ERROR %s: SRef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
+				# sys.exit(1)
+				return False
 		elif isinstance(element, ARef):
-			# bbox = compute_gdsii_aref_bbox(element)
-			return False
+			print "UNSUPPORTED %s: GDSII ARef elements are not supported." % (inspect.stack()[1][3])
+			sys.exit(3)
 		elif isinstance(element, Text):
-			# bbox = compute_gdsii_text_bbox(element)
+			# Ignore GDSII Text elements
 			return False
 
 		# Check if XY coord is inside another element's bounding box
-		if x_coord >= bbox.ll_x_coord and x_coord <= bbox.ur_x_coord:
-			if y_coord >= bbox.ll_y_coord and y_coord <= bbox.ur_y_coord:
+		if (x_coord + offset_x) >= bbox.ll_x_coord and (x_coord + offset_x) <= bbox.ur_x_coord:
+			if (y_coord + offset_y) >= bbox.ll_y_coord and (y_coord + offset_y) <= bbox.ur_y_coord:
+				dbg.debug_print_gdsii_element(element)
 				return True
 		return False
 
@@ -191,9 +217,8 @@ class Layout():
 	# inside the bounding box of another object. Returns True if 
 	# the point lies inside the bounding box of another GDSII element.
 	def is_point_blocked(self, x_coord, y_coord, gdsii_layer):
-		for structure in self.gdsii_lib:
-			for element in structure:
-				if self.is_inside_bb(element, x_coord, y_coord, gdsii_layer):
-					return True
+		for element in self.top_gdsii_structure:
+			if self.is_inside_bb(element, x_coord, y_coord, gdsii_layer, 0, 0):
+				return True
 		return False
 
