@@ -27,8 +27,6 @@ class Net():
 class Net_Segment():
 	def __init__(self):
 		self.gdsii_path      = None
-		self.gdsii_data_type = 0
-		self.gdsii_layer_num = 0
 		self.layer_num       = 0
 		self.layer_name      = None
 		self.direction       = None
@@ -39,8 +37,6 @@ class Net_Segment():
 
 	def __init__(self, gdsii_path, lef, layer_map):
 		self.gdsii_path      = gdsii_path
-		self.gdsii_data_type = gdsii_path.data_type
-		self.gdsii_layer_num = gdsii_path.layer
 		self.layer_num       = lef.get_layer_num(gdsii_path.layer, gdsii_path.data_type, layer_map)
 		self.layer_name      = lef.get_layer_name(gdsii_path.layer, gdsii_path.data_type, layer_map)
 		self.direction       = self.path_direction()

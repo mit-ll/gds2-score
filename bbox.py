@@ -22,13 +22,6 @@ class BBox():
 		self.ur_y_coord = ur_y_coord
 
 # ------------------------------
-# GDSII Structure BB Functions
-# ------------------------------
-# def compute_gdsii_structure_bbox(structure):
-# 	for element in structure:
-# 		if 
-
-# ------------------------------
 # GDSII Element BB Functions
 # ------------------------------
 

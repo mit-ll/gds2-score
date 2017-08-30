@@ -18,48 +18,47 @@ DEBUG_PRINTS = True
 # 1 = Error loading input load_files
 # 2 = Unknown GDSII object attributes/attribute types
 # 3 = Unhandled feature
+# 4 = Usage Error
 
-def check_north_blockage(net_segment, layout):
-	layer 			  = layout.lef.layers[net_segment.layer_name]
-	routing_direction = layer.direction
-	step_size         = layer.min_width * layout.lef.database_units
-	curr_x_coord      = net_segment.ll_x_coord + (step_size / 2)
-	north_y_coord     = net_segment.ur_y_coord
+def check_blockage(net_segment, layout, direction, step_size, check_distance):
 	num_units_blocked = 0
 
-	print "		Checking %d units along NORTH edge (%d/%f units/microns away)..." % (((net_segment.ur_x_coord - curr_x_coord) / step_size), north_y_coord, north_y_coord / layout.lef.database_units)
-	if net_segment.direction == "V":
-		# Path is Vertical
-		if routing_direction == "V":
-			# Routing Direction is Vertical
-			while curr_x_coord < net_segment.ur_x_coord:
-				print "			Checking unit %d..." % (curr_x_coord)
-				check_distance = layout.lef.layers[net_segment.layer_name].pitch * layout.lef.database_units
-				if layout.is_point_blocked(curr_x_coord, north_y_coord + check_distance, net_segment.gdsii_path.layer):
-					num_units_blocked += 1
-				curr_x_coord += step_size
-		else:
-			# Routing Direction is Horizontal
-			print "UNSUPPORTED %s: vertical paths on horizontal routing layer not supported." % (inspect.stack()[0][3])
-			sys.exit(3)
+	if   direction == 'N':
+		curr_scan_coord  = net_segment.ll_x_coord
+		end_scan_coord   = net_segment.ur_x_coord
+		curr_fixed_coord = net_segment.ur_y_coord + check_distance
+	elif direction == 'E':
+		curr_scan_coord  = net_segment.ll_y_coord
+		end_scan_coord   = net_segment.ur_y_coord
+		curr_fixed_coord = net_segment.ur_x_coord + check_distance
+	elif direction == 'S':
+		curr_scan_coord  = net_segment.ll_x_coord
+		end_scan_coord   = net_segment.ur_x_coord
+		curr_fixed_coord = net_segment.ll_y_coord - check_distance
+	elif direction == 'W':
+		curr_scan_coord  = net_segment.ll_y_coord
+		end_scan_coord   = net_segment.ur_y_coord
+		curr_fixed_coord = net_segment.ll_x_coord - check_distance
 	else:
-		# Path is Horizontal
-		if routing_direction == "H":
-			# Routing Direction is Horizontal
-			while curr_x_coord < net_segment.ur_x_coord:
-				print "			Checking unit %d..." % (curr_x_coord)
-				check_distance = layout.lef.layers[net_segment.layer_name].pitch * layout.lef.database_units
-				if layout.is_point_blocked(curr_x_coord, north_y_coord + check_distance, net_segment.gdsii_path.layer):
-					num_units_blocked += 1
-				curr_x_coord += step_size
+		print "ERROR %s: unknown scan direction (%s)." % (inspect.stack()[0][3], direction)
+		sys.exit(4)
+
+	num_points_to_scan = ((end_scan_coord - curr_scan_coord) / step_size) + 1
+	print "		Checking %d units along %s edge (%d/%f units/microns away)..." % (num_points_to_scan, direction, check_distance, check_distance / layout.lef.database_units)
+
+	# Scan single perimeter side to check for blockages
+	while curr_scan_coord < end_scan_coord:
+		if direction == 'N' or direction == 'S':
+			if layout.is_point_blocked(curr_scan_coord, curr_fixed_coord, net_segment.gdsii_path.layer):
+				num_units_blocked += 1
 		else:
-			# Routing Direction is Vertical
-			print "UNSUPPORTED %s: horizontal paths on vertical routing layer not supported." % (inspect.stack()[0][3])
-			sys.exit(3)
-	print "Done."
+			if layout.is_point_blocked(curr_fixed_coord, curr_scan_coord, net_segment.gdsii_path.layer):
+				num_units_blocked += 1
+		curr_scan_coord += step_size
+	
 	return num_units_blocked
 	
-def analyze_critical_path_connection_points(layout):
+def analyze_critical_nets(layout):
 	# Debug Prints
 	if DEBUG_PRINTS:
 		print
@@ -77,24 +76,51 @@ def analyze_critical_path_connection_points(layout):
 			perimeter            = (2 * top_bottom_perimeter) + (2 * left_right_perimeter) 
 			if DEBUG_PRINTS:
 				dbg.debug_print_path_obj(net_segment.gdsii_path)
+
 			# Report Path Segment Condition
 			print "	Analyzing Net Segment ", path_segment_counter
 			print "		Layer:         ", net_segment.layer_num
 			print "		Bounding Box:  ", net_segment.get_bbox()
 			print "		Perimeter:     ", perimeter
 			print "		Klayout Query: " 
-			print "paths on layer %d/%d of cell MAL_TOP where" % (net_segment.gdsii_path.layer, net_segment.gdsii_path.data_type)
-			print "shape.path.bbox.left==%d &&"  % (net_segment.ll_x_coord)
-			print "shape.path.bbox.right==%d &&" % (net_segment.ur_x_coord)
-			print "shape.path.bbox.top==%d &&"   % (net_segment.ur_y_coord)
-			print "shape.path.bbox.bottom==%d"   % (net_segment.ll_y_coord)
+			print "			paths on layer %d/%d of cell MAL_TOP where" % (net_segment.gdsii_path.layer, net_segment.gdsii_path.data_type)
+			print "			shape.path.bbox.left==%d &&"  % (net_segment.ll_x_coord)
+			print "			shape.path.bbox.right==%d &&" % (net_segment.ur_x_coord)
+			print "			shape.path.bbox.top==%d &&"   % (net_segment.ur_y_coord)
+			print "			shape.path.bbox.bottom==%d"   % (net_segment.ll_y_coord)
+
+			# check_path_blockage() Parameters
+			step_size       = 100
+			check_distance  = layout.lef.layers[net_segment.layer_name].pitch * layout.lef.database_units
 
 			# Check NORTH
-			north_perimeter_blocked = check_north_blockage(net_segment, layout)
+			start_time = time.time()
+			north_perimeter_blocked = check_blockage(net_segment, layout, 'N', step_size, check_distance)
 			print "		N-Perimeter Blocked: ", north_perimeter_blocked
+			print "		Done - Time Elapsed:", (time.time() - start_time), "seconds."
+			print "		----------------------------------------------"
+
 			# Check EAST
+			start_time = time.time()
+			east_perimeter_blocked = check_blockage(net_segment, layout, 'E', step_size, check_distance)
+			print "		E-Perimeter Blocked: ", east_perimeter_blocked
+			print "		Done - Time Elapsed:", (time.time() - start_time), "seconds."
+			print "		----------------------------------------------"
+
 			# Check SOUTH
+			start_time = time.time()
+			south_perimeter_blocked = check_blockage(net_segment, layout, 'S', step_size, check_distance)
+			print "		S-Perimeter Blocked: ", south_perimeter_blocked
+			print "		Done - Time Elapsed:", (time.time() - start_time), "seconds."
+			print "		----------------------------------------------"
+
 			# Check WEST
+			start_time = time.time()
+			west_perimeter_blocked = check_blockage(net_segment, layout, 'W', step_size, check_distance)
+			print "		W-Perimeter Blocked: ", west_perimeter_blocked
+			print "		Done - Time Elapsed:", (time.time() - start_time), "seconds."
+			print "		----------------------------------------------"
+			
 			# Check ABOVE
 			# Check BELOW
 
@@ -119,7 +145,7 @@ def main():
 		# dbg.debug_print_gdsii_hierarchy(layout.gdsii_lib)
 
 	# Analyze security critical paths in GDSII
-	analyze_critical_path_connection_points(layout)
+	analyze_critical_nets(layout)
 
 if __name__ == "__main__":
     main()
