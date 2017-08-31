@@ -15,6 +15,9 @@ import time
 import sys
 import pprint
 
+# GDSII Spec. Constants
+REFLECTION_ABOUT_X_AXIS = 32768
+
 class Layout():
 	def __init__(self):
 		self.top_level_name      = None  
@@ -33,7 +36,7 @@ class Layout():
 		self.gdsii_lib           = self.load_gdsii_library(gdsii_fname)
 		self.gdsii_structures    = self.index_gdsii_structures_by_name()
 		self.top_gdsii_structure = self.gdsii_structures[top_name]
-		self.top_gdsii_elements  = None
+		self.top_gdsii_elements  = []
 		self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname)) 
 		
 	# Loads GDSII structures elements into a dictionary
@@ -171,7 +174,7 @@ class Layout():
 
 	# Returns true if the XY coordinate is inside or
 	# touching the bounding box provided.
-	def is_inside_bb(self, element, x_coord, y_coord, gdsii_layer, offset_x, offset_y):
+	def is_inside_bb(self, element, x_coord, y_coord, gdsii_layer, offset_x, offset_y, x_reflection, rotation):
 		# Compute bounding-box of gdsii element
 		if isinstance(element, Path):
 			if gdsii_layer == element.layer:
@@ -190,26 +193,61 @@ class Layout():
 			print "UNSUPPORTED %s: GDSII Node elements are not supported." % (inspect.stack()[1][3])
 			sys.exit(3)
 		elif isinstance(element, SRef):
+			# Check if SRef properties are supported by this tool
+			# and that the structure pointed to exists.
 			if element.struct_name in self.gdsii_structures:
-				for sub_element in self.gdsii_structures[element.struct_name]:
-					if self.is_inside_bb(sub_element, x_coord, y_coord, gdsii_layer, sub_element.xy[0][0], sub_element.xy[0][1]):
-						return True
-				return False
+				is_sref_type_supported(element, self.gdsii_structures[element.struct_name])
 			else:
-				# print "ERROR %s: SRef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
-				# sys.exit(1)
-				return False
+				print "ERROR %s: SRef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
+				sys.exit(1)
+
+			# Iterate over elements of referenced structure
+			for sub_element in self.gdsii_structures[element.struct_name]:
+				if self.is_inside_bb(sub_element, x_coord, y_coord, gdsii_layer, element.xy[0][0], element.xy[0][1], element.strans, element.angle):
+					return True
+			return False
 		elif isinstance(element, ARef):
-			print "UNSUPPORTED %s: GDSII ARef elements are not supported." % (inspect.stack()[1][3])
-			sys.exit(3)
+			# Check if SRef properties are supported by this tool
+			# and that the structure pointed to exists.
+			if element.struct_name in self.gdsii_structures:
+				is_aref_type_supported(element, self.gdsii_structures[element.struct_name])
+			else:
+				print "ERROR %s: ARef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
+				sys.exit(1)
+
+			# Retrieve row and column spacing
+			curr_x_offset = element.xy[0][0]
+			col_spacing   = (element.xy[1][0] - curr_x_offset) / element.cols
+			curr_y_offset = element.xy[0][1]
+			row_spacing   = (element.xy[2][1] - curr_y_offset) / element.rows
+
+			if element.strans == REFLECTION_ABOUT_X_AXIS or element.angle != 0:
+				dbg.debug_print_aref_obj
+				sys.exit(1)
+
+			# Iterate over elements of referenced structures
+			for row_index in range(element.rows):
+				for col_index in range(element.cols):
+					for sub_element in self.gdsii_structures[element.struct_name]:
+						if self.is_inside_bb(sub_element, x_coord, y_coord, gdsii_layer, curr_x_offset, curr_y_offset, False):
+							return True
+					curr_x_offset += col_spacing
+				curr_y_offset += row_spacing
+			return False
 		elif isinstance(element, Text):
 			# Ignore GDSII Text elements
 			return False
 
+		# Compute translations if necessary
+		if x_reflection == REFLECTION_ABOUT_X_AXIS:
+			bbox = reflect_bbox_across_x_axis(bbox)
+		if rotation != 0:
+			bbox = rotate_bbox(bbox, rotation)
+
 		# Check if XY coord is inside another element's bounding box
 		if (x_coord + offset_x) >= bbox.ll_x_coord and (x_coord + offset_x) <= bbox.ur_x_coord:
 			if (y_coord + offset_y) >= bbox.ll_y_coord and (y_coord + offset_y) <= bbox.ur_y_coord:
-				dbg.debug_print_gdsii_element(element)
+				# dbg.debug_print_gdsii_element(element)
 				return True
 		return False
 
@@ -218,7 +256,7 @@ class Layout():
 	# the point lies inside the bounding box of another GDSII element.
 	def is_point_blocked(self, x_coord, y_coord, gdsii_layer):
 		for element in self.top_gdsii_structure:
-			if self.is_inside_bb(element, x_coord, y_coord, gdsii_layer, 0, 0):
+			if self.is_inside_bb(element, x_coord, y_coord, gdsii_layer, 0, 0, False, 0):
 				return True
 		return False
 

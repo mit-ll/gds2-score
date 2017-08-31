@@ -23,38 +23,39 @@ DEBUG_PRINTS = True
 def check_blockage(net_segment, layout, direction, step_size, check_distance):
 	num_units_blocked = 0
 
-	if   direction == 'N':
-		curr_scan_coord  = net_segment.ll_x_coord
-		end_scan_coord   = net_segment.ur_x_coord
-		curr_fixed_coord = net_segment.ur_y_coord + check_distance
-	elif direction == 'E':
-		curr_scan_coord  = net_segment.ll_y_coord
-		end_scan_coord   = net_segment.ur_y_coord
-		curr_fixed_coord = net_segment.ur_x_coord + check_distance
-	elif direction == 'S':
-		curr_scan_coord  = net_segment.ll_x_coord
-		end_scan_coord   = net_segment.ur_x_coord
-		curr_fixed_coord = net_segment.ll_y_coord - check_distance
-	elif direction == 'W':
-		curr_scan_coord  = net_segment.ll_y_coord
-		end_scan_coord   = net_segment.ur_y_coord
-		curr_fixed_coord = net_segment.ll_x_coord - check_distance
-	else:
-		print "ERROR %s: unknown scan direction (%s)." % (inspect.stack()[0][3], direction)
-		sys.exit(4)
-
-	num_points_to_scan = ((end_scan_coord - curr_scan_coord) / step_size) + 1
-	print "		Checking %d units along %s edge (%d/%f units/microns away)..." % (num_points_to_scan, direction, check_distance, check_distance / layout.lef.database_units)
-
-	# Scan single perimeter side to check for blockages
-	while curr_scan_coord < end_scan_coord:
-		if direction == 'N' or direction == 'S':
-			if layout.is_point_blocked(curr_scan_coord, curr_fixed_coord, net_segment.gdsii_path.layer):
-				num_units_blocked += 1
+	# Scan all 4 perimeter sides to check for blockages
+	for direction in ['N', 'E', 'S', 'W']:
+		if direction == 'N':
+			curr_scan_coord  = net_segment.ll_x_coord
+			end_scan_coord   = net_segment.ur_x_coord
+			curr_fixed_coord = net_segment.ur_y_coord + check_distance
+		elif direction == 'E':
+			curr_scan_coord  = net_segment.ll_y_coord
+			end_scan_coord   = net_segment.ur_y_coord
+			curr_fixed_coord = net_segment.ur_x_coord + check_distance
+		elif direction == 'S':
+			curr_scan_coord  = net_segment.ll_x_coord
+			end_scan_coord   = net_segment.ur_x_coord
+			curr_fixed_coord = net_segment.ll_y_coord - check_distance
+		elif direction == 'W':
+			curr_scan_coord  = net_segment.ll_y_coord
+			end_scan_coord   = net_segment.ur_y_coord
+			curr_fixed_coord = net_segment.ll_x_coord - check_distance
 		else:
-			if layout.is_point_blocked(curr_fixed_coord, curr_scan_coord, net_segment.gdsii_path.layer):
-				num_units_blocked += 1
-		curr_scan_coord += step_size
+			print "ERROR %s: unknown scan direction (%s)." % (inspect.stack()[0][3], direction)
+			sys.exit(4)
+		
+		num_points_to_scan = ((end_scan_coord - curr_scan_coord) / step_size) + 1
+		print "		Checking %d units along %s edge (%d/%f units/microns away)..." % (num_points_to_scan, direction, check_distance, check_distance / layout.lef.database_units)
+		
+		while curr_scan_coord < end_scan_coord:
+			if direction == 'N' or direction == 'S':
+				if layout.is_point_blocked(curr_scan_coord, curr_fixed_coord, net_segment.gdsii_path.layer):
+					num_units_blocked += 1
+			else:
+				if layout.is_point_blocked(curr_fixed_coord, curr_scan_coord, net_segment.gdsii_path.layer):
+					num_units_blocked += 1
+			curr_scan_coord += step_size
 	
 	return num_units_blocked
 	
@@ -143,9 +144,15 @@ def main():
 		dbg.debug_print_lib_obj(layout.gdsii_lib)
 		dbg.debug_print_gdsii_stats(layout.gdsii_lib)
 		# dbg.debug_print_gdsii_hierarchy(layout.gdsii_lib)
-
+		# dbg.debug_print_gdsii_sref_strans_stats(layout.gdsii_lib)
+		# dbg.debug_print_gdsii_aref_strans_stats(layout.gdsii_lib)
+		
 	# Analyze security critical paths in GDSII
+	start_time = time.time()
+	print "Starting Blockage Analysis:"
 	analyze_critical_nets(layout)
+	print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
+	print "----------------------------------------------"
 
 if __name__ == "__main__":
     main()

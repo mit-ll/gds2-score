@@ -114,6 +114,8 @@ class LEF:
 		layer_name = self.get_layer_name(gds_layer_num, gds_data_type, layer_map)
 		return self.layers[layer_name].layer_num
 
+	# Returns the preferred routing direction for the GDSII layer number
+	# and data type according to what is defined in the intput LEF file.
 	def get_routing_layer_direction(self, gds_layer_num, gds_data_type, layer_map):
 		layer_name = self.get_layer_name(gds_layer_num, gds_data_type, layer_map)
 		return self.layers[layer_name].direction

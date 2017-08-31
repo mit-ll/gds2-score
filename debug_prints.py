@@ -2,6 +2,9 @@
 from gdsii.library import Library
 from gdsii.elements import *
 
+# Other Imports
+import pprint
+
 def debug_print_lib_obj(lib_obj):
 	print "Lib Object:"
 	print "	version:       ", lib_obj.version
@@ -15,6 +18,14 @@ def debug_print_lib_obj(lib_obj):
 	print "	attrtable:     ", lib_obj.attrtable
 	print "	format:        ", lib_obj.format
 	print "	masks:         ", lib_obj.masks
+	print
+
+def debug_print_gdsii_structure(structure_obj):
+	print "Structure Object:"
+	print "	name:     ", structure_obj.name
+	print "	mod_time: ", structure_obj.mod_time
+	print "	acc_time: ", structure_obj.acc_time
+	print "	strclass: ", structure_obj.strclass
 	print
 
 def debug_print_path_obj(path_obj):
@@ -103,22 +114,6 @@ def debug_print_text_obj(text_obj):
 	print "	properties:   ", text_obj.properties
 	print
 
-def debug_print_gdsii_element(element):
-	if isinstance(element, Path):
-		debug_print_path_obj(element)
-	elif isinstance(element, Boundary):
-		debug_print_boundary_obj(element)
-	elif isinstance(element, Box):
-		debug_print_box_obj(element)
-	elif isinstance(element, Node):
-		debug_print_node_obj(element)
-	elif isinstance(element, SRef):
-		debug_print_sref_obj(element)
-	elif isinstance(element, ARef):
-		debug_print_aref_obj(element)
-	elif isinstance(element, Text):
-		debug_print_text_obj(element)
-
 def debug_print_gdsii_stats(gdsii_lib):
 	# Compute number/type of elements in GDSII
 	# Structures
@@ -161,6 +156,57 @@ def debug_print_gdsii_stats(gdsii_lib):
 	print " SRefs:      ", num_srefs
 	print " ARefs:      ", num_arefs
 	print " Texts:      ", num_texts
+	print
+
+def debug_print_gdsii_sref_strans_stats(gdsii_lib):
+	# Compute number/type of elements in GDSII
+	strans_vals = {}
+	for structure in gdsii_lib:
+		for element in structure:
+			if isinstance(element, SRef):
+				if element.strans != 0 and element.strans != None:
+					print "---------------------"
+					debug_print_gdsii_structure(structure)
+					debug_print_sref_obj(element)
+					print "---------------------"
+				if element.strans == None:
+					if "None" in strans_vals:
+						strans_vals["None"] += 1
+					else:
+						strans_vals["None"] = 1
+				else:
+					if bin(element.strans) in strans_vals:
+						strans_vals[bin(element.strans)] += 1
+					else:
+						strans_vals[bin(element.strans)] = 1
+	print "SRef.strans Stats:"
+	pprint.pprint(strans_vals)
+	print 
+
+def debug_print_gdsii_aref_strans_stats(gdsii_lib):
+	# Compute number/type of elements in GDSII
+	strans_vals = {}
+	for structure in gdsii_lib:
+		for element in structure:
+			if isinstance(element, ARef):
+				if element.strans != 0 and element.strans != None:
+					print "---------------------"
+					debug_print_gdsii_structure(structure)
+					debug_print_aref_obj(element)
+					print "---------------------"
+				if element.strans == None:
+					if "None" in strans_vals:
+						strans_vals["None"] += 1
+					else:
+						strans_vals["None"] = 1
+				else:
+					if bin(element.strans) in strans_vals:
+						strans_vals[bin(element.strans)] += 1
+					else:
+						strans_vals[bin(element.strans)] = 1
+	print "ARef.strans Stats:"
+	pprint.pprint(strans_vals)
+	print 
 
 def debug_print_gdsii_hierarchy(gdsii_lib):
 	print "GDSII Hierarchy:"
@@ -182,4 +228,23 @@ def debug_print_gdsii_hierarchy(gdsii_lib):
 			elif isinstance(element, Text):
 				print "	Text"
 
+def debug_print_gdsii_element(element):
+	if isinstance(element, Path):
+		debug_print_path_obj(element)
+	elif isinstance(element, Boundary):
+		debug_print_boundary_obj(element)
+	elif isinstance(element, Box):
+		debug_print_box_obj(element)
+	elif isinstance(element, Node):
+		debug_print_node_obj(element)
+	elif isinstance(element, SRef):
+		debug_print_sref_obj(element)
+	elif isinstance(element, ARef):
+		debug_print_aref_obj(element)
+	elif isinstance(element, Text):
+		debug_print_text_obj(element)
 
+def debug_print_gdsii_structure_and_elements(structure_obj):
+	debug_print_gdsii_structure(structure_obj)
+	for element in structure_obj:
+		debug_print_gdsii_element(element)

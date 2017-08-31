@@ -8,6 +8,9 @@ import debug_prints as dbg
 import inspect
 import sys
 
+# GDSII Spec. Constants
+REFLECTION_ABOUT_X_AXIS = 32768
+
 class BBox():
 	def __init__(self):
 		self.ll_x_coord = None
@@ -47,6 +50,36 @@ def is_boundary_type_supported(boundary):
 		return True
 	else:
 		print "UNSUPPORTED %s: number of coordinates (%d) for boundary object not supported." % (inspect.stack()[1][3], len(boundary.xy))
+		sys.exit(3)
+
+# Returns True if the SRef type is currently supported by 
+# this tool. Else, script exits with error code 3.
+# @TODO: Handle SRef magnitude and angle transformations.
+def is_sref_type_supported(sref, structure):
+	supported_strans = [ None, 0, REFLECTION_ABOUT_X_AXIS ]
+	supported_angles = [ None, 0, 90, 180, 270 ]
+	supported_mags   = [ None ]
+	if sref.strans in supported_strans and sref.angle in supported_angles and sref.mag in supported_mags:
+		return True
+	else:
+		dbg.debug_print_sref_obj(sref)
+		# dbg.debug_print_gdsii_structure_and_elements(structure)
+		print "UNSUPPORTED %s: transformations of SRef object not supported." % (inspect.stack()[1][3])
+		sys.exit(3)
+
+# Returns True if the ARef type is currently supported by 
+# this tool. Else, script exits with error code 3.
+# @TODO: Handle ARef magnitude and angle transformations.
+def is_aref_type_supported(aref, structure):
+	supported_strans = [ None, 0, REFLECTION_ABOUT_X_AXIS ]
+	supported_angles = [ None, 0, 90, 180, 270 ]
+	supported_mags   = [ None ]
+	if aref.strans in supported_strans and aref.angle in supported_angles and aref.mag in supported_mags:
+		return True
+	else:
+		dbg.debug_print_aref_obj(aref)
+		# dbg.debug_print_gdsii_structure_and_elements(structure)
+		print "UNSUPPORTED %s: transformations of SRef object not supported." % (inspect.stack()[1][3])
 		sys.exit(3)
 
 def compute_gdsii_path_bbox(path):
@@ -100,4 +133,35 @@ def compute_gdsii_boundary_bbox(boundary):
 		sorted_coords = sorted(boundary.xy, key=lambda x: (x[0], x[1]))
 		return BBox(sorted_coords[0][0], sorted_coords[0][1], sorted_coords[2][0], sorted_coords[2][1])
 
-	
+def reflect_bbox_across_x_axis(bb):
+	temp_ur_y_coord = bb.ur_y_coord
+	bb.ur_y_coord   = bb.ll_y_coord * -1
+	bb.ll_y_coord   = temp_ur_y_coord * -1
+	return bb
+
+# Performs counter clockwise rotation of BBox
+def rotate_bbox(bb, rotation):
+	temp_ll_x = bb.ll_x_coord
+	temp_ll_y = bb.ll_y_coord
+	temp_ur_x = bb.ur_x_coord
+	temp_ur_y = bb.ur_y_coord
+
+	if rotation == 90:
+		bb.ll_x_coord = temp_ur_y * -1
+		bb.ur_x_coord = temp_ll_y * -1
+		bb.ll_y_coord = temp_ll_x
+		bb.ur_y_coord = temp_ur_x
+	elif rotation == 180:
+		bb.ll_x_coord = temp_ur_x * -1
+		bb.ll_y_coord = temp_ur_y * -1
+		bb.ur_x_coord = temp_ll_x * -1
+		bb.ur_y_coord = temp_ll_y * -1
+	elif rotation == 270:
+		bb.ll_x_coord = temp_ll_y
+		bb.ur_x_coord = temp_ur_y
+		bb.ll_y_coord = temp_ur_x * -1
+		bb.ur_y_coord = temp_ll_x * -1
+	else:
+		print "UNSUPPORTED %s: rotation of %d degrees not supported." % (inspect.stack()[1][3], rotation)
+		sys.exit(3)
+	return bb
