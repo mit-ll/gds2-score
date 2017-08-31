@@ -221,8 +221,8 @@ class Layout():
 			curr_y_offset = element.xy[0][1]
 			row_spacing   = (element.xy[2][1] - curr_y_offset) / element.rows
 
-			if element.strans == REFLECTION_ABOUT_X_AXIS or element.angle != 0:
-				dbg.debug_print_aref_obj
+			if element.strans == REFLECTION_ABOUT_X_AXIS or (element.angle != 0 and element.angle != None):
+				dbg.debug_print_aref_obj(element)
 				sys.exit(1)
 
 			# Iterate over elements of referenced structures
