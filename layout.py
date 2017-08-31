@@ -229,7 +229,7 @@ class Layout():
 			for row_index in range(element.rows):
 				for col_index in range(element.cols):
 					for sub_element in self.gdsii_structures[element.struct_name]:
-						if self.is_inside_bb(sub_element, x_coord, y_coord, gdsii_layer, curr_x_offset, curr_y_offset, False):
+						if self.is_inside_bb(sub_element, x_coord, y_coord, gdsii_layer, curr_x_offset, curr_y_offset, False, 0):
 							return True
 					curr_x_offset += col_spacing
 				curr_y_offset += row_spacing
