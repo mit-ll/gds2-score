@@ -6,7 +6,7 @@ from gdsii.library import Library
 from gdsii.elements import *
 
 # Import Custom Modules
-from bbox import *
+from polygon import *
 import lef
 import net
 
@@ -38,7 +38,26 @@ class Layout():
 		self.top_gdsii_structure = self.gdsii_structures[top_name]
 		self.top_gdsii_elements  = []
 		self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname)) 
-		
+	
+	# Loads GDSII top level structure elements into a grid
+	# according to approximate location in the top level GDSII
+	# structure for more efficient indexing.
+	def index_gdsii_top_elements_by_location(self):
+		# Check that GDSII library has been loaded
+		if self.gdsii_lib == None:
+			print "ERROR %s: must load GDSII library before indexing GDSII structures." % (inspect.stack()[0][3])
+			sys.exit(1)
+
+		# Load GDSII structures in a dictionary
+		gdsii_structures_index = {}
+		for structure in self.gdsii_lib:
+			if structure.name not in gdsii_structures_index.keys():
+				gdsii_structures_index[structure.name] = structure
+			else:
+				print "ERROR %s: encountered multiple GDSII structures with the same name (%s)." % (inspect.stack()[0][3], structure.struct_name)
+				sys.exit(2)
+		return gdsii_structures_index
+
 	# Loads GDSII structures elements into a dictionary
 	# keyed by structure name to allow for efficient
 	# structure object lookups.
@@ -174,16 +193,16 @@ class Layout():
 
 	# Returns true if the XY coordinate is inside or
 	# touching the bounding box provided.
-	def is_inside_bb(self, element, x_coord, y_coord, gdsii_layer, offset_x, offset_y, x_reflection, rotation):
+	def is_inside_bb(self, element, x_coord, y_coord, gdsii_layer, offset_x, offset_y, x_reflection, degrees):
 		# Compute bounding-box of gdsii element
 		if isinstance(element, Path):
 			if gdsii_layer == element.layer:
-				bbox = compute_gdsii_path_bbox(element)
+				poly = init_polygon_from_path(element)
 			else:
 				return False
 		elif isinstance(element, Boundary):
 			if gdsii_layer == element.layer:
-				bbox = compute_gdsii_boundary_bbox(element)
+				poly = init_polygon_from_boundary(element)
 			else:
 				return False
 		elif isinstance(element, Box):
@@ -236,15 +255,13 @@ class Layout():
 
 		# Compute translations if necessary
 		if x_reflection == REFLECTION_ABOUT_X_AXIS:
-			bbox = reflect_bbox_across_x_axis(bbox)
-		if rotation != 0 and rotation != None:
-			bbox = rotate_bbox(bbox, rotation)
+			poly.reflect_across_x_axis()
+		if degrees != 0 and degrees != None:
+			poly.rotate(degrees)
 
 		# Check if XY coord is inside another element's bounding box
-		if (x_coord + offset_x) >= bbox.ll_x_coord and (x_coord + offset_x) <= bbox.ur_x_coord:
-			if (y_coord + offset_y) >= bbox.ll_y_coord and (y_coord + offset_y) <= bbox.ur_y_coord:
-				# dbg.debug_print_gdsii_element(element)
-				return True
+		if poly.is_point_inside(x_coord, y_coord, offset_x, offset_y):
+			return True
 		return False
 
 	# Searches the GDSII design to see if the provided point falls

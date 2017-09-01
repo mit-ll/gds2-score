@@ -117,22 +117,32 @@ def debug_print_text_obj(text_obj):
 def debug_print_gdsii_stats(gdsii_lib):
 	# Compute number/type of elements in GDSII
 	# Structures
-	num_structures = 0
+	num_structures  = 0
 	# Elements
-	num_paths 	   = 0
-	num_boundaries = 0
- 	num_nodes 	   = 0
-	num_boxes 	   = 0
-	num_srefs 	   = 0
-	num_arefs 	   = 0
-	num_texts 	   = 0
+	num_paths 	    = 0
+	num_boundaries  = 0
+ 	num_nodes 	    = 0
+	num_boxes 	    = 0
+	num_srefs 	    = 0
+	num_arefs 	    = 0
+	num_texts 	    = 0
+	path_coords     = {}
+	boundary_coords = {}
 	for structure in gdsii_lib:
 		num_structures += 1
 		for element in structure:
 			if isinstance(element, Path):
 				num_paths += 1
+				if len(element.xy) not in path_coords:
+					path_coords[len(element.xy)] = 1
+				else:
+					path_coords[len(element.xy)] += 1
 			elif isinstance(element, Boundary):
 				num_boundaries += 1
+				if len(element.xy) not in boundary_coords:
+					boundary_coords[len(element.xy)] = 1
+				else:
+					boundary_coords[len(element.xy)] += 1
 			elif isinstance(element, Box):
 				num_boxes += 1
 			elif isinstance(element, Node):
@@ -157,6 +167,14 @@ def debug_print_gdsii_stats(gdsii_lib):
 	print " ARefs:      ", num_arefs
 	print " Texts:      ", num_texts
 	print
+	# print "Path Coords:"
+	# print "---------------------"
+	# pprint.pprint(path_coords)
+	# print
+	# print "Boundary Coords:"
+	# print "---------------------"
+	# pprint.pprint(boundary_coords)
+	# print
 
 def debug_print_gdsii_sref_strans_stats(gdsii_lib):
 	# Compute number/type of elements in GDSII

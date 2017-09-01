@@ -2,7 +2,7 @@
 from gdsii.elements import *
 
 # Import Custom Modules
-from bbox import *
+from polygon import *
 
 # Other Imports
 import inspect
@@ -40,10 +40,10 @@ class Net_Segment():
 		self.layer_num  = lef.get_layer_num(gdsii_path.layer, gdsii_path.data_type, layer_map)
 		self.layer_name = lef.get_layer_name(gdsii_path.layer, gdsii_path.data_type, layer_map)
 		self.direction  = self.path_direction()
-		self.ll_x_coord = compute_gdsii_path_bbox(gdsii_path).ll_x_coord
-		self.ll_y_coord = compute_gdsii_path_bbox(gdsii_path).ll_y_coord
-		self.ur_x_coord = compute_gdsii_path_bbox(gdsii_path).ur_x_coord
-		self.ur_y_coord = compute_gdsii_path_bbox(gdsii_path).ur_y_coord
+		self.ll_x_coord = min(init_polygon_from_path(gdsii_path).x_coords)
+		self.ll_y_coord = min(init_polygon_from_path(gdsii_path).y_coords)
+		self.ur_x_coord = max(init_polygon_from_path(gdsii_path).x_coords)
+		self.ur_y_coord = max(init_polygon_from_path(gdsii_path).y_coords)
 
 	def get_bbox(self):
 		return [(self.ll_x_coord, self.ll_y_coord), (self.ur_x_coord, self.ur_y_coord)]
