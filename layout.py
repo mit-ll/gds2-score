@@ -221,15 +221,11 @@ class Layout():
 			curr_y_offset = element.xy[0][1]
 			row_spacing   = (element.xy[2][1] - curr_y_offset) / element.rows
 
-			if element.strans == REFLECTION_ABOUT_X_AXIS or (element.angle != 0 and element.angle != None):
-				dbg.debug_print_aref_obj(element)
-				sys.exit(1)
-
 			# Iterate over elements of referenced structures
 			for row_index in range(element.rows):
 				for col_index in range(element.cols):
 					for sub_element in self.gdsii_structures[element.struct_name]:
-						if self.is_inside_bb(sub_element, x_coord, y_coord, gdsii_layer, curr_x_offset, curr_y_offset, False, 0):
+						if self.is_inside_bb(sub_element, x_coord, y_coord, gdsii_layer, curr_x_offset, curr_y_offset, element.strans, element.angle):
 							return True
 					curr_x_offset += col_spacing
 				curr_y_offset += row_spacing
@@ -241,7 +237,7 @@ class Layout():
 		# Compute translations if necessary
 		if x_reflection == REFLECTION_ABOUT_X_AXIS:
 			bbox = reflect_bbox_across_x_axis(bbox)
-		if rotation != 0:
+		if rotation != 0 and rotation != None:
 			bbox = rotate_bbox(bbox, rotation)
 
 		# Check if XY coord is inside another element's bounding box
