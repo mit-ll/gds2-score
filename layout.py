@@ -26,7 +26,7 @@ class Layout():
 		self.gdsii_lib           = None
 		self.gdsii_structures    = {}
 		self.top_gdsii_structure = None
-		self.top_gdsii_elements  = None
+		self.top_gdsii_elements  = []
 		self.critical_nets       = None
 
 	def __init__(self, top_name, lef_fname, layer_map_fname, gdsii_fname, dot_fname):
@@ -193,7 +193,7 @@ class Layout():
 
 	# Returns true if the XY coordinate is inside or
 	# touching the bounding box provided.
-	def is_inside_bb(self, element, x_coord, y_coord, gdsii_layer, offset_x, offset_y, x_reflection, degrees):
+	def is_inside_poly(self, element, x_coord, y_coord, gdsii_layer, offset_x, offset_y, x_reflection, degrees):
 		# Compute bounding-box of gdsii element
 		if isinstance(element, Path):
 			if gdsii_layer == element.layer:
@@ -222,7 +222,7 @@ class Layout():
 
 			# Iterate over elements of referenced structure
 			for sub_element in self.gdsii_structures[element.struct_name]:
-				if self.is_inside_bb(sub_element, x_coord, y_coord, gdsii_layer, element.xy[0][0], element.xy[0][1], element.strans, element.angle):
+				if self.is_inside_poly(sub_element, x_coord, y_coord, gdsii_layer, element.xy[0][0], element.xy[0][1], element.strans, element.angle):
 					return True
 			return False
 		elif isinstance(element, ARef):
@@ -244,7 +244,7 @@ class Layout():
 			for row_index in range(element.rows):
 				for col_index in range(element.cols):
 					for sub_element in self.gdsii_structures[element.struct_name]:
-						if self.is_inside_bb(sub_element, x_coord, y_coord, gdsii_layer, curr_x_offset, curr_y_offset, element.strans, element.angle):
+						if self.is_inside_poly(sub_element, x_coord, y_coord, gdsii_layer, curr_x_offset, curr_y_offset, element.strans, element.angle):
 							return True
 					curr_x_offset += col_spacing
 				curr_y_offset += row_spacing
@@ -258,9 +258,11 @@ class Layout():
 			poly.reflect_across_x_axis()
 		if degrees != 0 and degrees != None:
 			poly.rotate(degrees)
+		if offset_x != 0 or offset_y != 0:
+			poly.shift_x_y(offset_x, offset_y)
 
 		# Check if XY coord is inside another element's bounding box
-		if poly.is_point_inside(x_coord, y_coord, offset_x, offset_y):
+		if poly.is_point_inside(x_coord, y_coord):
 			return True
 		return False
 
@@ -269,7 +271,7 @@ class Layout():
 	# the point lies inside the bounding box of another GDSII element.
 	def is_point_blocked(self, x_coord, y_coord, gdsii_layer):
 		for element in self.top_gdsii_structure:
-			if self.is_inside_bb(element, x_coord, y_coord, gdsii_layer, 0, 0, False, 0):
+			if self.is_inside_poly(element, x_coord, y_coord, gdsii_layer, 0, 0, False, 0):
 				return True
 		return False
 
