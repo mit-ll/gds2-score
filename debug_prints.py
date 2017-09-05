@@ -128,21 +128,33 @@ def debug_print_gdsii_stats(gdsii_lib):
 	num_texts 	    = 0
 	path_coords     = {}
 	boundary_coords = {}
+	max_boundary    = None
+	min_boundary    = None
 	for structure in gdsii_lib:
 		num_structures += 1
 		for element in structure:
 			if isinstance(element, Path):
 				num_paths += 1
-				if len(element.xy) not in path_coords:
-					path_coords[len(element.xy)] = 1
-				else:
-					path_coords[len(element.xy)] += 1
+				# if len(element.xy) not in path_coords:
+				# 	path_coords[len(element.xy)] = 1
+				# else:
+				# 	path_coords[len(element.xy)] += 1
 			elif isinstance(element, Boundary):
 				num_boundaries += 1
-				if len(element.xy) not in boundary_coords:
-					boundary_coords[len(element.xy)] = 1
-				else:
-					boundary_coords[len(element.xy)] += 1
+				# if len(element.xy) not in boundary_coords:
+				# 	boundary_coords[len(element.xy)] = 1
+				# else:
+				# 	boundary_coords[len(element.xy)] += 1
+				# # Update Max Coord Boundary
+				# if max_boundary == None:
+				# 	max_boundary = element
+				# elif sorted(element.xy, key=lambda x:(x[0], x[1]))[-1] > sorted(max_boundary.xy, key=lambda x:(x[0], x[1]))[-1]:
+				# 	max_boundary = element
+				# # Update Min Coord Boundary
+				# if min_boundary == None:
+				# 	min_boundary = element
+				# elif sorted(element.xy, key=lambda x:(x[0], x[1]))[0] < sorted(min_boundary.xy, key=lambda x:(x[0], x[1]))[0]:
+				# 	min_boundary = element
 			elif isinstance(element, Box):
 				num_boxes += 1
 			elif isinstance(element, Node):
@@ -174,6 +186,14 @@ def debug_print_gdsii_stats(gdsii_lib):
 	# print "Boundary Coords:"
 	# print "---------------------"
 	# pprint.pprint(boundary_coords)
+	# print
+	# print "Max Boundary:"
+	# print "---------------------"
+	# debug_print_boundary_obj(max_boundary)
+	# print
+	# print "Min Boundary:"
+	# print "---------------------"
+	# debug_print_boundary_obj(min_boundary)
 	# print
 
 def debug_print_gdsii_sref_strans_stats(gdsii_lib):

@@ -11,12 +11,10 @@ import lef
 import net
 
 # Other Imports
+import copy
 import time
 import sys
 import pprint
-
-# GDSII Spec. Constants
-REFLECTION_ABOUT_X_AXIS = 32768
 
 class Layout():
 	def __init__(self):
@@ -26,7 +24,6 @@ class Layout():
 		self.gdsii_lib           = None
 		self.gdsii_structures    = {}
 		self.top_gdsii_structure = None
-		self.top_gdsii_elements  = []
 		self.critical_nets       = None
 
 	def __init__(self, top_name, lef_fname, layer_map_fname, gdsii_fname, dot_fname):
@@ -36,27 +33,95 @@ class Layout():
 		self.gdsii_lib           = self.load_gdsii_library(gdsii_fname)
 		self.gdsii_structures    = self.index_gdsii_structures_by_name()
 		self.top_gdsii_structure = self.gdsii_structures[top_name]
-		self.top_gdsii_elements  = []
-		self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname)) 
-	
-	# Loads GDSII top level structure elements into a grid
-	# according to approximate location in the top level GDSII
-	# structure for more efficient indexing.
-	def index_gdsii_top_elements_by_location(self):
+		self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname))
+
+	def is_element_nearby(self, element, x_coord, y_coord, threshold_distance, gdsii_layer, offset_x, offset_y, x_reflection, degrees):
+		nearby_polygons = []
+
+		if isinstance(element, Path):
+			if gdsii_layer == element.layer:
+				poly = init_polygon_from_path(element)
+				
+				# Compute translations if any
+				poly.compute_translations(offset_x, offset_y, x_reflection, degrees)
+				
+				# Check if polygon is nearby
+				if poly.is_nearby(x_coord, y_coord, threshold_distance):
+					nearby_polygons.append(copy.deepcopy(poly))
+		elif isinstance(element, Boundary):
+			if gdsii_layer == element.layer:
+				poly = init_polygon_from_boundary(element)
+
+				# Compute translations if any
+				poly.compute_translations(offset_x, offset_y, x_reflection, degrees)
+
+				# Check if polygon is nearby
+				if poly.is_nearby(x_coord, y_coord, threshold_distance):
+					nearby_polygons.append(copy.deepcopy(poly))
+		elif isinstance(element, SRef):
+			# Check if SRef properties are supported by this tool
+			# and that the structure pointed to exists.
+			if element.struct_name in self.gdsii_structures:
+				is_sref_type_supported(element, self.gdsii_structures[element.struct_name])
+			else:
+				print "ERROR %s: SRef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
+				sys.exit(1)
+
+			# Iterate over elements of referenced structure
+			for sub_element in self.gdsii_structures[element.struct_name]:
+				nearby_polygons.extend(self.is_element_nearby(sub_element, x_coord, y_coord, threshold_distance, gdsii_layer, element.xy[0][0], element.xy[0][1], element.strans, element.angle))
+		elif isinstance(element, ARef):
+			# Check if SRef properties are supported by this tool
+			# and that the structure pointed to exists.
+			if element.struct_name in self.gdsii_structures:
+				is_aref_type_supported(element, self.gdsii_structures[element.struct_name])
+			else:
+				print "ERROR %s: ARef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
+				sys.exit(1)
+
+			# Retrieve row and column spacing
+			curr_x_offset = element.xy[0][0]
+			col_spacing   = (element.xy[1][0] - curr_x_offset) / element.cols
+			curr_y_offset = element.xy[0][1]
+			row_spacing   = (element.xy[2][1] - curr_y_offset) / element.rows
+
+			# Iterate over elements of referenced structures
+			for row_index in range(element.rows):
+				for col_index in range(element.cols):
+					for sub_element in self.gdsii_structures[element.struct_name]:
+						nearby_polygons.extend(self.is_element_nearby(sub_element, x_coord, y_coord, threshold_distance, gdsii_layer, curr_x_offset, curr_y_offset, element.strans, element.angle))
+					curr_x_offset += col_spacing
+				curr_y_offset += row_spacing
+		# Ignore GDSII Text elements
+		# elif isinstance(element, Text):
+		elif isinstance(element, Box):
+			print "UNSUPPORTED %s: GDSII Box elements are not supported." % (inspect.stack()[1][3])
+			sys.exit(3)
+		elif isinstance(element, Node):
+			print "UNSUPPORTED %s: GDSII Node elements are not supported." % (inspect.stack()[1][3])
+			sys.exit(3)
+
+		return nearby_polygons
+
+	# Extracts a list of GDSII elements (converted to polygon objects)
+	# that are in close proimity to a given security-critical net segement.
+	# By only examining nearby elements, the runtime of this tool
+	# significantly descreases.
+	def extract_nearby_elements(self, net_segment, threshold_distance):
 		# Check that GDSII library has been loaded
-		if self.gdsii_lib == None:
+		if self.gdsii_lib == None or self.top_gdsii_structure == None:
 			print "ERROR %s: must load GDSII library before indexing GDSII structures." % (inspect.stack()[0][3])
 			sys.exit(1)
 
-		# Load GDSII structures in a dictionary
-		gdsii_structures_index = {}
-		for structure in self.gdsii_lib:
-			if structure.name not in gdsii_structures_index.keys():
-				gdsii_structures_index[structure.name] = structure
-			else:
-				print "ERROR %s: encountered multiple GDSII structures with the same name (%s)." % (inspect.stack()[0][3], structure.struct_name)
-				sys.exit(2)
-		return gdsii_structures_index
+		nearby_polygons = []
+		path_center_x   = net_segment.ur_x_coord - net_segment.ll_x_coord
+		path_center_y   = net_segment.ur_y_coord - net_segment.ll_y_coord
+
+		# Find all polygons that are within the threshold distance
+		# of the critical GDSII path object.
+		for element in self.top_gdsii_structure:
+			nearby_polygons.extend(self.is_element_nearby(element, path_center_x, path_center_y, threshold_distance, net_segment.gdsii_path.layer, 0, 0, 0, 0))
+		return nearby_polygons
 
 	# Loads GDSII structures elements into a dictionary
 	# keyed by structure name to allow for efficient
@@ -190,88 +255,3 @@ class Layout():
 		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
 		print "----------------------------------------------"
 		return layer_map
-
-	# Returns true if the XY coordinate is inside or
-	# touching the bounding box provided.
-	def is_inside_poly(self, element, x_coord, y_coord, gdsii_layer, offset_x, offset_y, x_reflection, degrees):
-		# Compute bounding-box of gdsii element
-		if isinstance(element, Path):
-			if gdsii_layer == element.layer:
-				poly = init_polygon_from_path(element)
-			else:
-				return False
-		elif isinstance(element, Boundary):
-			if gdsii_layer == element.layer:
-				poly = init_polygon_from_boundary(element)
-			else:
-				return False
-		elif isinstance(element, Box):
-			print "UNSUPPORTED %s: GDSII Box elements are not supported." % (inspect.stack()[1][3])
-			sys.exit(3)
-		elif isinstance(element, Node):
-			print "UNSUPPORTED %s: GDSII Node elements are not supported." % (inspect.stack()[1][3])
-			sys.exit(3)
-		elif isinstance(element, SRef):
-			# Check if SRef properties are supported by this tool
-			# and that the structure pointed to exists.
-			if element.struct_name in self.gdsii_structures:
-				is_sref_type_supported(element, self.gdsii_structures[element.struct_name])
-			else:
-				print "ERROR %s: SRef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
-				sys.exit(1)
-
-			# Iterate over elements of referenced structure
-			for sub_element in self.gdsii_structures[element.struct_name]:
-				if self.is_inside_poly(sub_element, x_coord, y_coord, gdsii_layer, element.xy[0][0], element.xy[0][1], element.strans, element.angle):
-					return True
-			return False
-		elif isinstance(element, ARef):
-			# Check if SRef properties are supported by this tool
-			# and that the structure pointed to exists.
-			if element.struct_name in self.gdsii_structures:
-				is_aref_type_supported(element, self.gdsii_structures[element.struct_name])
-			else:
-				print "ERROR %s: ARef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
-				sys.exit(1)
-
-			# Retrieve row and column spacing
-			curr_x_offset = element.xy[0][0]
-			col_spacing   = (element.xy[1][0] - curr_x_offset) / element.cols
-			curr_y_offset = element.xy[0][1]
-			row_spacing   = (element.xy[2][1] - curr_y_offset) / element.rows
-
-			# Iterate over elements of referenced structures
-			for row_index in range(element.rows):
-				for col_index in range(element.cols):
-					for sub_element in self.gdsii_structures[element.struct_name]:
-						if self.is_inside_poly(sub_element, x_coord, y_coord, gdsii_layer, curr_x_offset, curr_y_offset, element.strans, element.angle):
-							return True
-					curr_x_offset += col_spacing
-				curr_y_offset += row_spacing
-			return False
-		elif isinstance(element, Text):
-			# Ignore GDSII Text elements
-			return False
-
-		# Compute translations if necessary
-		if x_reflection == REFLECTION_ABOUT_X_AXIS:
-			poly.reflect_across_x_axis()
-		if degrees != 0 and degrees != None:
-			poly.rotate(degrees)
-		if offset_x != 0 or offset_y != 0:
-			poly.shift_x_y(offset_x, offset_y)
-
-		# Check if XY coord is inside another element's bounding box
-		if poly.is_point_inside(x_coord, y_coord):
-			return True
-		return False
-
-	# Searches the GDSII design to see if the provided point falls
-	# inside the bounding box of another object. Returns True if 
-	# the point lies inside the bounding box of another GDSII element.
-	def is_point_blocked(self, x_coord, y_coord, gdsii_layer):
-		for element in self.top_gdsii_structure:
-			if self.is_inside_poly(element, x_coord, y_coord, gdsii_layer, 0, 0, False, 0):
-				return True
-		return False
-

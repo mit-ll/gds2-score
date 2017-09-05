@@ -1,7 +1,8 @@
 # Import Custom Modules
 import debug_prints as dbg
-from net    import *
-from layout import *
+from polygon import *
+from net     import *
+from layout  import *
 
 # Import GDSII Library
 from gdsii.library import Library
@@ -20,7 +21,7 @@ DEBUG_PRINTS = True
 # 3 = Unhandled feature
 # 4 = Usage Error
 
-def check_blockage(net_segment, layout, direction, step_size, check_distance):
+def check_blockage(net_segment, nearby_polygons, layout, step_size, check_distance):
 	num_units_blocked = 0
 
 	# Scan all 4 perimeter sides to check for blockages
@@ -50,11 +51,15 @@ def check_blockage(net_segment, layout, direction, step_size, check_distance):
 		
 		while curr_scan_coord < end_scan_coord:
 			if direction == 'N' or direction == 'S':
-				if layout.is_point_blocked(curr_scan_coord, curr_fixed_coord, net_segment.gdsii_path.layer):
-					num_units_blocked += 1
+				for poly in nearby_polygons:
+					if poly.is_point_inside(curr_scan_coord, curr_fixed_coord):
+						num_units_blocked += 1
+				# if layout.is_point_blocked(curr_scan_coord, curr_fixed_coord, net_segment.gdsii_path.layer):
 			else:
-				if layout.is_point_blocked(curr_fixed_coord, curr_scan_coord, net_segment.gdsii_path.layer):
-					num_units_blocked += 1
+				for poly in nearby_polygons:
+					if poly.is_point_inside(curr_fixed_coord, curr_scan_coord):
+						num_units_blocked += 1
+				# if layout.is_point_blocked(curr_fixed_coord, curr_scan_coord, net_segment.gdsii_path.layer):
 			curr_scan_coord += step_size
 	
 	return num_units_blocked
@@ -68,22 +73,37 @@ def analyze_critical_nets(layout):
 			print net.fullname
 		print
 
+	# Extract Nearby Polygons in the Design
+	# These are the objects that could possibly block
+	# connection points to a security critical net.
+	start_time = time.time()
+	print "----------------------------------------------"
+	print "Extracting nearby polygons ..."
+	nearby_polygons = {}
+	for net in layout.critical_nets:
+		nearby_polygons[net.fullname] = []
+		for net_segment in net.segments:
+			nearby_threshold_distance = net_segment.gdsii_path.width + (net_segment.length)
+			nearby_polygons[net.fullname].append(layout.extract_nearby_elements(net_segment, nearby_threshold_distance))
+	print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
+	print "----------------------------------------------"
+
 	for net in layout.critical_nets:
 		print "Analying Net: ", net.fullname
 		for net_segment in net.segments:
 			path_segment_counter = 1
 			top_bottom_perimeter = net_segment.ur_x_coord - net_segment.ll_x_coord
 			left_right_perimeter = net_segment.ur_y_coord - net_segment.ll_y_coord
-			perimeter            = (2 * top_bottom_perimeter) + (2 * left_right_perimeter) 
-			if DEBUG_PRINTS:
-				dbg.debug_print_path_obj(net_segment.gdsii_path)
+			perimeter            = (2 * top_bottom_perimeter) + (2 * left_right_perimeter)
+			polygons_to_check    = nearby_polygons[net.fullname][path_segment_counter-1]
 
 			# Report Path Segment Condition
 			print "	Analyzing Net Segment ", path_segment_counter
-			print "		Layer:         ", net_segment.layer_num
-			print "		Bounding Box:  ", net_segment.get_bbox()
-			print "		Perimeter:     ", perimeter
-			print "		Klayout Query: " 
+			print "		Layer:          ", net_segment.layer_num
+			print "		Bounding Box:   ", net_segment.get_bbox()
+			print "		Perimeter:      ", perimeter
+			print "		Nearby Polygons:", len(polygons_to_check)
+			print "		Klayout Query:  " 
 			print "			paths on layer %d/%d of cell MAL_TOP where" % (net_segment.gdsii_path.layer, net_segment.gdsii_path.data_type)
 			print "			shape.path.bbox.left==%d &&"  % (net_segment.ll_x_coord)
 			print "			shape.path.bbox.right==%d &&" % (net_segment.ur_x_coord)
@@ -91,39 +111,19 @@ def analyze_critical_nets(layout):
 			print "			shape.path.bbox.bottom==%d"   % (net_segment.ll_y_coord)
 
 			# check_path_blockage() Parameters
-			step_size       = 100
-			check_distance  = layout.lef.layers[net_segment.layer_name].pitch * layout.lef.database_units
-
-			# Check NORTH
-			start_time = time.time()
-			north_perimeter_blocked = check_blockage(net_segment, layout, 'N', step_size, check_distance)
-			print "		N-Perimeter Blocked: ", north_perimeter_blocked
-			print "		Done - Time Elapsed:", (time.time() - start_time), "seconds."
-			print "		----------------------------------------------"
-
-			# Check EAST
-			start_time = time.time()
-			east_perimeter_blocked = check_blockage(net_segment, layout, 'E', step_size, check_distance)
-			print "		E-Perimeter Blocked: ", east_perimeter_blocked
-			print "		Done - Time Elapsed:", (time.time() - start_time), "seconds."
-			print "		----------------------------------------------"
-
-			# Check SOUTH
-			start_time = time.time()
-			south_perimeter_blocked = check_blockage(net_segment, layout, 'S', step_size, check_distance)
-			print "		S-Perimeter Blocked: ", south_perimeter_blocked
-			print "		Done - Time Elapsed:", (time.time() - start_time), "seconds."
-			print "		----------------------------------------------"
-
-			# Check WEST
-			start_time = time.time()
-			west_perimeter_blocked = check_blockage(net_segment, layout, 'W', step_size, check_distance)
-			print "		W-Perimeter Blocked: ", west_perimeter_blocked
-			print "		Done - Time Elapsed:", (time.time() - start_time), "seconds."
-			print "		----------------------------------------------"
+			step_size      = 100
+			check_distance = layout.lef.layers[net_segment.layer_name].pitch * layout.lef.database_units
 			
+			# Check N, E, S, W
+			start_time = time.time()
+			perimeter_blocked = check_blockage(net_segment, nearby_polygons, layout, step_size, check_distance)
+			print "		Perimeter Blocked: ", perimeter_blocked
+			print "		Done - Time Elapsed:", (time.time() - start_time), "seconds."
+			print "		----------------------------------------------"
 			# Check ABOVE
 			# Check BELOW
+
+			path_segment_counter += 1
 
 def main():
 	TOP_LEVEL_MODULE          = 'MAL_TOP'

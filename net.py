@@ -34,6 +34,8 @@ class Net_Segment():
 		self.ll_y_coord = 0
 		self.ur_x_coord = 0
 		self.ur_y_coord = 0
+		self.length     = 0
+		self.center     = 0
 
 	def __init__(self, gdsii_path, lef, layer_map):
 		self.gdsii_path = gdsii_path
@@ -44,6 +46,7 @@ class Net_Segment():
 		self.ll_y_coord = min(init_polygon_from_path(gdsii_path).y_coords)
 		self.ur_x_coord = max(init_polygon_from_path(gdsii_path).x_coords)
 		self.ur_y_coord = max(init_polygon_from_path(gdsii_path).y_coords)
+		self.length     = max((self.ur_x_coord - self.ll_x_coord), (self.ur_y_coord - self.ll_y_coord))
 
 	def get_bbox(self):
 		return [(self.ll_x_coord, self.ll_y_coord), (self.ur_x_coord, self.ur_y_coord)]
