@@ -35,7 +35,7 @@ class Layout():
 		self.top_gdsii_structure = self.gdsii_structures[top_name]
 		self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname))
 
-	def is_element_nearby(self, element, x_coord, y_coord, threshold_distance, gdsii_layer, offset_x, offset_y, x_reflection, degrees):
+	def is_element_nearby(self, element, threshold_bbox, gdsii_layer, offset_x, offset_y, x_reflection, degrees):
 		nearby_polygons = []
 
 		if isinstance(element, Path):
@@ -69,7 +69,7 @@ class Layout():
 
 			# Iterate over elements of referenced structure
 			for sub_element in self.gdsii_structures[element.struct_name]:
-				nearby_polygons.extend(self.is_element_nearby(sub_element, x_coord, y_coord, threshold_distance, gdsii_layer, element.xy[0][0], element.xy[0][1], element.strans, element.angle))
+				nearby_polygons.extend(self.is_element_nearby(sub_element, threshold_bbox, gdsii_layer, element.xy[0][0], element.xy[0][1], element.strans, element.angle))
 		elif isinstance(element, ARef):
 			# Check if SRef properties are supported by this tool
 			# and that the structure pointed to exists.
@@ -89,7 +89,7 @@ class Layout():
 			for row_index in range(element.rows):
 				for col_index in range(element.cols):
 					for sub_element in self.gdsii_structures[element.struct_name]:
-						nearby_polygons.extend(self.is_element_nearby(sub_element, x_coord, y_coord, threshold_distance, gdsii_layer, curr_x_offset, curr_y_offset, element.strans, element.angle))
+						nearby_polygons.extend(self.is_element_nearby(sub_element, threshold_bbox, gdsii_layer, curr_x_offset, curr_y_offset, element.strans, element.angle))
 					curr_x_offset += col_spacing
 				curr_y_offset += row_spacing
 		# Ignore GDSII Text elements
@@ -107,20 +107,18 @@ class Layout():
 	# that are in close proimity to a given security-critical net segement.
 	# By only examining nearby elements, the runtime of this tool
 	# significantly descreases.
-	def extract_nearby_elements(self, net_segment, threshold_distance):
+	def extract_nearby_elements(self, net_segment, threshold_bbox):
 		# Check that GDSII library has been loaded
 		if self.gdsii_lib == None or self.top_gdsii_structure == None:
 			print "ERROR %s: must load GDSII library before indexing GDSII structures." % (inspect.stack()[0][3])
 			sys.exit(1)
 
 		nearby_polygons = []
-		path_center_x   = net_segment.ur_x_coord - net_segment.ll_x_coord
-		path_center_y   = net_segment.ur_y_coord - net_segment.ll_y_coord
-
-		# Find all polygons that are within the threshold distance
-		# of the critical GDSII path object.
+		
+		# Find all polygons that overlap the threshold 
+		# bounding box of the critical GDSII path object.
 		for element in self.top_gdsii_structure:
-			nearby_polygons.extend(self.is_element_nearby(element, path_center_x, path_center_y, threshold_distance, net_segment.gdsii_path.layer, 0, 0, 0, 0))
+			nearby_polygons.extend(self.is_element_nearby(element, threshold_bbox, net_segment.gdsii_path.layer, 0, 0, 0, 0))
 		return nearby_polygons
 
 	# Loads GDSII structures elements into a dictionary

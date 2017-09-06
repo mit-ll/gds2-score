@@ -27,21 +27,21 @@ def check_blockage(net_segment, nearby_polygons, layout, step_size, check_distan
 	# Scan all 4 perimeter sides to check for blockages
 	for direction in ['N', 'E', 'S', 'W']:
 		if direction == 'N':
-			curr_scan_coord  = net_segment.ll_x_coord
-			end_scan_coord   = net_segment.ur_x_coord
-			curr_fixed_coord = net_segment.ur_y_coord + check_distance
+			curr_scan_coord  = net_segment.bbox.ll_x
+			end_scan_coord   = net_segment.bbox.ur_x
+			curr_fixed_coord = net_segment.bbox.ur_y + check_distance
 		elif direction == 'E':
-			curr_scan_coord  = net_segment.ll_y_coord
-			end_scan_coord   = net_segment.ur_y_coord
-			curr_fixed_coord = net_segment.ur_x_coord + check_distance
+			curr_scan_coord  = net_segment.bbox.ll_y
+			end_scan_coord   = net_segment.bbox.ur_y
+			curr_fixed_coord = net_segment.bbox.ur_x + check_distance
 		elif direction == 'S':
-			curr_scan_coord  = net_segment.ll_x_coord
-			end_scan_coord   = net_segment.ur_x_coord
-			curr_fixed_coord = net_segment.ll_y_coord - check_distance
+			curr_scan_coord  = net_segment.bbox.ll_x
+			end_scan_coord   = net_segment.bbox.ur_x
+			curr_fixed_coord = net_segment.bbox.ll_y - check_distance
 		elif direction == 'W':
-			curr_scan_coord  = net_segment.ll_y_coord
-			end_scan_coord   = net_segment.ur_y_coord
-			curr_fixed_coord = net_segment.ll_x_coord - check_distance
+			curr_scan_coord  = net_segment.bbox.ll_y
+			end_scan_coord   = net_segment.bbox.ur_y
+			curr_fixed_coord = net_segment.bbox.ll_x - check_distance
 		else:
 			print "ERROR %s: unknown scan direction (%s)." % (inspect.stack()[0][3], direction)
 			sys.exit(4)
@@ -54,12 +54,10 @@ def check_blockage(net_segment, nearby_polygons, layout, step_size, check_distan
 				for poly in nearby_polygons:
 					if poly.is_point_inside(curr_scan_coord, curr_fixed_coord):
 						num_units_blocked += 1
-				# if layout.is_point_blocked(curr_scan_coord, curr_fixed_coord, net_segment.gdsii_path.layer):
 			else:
 				for poly in nearby_polygons:
 					if poly.is_point_inside(curr_fixed_coord, curr_scan_coord):
 						num_units_blocked += 1
-				# if layout.is_point_blocked(curr_fixed_coord, curr_scan_coord, net_segment.gdsii_path.layer):
 			curr_scan_coord += step_size
 	
 	return num_units_blocked
@@ -83,8 +81,9 @@ def analyze_critical_nets(layout):
 	for net in layout.critical_nets:
 		nearby_polygons[net.fullname] = []
 		for net_segment in net.segments:
-			nearby_threshold_distance = net_segment.gdsii_path.width + (net_segment.length)
-			nearby_polygons[net.fullname].append(layout.extract_nearby_elements(net_segment, nearby_threshold_distance))
+			nearby_threshold_dist = net_segment.gdsii_path.width + net_segment.bbox.length
+			nearby_threshold_bbox = BBox(net_segment.bbox, nearby_threshold_dist)
+			nearby_polygons[net.fullname].append(layout.extract_nearby_elements(net_segment, nearby_threshold_bbox))
 	print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
 	print "----------------------------------------------"
 
@@ -92,16 +91,14 @@ def analyze_critical_nets(layout):
 		print "Analying Net: ", net.fullname
 		for net_segment in net.segments:
 			path_segment_counter = 1
-			top_bottom_perimeter = net_segment.ur_x_coord - net_segment.ll_x_coord
-			left_right_perimeter = net_segment.ur_y_coord - net_segment.ll_y_coord
-			perimeter            = (2 * top_bottom_perimeter) + (2 * left_right_perimeter)
+			perimeter            = net_segment.bbox.get_perimeter()
 			polygons_to_check    = nearby_polygons[net.fullname][path_segment_counter-1]
 
 			# Report Path Segment Condition
 			print "	Analyzing Net Segment ", path_segment_counter
 			print "		Layer:          ", net_segment.layer_num
-			print "		Bounding Box:   ", net_segment.get_bbox()
-			print "		Perimeter:      ", perimeter
+			print "		Bounding Box:   ", net_segment.bbox.get_bbox_as_list()
+			print "		Perimeter:      ", net_segment.bbox.get_perimeter()
 			print "		Nearby Polygons:", len(polygons_to_check)
 			print "		Klayout Query:  " 
 			print "			paths on layer %d/%d of cell MAL_TOP where" % (net_segment.gdsii_path.layer, net_segment.gdsii_path.data_type)
