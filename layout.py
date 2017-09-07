@@ -7,57 +7,47 @@ from gdsii.elements import *
 
 # Import Custom Modules
 from polygon import *
-import lef
-import net
+from lef     import *
+from net     import *
+from error   import *
 
 # Other Imports
 import copy
 import time
 import sys
-import pprint
 
 class Layout():
-	def __init__(self):
-		self.top_level_name      = None  
-		self.lef                 = None
-		self.layer_map           = None
-		self.gdsii_lib           = None
-		self.gdsii_structures    = {}
-		self.top_gdsii_structure = None
-		self.critical_nets       = None
-
 	def __init__(self, top_name, lef_fname, layer_map_fname, gdsii_fname, dot_fname):
 		self.top_level_name      = top_name 
-		self.lef                 = lef.LEF(lef_fname)
+		self.lef                 = LEF(lef_fname)
 		self.layer_map           = self.load_layer_map(layer_map_fname)
 		self.gdsii_lib           = self.load_gdsii_library(gdsii_fname)
 		self.gdsii_structures    = self.index_gdsii_structures_by_name()
 		self.top_gdsii_structure = self.gdsii_structures[top_name]
 		self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname))
+		self.extract_nearby_polygons()
 
-	def is_element_nearby(self, element, threshold_bbox, gdsii_layer, offset_x, offset_y, x_reflection, degrees):
-		nearby_polygons = []
-
+	def is_element_nearby(self, element, net_segment, offset_x, offset_y, x_reflection, degrees):
 		if isinstance(element, Path):
-			if gdsii_layer == element.layer:
-				poly = init_polygon_from_path(element)
+			if net_segment.gdsii_path.layer == element.layer:
+				poly = Polygon.from_gdsii_path(element)
 				
 				# Compute translations if any
 				poly.compute_translations(offset_x, offset_y, x_reflection, degrees)
 				
 				# Check if polygon is nearby
-				if poly.is_nearby(x_coord, y_coord, threshold_distance):
-					nearby_polygons.append(copy.deepcopy(poly))
+				if poly.overlaps(net_segment.nearby_bbox):
+					net_segment.nearby_polygons.append(copy.deepcopy(poly))
 		elif isinstance(element, Boundary):
-			if gdsii_layer == element.layer:
-				poly = init_polygon_from_boundary(element)
+			if net_segment.gdsii_path.layer == element.layer:
+				poly = Polygon.from_gdsii_boundary(element)
 
 				# Compute translations if any
 				poly.compute_translations(offset_x, offset_y, x_reflection, degrees)
 
 				# Check if polygon is nearby
-				if poly.is_nearby(x_coord, y_coord, threshold_distance):
-					nearby_polygons.append(copy.deepcopy(poly))
+				if poly.overlaps(net_segment.nearby_bbox):
+					net_segment.nearby_polygons.append(copy.deepcopy(poly))
 		elif isinstance(element, SRef):
 			# Check if SRef properties are supported by this tool
 			# and that the structure pointed to exists.
@@ -69,7 +59,7 @@ class Layout():
 
 			# Iterate over elements of referenced structure
 			for sub_element in self.gdsii_structures[element.struct_name]:
-				nearby_polygons.extend(self.is_element_nearby(sub_element, threshold_bbox, gdsii_layer, element.xy[0][0], element.xy[0][1], element.strans, element.angle))
+				self.is_element_nearby(sub_element, net_segment, element.xy[0][0], element.xy[0][1], element.strans, element.angle)
 		elif isinstance(element, ARef):
 			# Check if SRef properties are supported by this tool
 			# and that the structure pointed to exists.
@@ -89,7 +79,7 @@ class Layout():
 			for row_index in range(element.rows):
 				for col_index in range(element.cols):
 					for sub_element in self.gdsii_structures[element.struct_name]:
-						nearby_polygons.extend(self.is_element_nearby(sub_element, threshold_bbox, gdsii_layer, curr_x_offset, curr_y_offset, element.strans, element.angle))
+						self.is_element_nearby(sub_element, net_segment, curr_x_offset, curr_y_offset, element.strans, element.angle)
 					curr_x_offset += col_spacing
 				curr_y_offset += row_spacing
 		# Ignore GDSII Text elements
@@ -101,25 +91,21 @@ class Layout():
 			print "UNSUPPORTED %s: GDSII Node elements are not supported." % (inspect.stack()[1][3])
 			sys.exit(3)
 
-		return nearby_polygons
-
-	# Extracts a list of GDSII elements (converted to polygon objects)
-	# that are in close proimity to a given security-critical net segement.
-	# By only examining nearby elements, the runtime of this tool
-	# significantly descreases.
-	def extract_nearby_elements(self, net_segment, threshold_bbox):
-		# Check that GDSII library has been loaded
-		if self.gdsii_lib == None or self.top_gdsii_structure == None:
-			print "ERROR %s: must load GDSII library before indexing GDSII structures." % (inspect.stack()[0][3])
-			sys.exit(1)
-
-		nearby_polygons = []
+	# Extracts a list of GDSII elements (converted to polygon objects) that are in close
+	# proimity to a given security-critical net segement. This is doen by finding all 
+	# polygons that overlap the nearby-bounding-box of the critical net_segment object.
+	# By only examining nearby elements, the runtime of this tool significantly descreases.
+	def extract_nearby_polygons(self):
+		start_time = time.time()
+		print "Extracting nearby polygons ..."
 		
-		# Find all polygons that overlap the threshold 
-		# bounding box of the critical GDSII path object.
 		for element in self.top_gdsii_structure:
-			nearby_polygons.extend(self.is_element_nearby(element, threshold_bbox, net_segment.gdsii_path.layer, 0, 0, 0, 0))
-		return nearby_polygons
+			for net in self.critical_nets:
+				for net_segment in net.segments:
+					self.is_element_nearby(element, net_segment, 0, 0, 0, 0)
+		
+		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
+		print "----------------------------------------------"
 
 	# Loads GDSII structures elements into a dictionary
 	# keyed by structure name to allow for efficient
@@ -167,7 +153,7 @@ class Layout():
 
 		# Initialize Net Objects
 		for net_name in critical_paths.keys():
-			critical_nets.append(net.Net(net_name, critical_paths[net_name], self.lef, self.layer_map))
+			critical_nets.append(Net(net_name, critical_paths[net_name], self.lef, self.layer_map))
 
 		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
 		print "----------------------------------------------"

@@ -14,10 +14,13 @@ import sys
 # 3 = Unhandled feature
 # 4 = Usage Error
 
+# GDSII Spec. Constants
+REFLECTION_ABOUT_X_AXIS = 32768
+
 # Returns True if the Path type is currently supported by 
 # this tool. Else, script exits with error code 3.
 # @TODO: Handle more than two coordinate pairs
-# @TODO: Handle more path_types than just type 2
+# @TODO: Handle more path_types than just type 2 and 0
 def is_path_type_supported(path):
 	if len(path.xy) == 2 and path.path_type == 0 or path.path_type == 2:
 		return True
@@ -30,7 +33,7 @@ def is_path_type_supported(path):
 
 # Returns True if the SRef type is currently supported by 
 # this tool. Else, script exits with error code 3.
-# @TODO: Handle SRef magnitude and angle transformations.
+# @TODO: Handle SRef magnitude and any angle transformations.
 def is_sref_type_supported(sref, structure):
 	supported_strans = [ None, 0, REFLECTION_ABOUT_X_AXIS ]
 	supported_angles = [ None, 0, 90, 180, 270 ]
@@ -45,7 +48,7 @@ def is_sref_type_supported(sref, structure):
 
 # Returns True if the ARef type is currently supported by 
 # this tool. Else, script exits with error code 3.
-# @TODO: Handle ARef magnitude and angle transformations.
+# @TODO: Handle ARef magnitude and any angle transformations.
 def is_aref_type_supported(aref, structure):
 	supported_strans = [ None, 0, REFLECTION_ABOUT_X_AXIS ]
 	supported_angles = [ None, 0, 90, 180, 270 ]

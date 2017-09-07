@@ -3,11 +3,6 @@ import sys
 import time
 
 class LEF:
-	def __init__(self):
-		self.database_units     = 0
-		self.manufacturing_grid = 0
-		self.layers             = {}
-
 	def __init__(self, lef_fname):
 		self.database_units     = 0
 		self.manufacturing_grid = 0
@@ -129,24 +124,6 @@ class LEF:
 		return
 
 class Routing_Layer:
-	def __init__(self):
-		self.name      = None
-		self.layer_num = None
-		self.direction = None
-		self.pitch     = None
-		self.offset    = None
-		self.min_width = None
-		self.max_width = None
-		self.width     = None
-		self.spacing   = None
-		# self.area
-		# self.min_enclosed_area
-		# self.min_density
-		# self.max_density
-		# self.density_check_window
-		# self.density_check_step
-		# self.min_cut
-
 	def __init__(self, name, num, direction, pitch, offset, min_width, max_width, width, spacing):
 		self.name      = name
 		self.layer_num = num
@@ -186,9 +163,6 @@ class Routing_Layer:
 				print "RANGE %.4f %.4f" % (range_val[0], range_val[1])
 
 class Via_Layer:
-	def __init__(self):
-		self.spacing = None
-
 	def __init__(self, spacing):
 		self.spacing = spacing
 
