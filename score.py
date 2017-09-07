@@ -72,17 +72,16 @@ def analyze_critical_nets(layout):
 
 	for net in layout.critical_nets:
 		print "Analying Net: ", net.fullname
+		path_segment_counter = 1
 		for net_segment in net.segments:
-			path_segment_counter = 1
-
 			# Report Path Segment Condition
-			print "	Analyzing Net Segment     ", path_segment_counter
+			print "	Analyzing Net Segment", path_segment_counter
 			print "		Layer:                ", net_segment.layer_num
 			print "		Perimeter:            ", net_segment.bbox.get_perimeter()
 			print "		BBox (M-Units):       ", net_segment.bbox.get_bbox_as_list()
-			print "		BBox (Microns):       ", net_segment.bbox.get_bbox_as_list()
+			print "		BBox (Microns):       ", net_segment.bbox.get_bbox_as_list_microns(1.0 / layout.lef.database_units)
 			print "		Nearby BBox (M-Units):", net_segment.nearby_bbox.get_bbox_as_list()
-			print "		Nearby BBox (Microns):", net_segment.nearby_bbox.get_bbox_as_list()
+			print "		Nearby BBox (Microns):", net_segment.nearby_bbox.get_bbox_as_list_microns(1.0 / layout.lef.database_units)
 			print "		Nearby Polygons:      ", len(net_segment.nearby_polygons)
 			print "		Klayout Query: " 
 			print "			paths on layer %d/%d of cell MAL_TOP where" % (net_segment.gdsii_path.layer, net_segment.gdsii_path.data_type)
@@ -122,8 +121,8 @@ def main():
 		INPUT_DOT_FILE_PATH)
 
 	if DEBUG_PRINTS:
-		dbg.debug_print_lib_obj(layout.gdsii_lib)
-		print "----------------------------------------------"
+		# dbg.debug_print_lib_obj(layout.gdsii_lib)
+		# print "----------------------------------------------"
 		dbg.debug_print_gdsii_stats(layout.gdsii_lib)
 		print "----------------------------------------------"
 		# dbg.debug_print_gdsii_hierarchy(layout.gdsii_lib)

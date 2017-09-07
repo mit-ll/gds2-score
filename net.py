@@ -25,7 +25,7 @@ class Net_Segment():
 		self.layer_name      = lef.get_layer_name(gdsii_path.layer, gdsii_path.data_type, layer_map)
 		self.direction       = self.path_direction()
 		self.bbox            = BBox.from_polygon(Polygon.from_gdsii_path(gdsii_path))
-		self.nearby_bbox     = BBox.from_bbox_and_extension(self.bbox, self.gdsii_path.width + self.bbox.length)
+		self.nearby_bbox     = BBox.from_bbox_and_extension(self.bbox, (2 * (self.gdsii_path.width + self.bbox.length)))
 		self.nearby_polygons = []
 
 	def get_width(self):
