@@ -32,7 +32,7 @@ class BBox():
 		ll_x = bbox.ll_x - extension
 		ll_y = bbox.ll_y - extension
 		ur_x = bbox.ur_x + extension
-		ur_y = bbox.ur_x + extension
+		ur_y = bbox.ur_y + extension
 		return cls(ll_x, ll_y, ur_x, ur_y)
 
 	def get_perimeter(self):
