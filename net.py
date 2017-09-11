@@ -20,13 +20,15 @@ class Net():
 
 class Net_Segment():
 	def __init__(self, gdsii_path, lef, layer_map):
-		self.gdsii_path      = gdsii_path
-		self.layer_num       = lef.get_layer_num(gdsii_path.layer, gdsii_path.data_type, layer_map)
-		self.layer_name      = lef.get_layer_name(gdsii_path.layer, gdsii_path.data_type, layer_map)
-		self.direction       = self.path_direction()
-		self.bbox            = BBox.from_polygon(Polygon.from_gdsii_path(gdsii_path))
-		self.nearby_bbox     = BBox.from_bbox_and_extension(self.bbox, (2 * (self.gdsii_path.width + self.bbox.length)))
-		self.nearby_polygons = []
+		self.gdsii_path         = gdsii_path
+		self.layer_num          = lef.get_layer_num(gdsii_path.layer, gdsii_path.data_type, layer_map)
+		self.layer_name         = lef.get_layer_name(gdsii_path.layer, gdsii_path.data_type, layer_map)
+		self.direction          = self.path_direction()
+		self.polygon            = Polygon.from_gdsii_path(gdsii_path)
+		self.bbox               = BBox.from_polygon(self.polygon)
+		self.nearby_bbox        = BBox.from_bbox_and_extension(self.bbox, (2 * (self.gdsii_path.width + self.bbox.length)))
+		self.nearby_sl_polygons = [] # nearby polygons on the same layer
+		self.nearby_al_polygons = [] # nearby polygons on adjacent layers (top and)
 
 	def get_width(self):
 		return self.gdsii_path.width

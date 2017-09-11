@@ -28,26 +28,32 @@ class Layout():
 		self.extract_nearby_polygons()
 
 	def is_element_nearby(self, element, net_segment, offset_x, offset_y, x_reflection, degrees):
-		if isinstance(element, Path):
-			if net_segment.gdsii_path.layer == element.layer:
-				poly = Polygon.from_gdsii_path(element)
+		if isinstance(element, Path) or isinstance(element, Boundary):
+			if (net_segment.gdsii_path.layer == element.layer): 
+				#or \
+				# self.lef.is_gdsii_layer_above_below(net_segment.gdsii_path, element, self.layer_map):
+				# Compute polygon from element
+				if isinstance(element, Path):
+					# Element is a Path object
+					poly = Polygon.from_gdsii_path(element)
+				else:
+					# Element is a Boundary object
+					poly = Polygon.from_gdsii_boundary(element)
 				
 				# Compute translations if any
 				poly.compute_translations(offset_x, offset_y, x_reflection, degrees)
 				
 				# Check if polygon is nearby
-				if poly.overlaps(net_segment.nearby_bbox):
-					net_segment.nearby_polygons.append(copy.deepcopy(poly))
-		elif isinstance(element, Boundary):
-			if net_segment.gdsii_path.layer == element.layer:
-				poly = Polygon.from_gdsii_boundary(element)
-
-				# Compute translations if any
-				poly.compute_translations(offset_x, offset_y, x_reflection, degrees)
-
-				# Check if polygon is nearby
-				if poly.overlaps(net_segment.nearby_bbox):
-					net_segment.nearby_polygons.append(copy.deepcopy(poly))
+				if net_segment.gdsii_path.layer == element.layer:
+					# Element on the same layer as net_segment
+					if poly.overlaps_bbox(net_segment.nearby_bbox):
+						net_segment.nearby_sl_polygons.append(copy.deepcopy(poly))
+				else:
+					# Element is either one layer above or below the net_segment.
+					# Element is only considered "nearyby" if it insects with the
+					# bounding box of the path object projected one layer above/below.
+					if poly.overlaps_bbox(net_segment.bbox):
+						net_segment.nearby_al_polygons.append(copy.deepcopy(poly))
 		elif isinstance(element, SRef):
 			# Check if SRef properties are supported by this tool
 			# and that the structure pointed to exists.
@@ -97,13 +103,13 @@ class Layout():
 	# By only examining nearby elements, the runtime of this tool significantly descreases.
 	def extract_nearby_polygons(self):
 		start_time = time.time()
-		print "Extracting nearby polygons ..."
+		print "Extracting polygons near critical nets ..."
 		
 		for element in self.top_gdsii_structure:
 			for net in self.critical_nets:
 				for net_segment in net.segments:
 					self.is_element_nearby(element, net_segment, 0, 0, 0, 0)
-		
+
 		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
 		print "----------------------------------------------"
 
@@ -155,6 +161,13 @@ class Layout():
 		for net_name in critical_paths.keys():
 			critical_nets.append(Net(net_name, critical_paths[net_name], self.lef, self.layer_map))
 
+		# Print out security critical nets extracted from GDSII
+		print
+		print "Security critical nets extracted from GDSII:"
+		for net in critical_nets:
+			print "%s -- (%d segments)" % (net.fullname, net.num_segments)
+		print
+
 		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
 		print "----------------------------------------------"
 		return critical_nets
@@ -180,6 +193,13 @@ class Layout():
 			full_name_list  = full_name.split('.')
 			base_name 	    = full_name_list[-1]
 			nets[full_name] = base_name
+
+		# Print out security critical nets extracted from GDSII
+		print
+		print "Security critical nets extracted from DOT:"
+		for net_full_name in nets.keys():
+			print "%s" % (net_full_name)
+		print
 
 		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
 		print "----------------------------------------------"

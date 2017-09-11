@@ -1,6 +1,7 @@
 # Other Imports
 import sys
 import time
+import pprint
 
 class LEF:
 	def __init__(self, lef_fname):
@@ -101,13 +102,42 @@ class LEF:
 	# Returns the layer name associated with a given 
 	# GDSII layer number and data type.
 	def get_layer_name(self, gds_layer_num, gds_data_type, layer_map):
-		return layer_map[gds_layer_num][gds_data_type]
+		if gds_layer_num not in layer_map:
+			return None
+		else:
+			if gds_data_type not in layer_map[gds_layer_num]:
+				return None
+			else:
+				return layer_map[gds_layer_num][gds_data_type]
 
 	# Returns the logical layer number associated with a given 
 	# GDSII layer number and data type.
 	def get_layer_num(self, gds_layer_num, gds_data_type, layer_map):
 		layer_name = self.get_layer_name(gds_layer_num, gds_data_type, layer_map)
 		return self.layers[layer_name].layer_num
+
+	# Returns the True if the GDSII layer number is ABOVE the 
+	# reference GDSII layer number.
+	def is_gdsii_layer_above_below(self, ref_gds_element, gds_element, layer_map):
+		# Get Logical Layer Num of Reference Layer
+		ref_gds_element_layer_name = self.get_layer_name(ref_gds_element.layer, ref_gds_element.data_type, layer_map)
+		# @TODO -- fix this by loading layer map with layer nums from 
+		# stdcell GDSII file as well as layer map.
+		if ref_gds_element_layer_name == None:
+			return False
+		ref_layer_num = self.layers[ref_gds_element_layer_name].layer_num 
+		
+		# Get Logical Layer Num of Layer in Question
+		gds_element_layer_name = self.get_layer_name(gds_element.layer, gds_element.data_type, layer_map) 
+		# @TODO -- fix this by loading layer map with layer nums from 
+		# stdcell GDSII file as well as layer map.
+		if gds_element_layer_name == None or gds_element_layer_name not in self.layers:
+			return False
+		layer_num = self.layers[gds_element_layer_name].layer_num 
+		
+		if abs(ref_layer_num - layer_num) == 1:
+			return True
+		return False
 
 	# Returns the preferred routing direction for the GDSII layer number
 	# and data type according to what is defined in the intput LEF file.
