@@ -2,6 +2,12 @@
 from gdsii.library import Library
 from gdsii.elements import *
 
+# Import matplotlib
+import matplotlib.pyplot as plt
+
+# Import custom modules
+from polygon import *
+
 # Other Imports
 import pprint
 
@@ -286,3 +292,110 @@ def debug_print_gdsii_structure_and_elements(structure_obj):
 	debug_print_gdsii_structure(structure_obj)
 	for element in structure_obj:
 		debug_print_gdsii_element(element)
+
+def debug_print_wa_graph(wa_graph):
+	# Print Polygon Edges
+	print "Polygon Edges:"
+	for point in wa_graph.keys():
+		point.print_coords()
+		print ":",
+		for connection_point in wa_graph[point][0]:
+			print "-->", 
+			connection_point.print_coords()
+		print
+	print 
+
+	# Print Polygon Clip Edges
+	print "Polygon Clip Edges:"
+	for point in wa_graph.keys():
+		point.print_coords()
+		print ":",
+		for connection_point in wa_graph[point][1]:
+			print "-->", 
+			connection_point.print_coords()
+		print
+	print
+
+def debug_print_wa_outgoing_points(outgoing_points):
+	print "Outgoing Points: "
+	debug_print_points(outgoing_points)
+	print 
+
+def debug_print_wa_incoming_points(incoming_points):
+	print "Incoming Points: "
+	debug_print_points(incoming_points)
+	print 
+
+def debug_print_points(points):
+	for point in points:
+		point.print_coords()
+		print
+
+def debug_weiler_atherton_algorithm():
+	# Create polygon 1
+	r1 = Point(0, 0)
+	r2 = Point(4, 0)
+	r3 = Point(4, 4)
+	r4 = Point(0, 4)
+	poly_1 = Polygon([r1, r2, r3, r4, r1])
+
+	# Create polygon 2
+	p1 = Point(1, -2)
+	p2 = Point(5, -2)
+	p3 = Point(5, 5)
+	p4 = Point(1, 5)
+	p5 = Point(1, 3)
+	p6 = Point(2, 3)
+	p7 = Point(2, 2)
+	p8 = Point(1, 2)
+	poly_2 = Polygon([p1, p2, p3, p4, p5, p6, p7, p8, p1])
+
+	# Create polygon 3 from clipping 2 with 1
+	poly_3 = Polygon.from_polygon_clip(poly_2, poly_1)[0]
+
+	# # Plot both polygons
+	# plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	# plt.plot(poly_2.get_x_coords(), poly_2.get_y_coords())
+	# plt.plot(poly_3.get_x_coords(), poly_3.get_y_coords())
+	# plt.grid()
+	# plt.show()
+
+	# Create polygon 4
+	p1 = Point(-1, 1)
+	p2 = Point(1, 1)
+	p3 = Point(2, -1)
+	p4 = Point(3, 1)
+	p5 = Point(3, 3)
+	p6 = Point(2, 5)
+	p7 = Point(-1, 3)
+	poly_4 = Polygon([p1, p2, p3, p4, p5, p6, p7, p1])
+
+	# Create polygon 5 from clipping 4 with 1
+	poly_5 = Polygon.from_polygon_clip(poly_4, poly_1)[0]
+
+	# # Plot both polygons
+	# plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	# plt.plot(poly_4.get_x_coords(), poly_4.get_y_coords())
+	# plt.plot(poly_5.get_x_coords(), poly_5.get_y_coords())
+	# plt.grid()
+	# plt.show()
+
+	# Create polygon 6
+	p1 = Point(1, -2)
+	p2 = Point(3, -2)
+	p3 = Point(3, 1)
+	p4 = Point(6, 1)
+	p5 = Point(6, 5)
+	p6 = Point(1, 5)
+	poly_6 = Polygon([p1, p2, p3, p4, p5, p6, p1])
+
+	# Create polygon 7 from clipping 6 with 1
+	poly_7 = Polygon.from_polygon_clip(poly_6, poly_1)[0]
+
+	# Plot both polygons
+	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	plt.plot(poly_6.get_x_coords(), poly_6.get_y_coords())
+	plt.plot(poly_7.get_x_coords(), poly_7.get_y_coords())
+	plt.grid()
+	plt.show()
+

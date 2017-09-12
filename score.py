@@ -57,16 +57,14 @@ def check_blockage(net_segment, layout, step_size, check_distance):
 			while curr_scan_coord < end_scan_coord:
 				for poly in net_segment.nearby_sl_polygons:
 					if direction == 'N' or direction == 'S':
-						if poly.is_point_inside(curr_scan_coord, curr_fixed_coord):
+						if poly.is_point_inside(Point(curr_scan_coord, curr_fixed_coord)):
 							num_units_blocked += 1
 					else:
-						if poly.is_point_inside(curr_fixed_coord, curr_scan_coord):
+						if poly.is_point_inside(Point(curr_fixed_coord, curr_scan_coord)):
 							num_units_blocked += 1
 				curr_scan_coord += step_size
 		# else:
 			# Calculate disjoint set of areas of intersection of nearby polygons
-
-	
 	return num_units_blocked
 	
 def analyze_critical_net_blockage(layout):
@@ -119,6 +117,7 @@ def main():
 
 	overall_start_time        = time.time()
 
+	# dbg.debug_weiler_atherton_algorithm()
 	# Load layout and critical nets
 	layout = Layout( \
 		TOP_LEVEL_MODULE, \

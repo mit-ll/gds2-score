@@ -2,21 +2,25 @@
 from gdsii.elements import *
 
 # Import Custom Modules
+import debug_prints as dbg
 from error import *
 
 # Import matplotlib
 import matplotlib.pyplot as plt
 
 # Other Imports
+import math
 import inspect
 import sys
+import pprint
 
 COMPUTATION_TOLERANCE = 0.001
 
 class Point():
 	def __init__(self, x, y):
-		self.x = float(x)
-		self.y = float(y)
+		self.x           = float(x)
+		self.y           = float(y)
+		self.point_tuple = (self.x, self.y)
 
 	@classmethod
 	def from_tuple(cls, point_tuple):
@@ -28,9 +32,22 @@ class Point():
 		y = point.y + y_offset
 		return cls(x, y)
 
+	def __eq__(self, other_point):
+		return (self.x == other_point.x and self.y == other_point.y)
+
+	def __hash__(self):
+		return hash(self.point_tuple)
+
 	def shift(self, x_offset, y_offset):
 		self.x += x_offset
 		self.y += y_offset
+
+	# Computes the eulcidean distance itself to point P
+	def distance_from(self, P):
+		return math.sqrt((P.x - self.x)**2 + (P.y - self.y)**2)
+
+	def print_coords(self):
+		print "(x: %5.2f; y: %5.2f)" % (self.x, self.y),
 
 # Line Segment
 class LineSegment():
@@ -38,32 +55,30 @@ class LineSegment():
 		# End Points
 		self.p1 = p1
 		self.p2 = p2
+		if p1.x != p2.x:
+			self.slope       = (p2.y - p1.y) / (p2.x - p1.x)
+			self.y_intercept = p1.y - (self.slope * p1.x)
+		else:
+			self.slope       = None
+			self.y_intercept = None
 		# Standard Form of the Line
-		self.a, self.b, self.c = self.get_standard_form_coefs()  
+		self.a, self.b, self.c = self.get_standard_form_coefs()
 
 	# Standard Form of a line: ax + by = c,
 	# where a, b, and c are coefs
 	def get_standard_form_coefs(self):
 		a = float(self.p1.y) - float(self.p2.y)
-		b = float(self.p2.x) - float(self.p2.x)
-		c = (self.p1.x * self.p2.y) - (self.p2.x * self.p1.y)
+		b = float(self.p2.x) - float(self.p1.x)
+		c = -1.0 * ((self.p1.x * self.p2.y) - (self.p2.x * self.p1.y))
 		return (a, b, c)
 
-	# Returns true if the all point P lies on the line segment
-	# NOTE: Assumes all points are colinear.
-	def on_segment(self, P):
-		if P.x <= max(self.p1.x, self.p2.x) and P.x >= min(self.p1.x, self.p2.x) and \
-			P.y <= max(self.p1.y, self.p2.y) and P.y >= min(self.p1.y, self.p2.y):
-			return True
-		return False
-
 	# Returns the following values according to the 
-	# orientation of the points A, B, C:
+	# orientation of the points P, Q, R:
 	# 0 --> p, q and r are colinear
 	# 1 --> Clockwise
 	# 2 --> Counterclockwise
-	def orientation_of_points(self, A, B, C):
-		orientation = ((B.y - A.y) * (C.x - B.x)) - ((B.x - A.x) * (C.y - B.y))
+	def get_orientation_of_points(self, P, Q, R):
+		orientation = ((Q.y - P.y) * (R.x - Q.x)) - ((Q.x - P.x) * (R.y - Q.y))
 		if orientation == 0:
 			# Colinear
 			return 0
@@ -74,13 +89,21 @@ class LineSegment():
 			# Counterclockwise
 			return 2
 
+	# Returns true if the point P lies on the line segment
+	# NOTE: Assumes points are colinear.
+	def on_segment(self, P):
+		if P.x <= max(self.p1.x, self.p2.x) and P.x >= min(self.p1.x, self.p2.x) and \
+			P.y <= max(self.p1.y, self.p2.y) and P.y >= min(self.p1.y, self.p2.y):
+			return True
+		return False
+
 	# Returns True if the line segments intersect.
 	# Returns False otherwise.
 	def intersects(self, line):
-		orientation_1 = self.orientation_of_points(self.p1, line.p1, self.p2)
-		orientation_2 = self.orientation_of_points(self.p1, line.p1, line.p2)
-		orientation_3 = self.orientation_of_points(self.p2, line.p2, self.p1)
-		orientation_4 = self.orientation_of_points(self.p2, line.p2, line.p1)
+		orientation_1 = self.get_orientation_of_points(self.p1, self.p2, line.p1)
+		orientation_2 = self.get_orientation_of_points(self.p1, self.p2, line.p2)
+		orientation_3 = self.get_orientation_of_points(line.p1, line.p2, self.p1)
+		orientation_4 = self.get_orientation_of_points(line.p1, line.p2, self.p2)
 
 		# General Case
 		if orientation_1 != orientation_2 and orientation_3 != orientation_4:
@@ -103,6 +126,9 @@ class LineSegment():
 	# Cramer's Method
 	def intersection(self, line):
 		if self.intersects(line):
+			# print "Intersection Found: "
+			# print "	Line -- P1(%f, %f), P2(%f, %f), A(%f), B(%f), C(%f)" % (line.p1.x, line.p1.y, line.p2.x, line.p2.y, line.a, line.b, line.c)
+			# print "	Self -- P1(%f, %f), P2(%f, %f), A(%f), B(%f), C(%f)" % (self.p1.x, self.p1.y, self.p2.x, self.p2.y, self.a, self.b, self.c)
 			determinant   = (self.a * line.b) - (line.a * self.b)
 			determinant_x = (self.c * line.b) - (line.c * self.b)
 			determinant_y = (self.a * line.c) - (line.a * self.c)
@@ -198,18 +224,104 @@ class Polygon():
 		return cls(coords)
 
 	# Weiler-Atherton Algorithm
-	# @classmethod
-	# def from_polygon_clip(cls, poly, clip_poly):
-	# 	coords = []
-	# 	coords.append(poly.coords[0])
-	# 	for i in range(poly.num_coords - 1):
-	# 		curr_poly_edge = Line(poly.coords[i], poly.coords[i + 1])
-	# 		for j in range(clip_poly.num_coords - 1):
-	# 			curr_clip_edge     = Line(clip_poly.coords[i], clip_poly.coords[i + 1])
-	# 			intersection_point = curr_clip_edge.intersection(curr_poly_edge)
-	# 			if intersection_point != None:
-	# 				coords.append(intersection_point)
-	# 		coords.append(poly.coords[i + 1])
+	# Returns list of polygon objects as a result of a clipping operation
+	@classmethod
+	def from_polygon_clip(cls, poly, clip_poly):
+		# Construct graph with three groups of vertices:
+		# 1. polygon vertices
+		# 2. clipping region
+		# 3. intersection vertices
+		
+		wa_graph          = {}
+		outgoing_vertices = set()
+		incoming_vertices = set()
+
+		# Add all poly and clip_poly nodes to graph
+		for vertex in poly.coords:
+			if vertex not in wa_graph:
+				wa_graph[vertex] = [[], []]
+		for vertex in clip_poly.coords:
+			if vertex not in wa_graph:
+				wa_graph[vertex] = [[], []]
+
+		# Add edges between poly vertices and intersection points, 
+		# keeping track of direction entering(False)/exiting(True) 
+		# of intersection points with curr_location
+		inside_clip_region = clip_poly.is_point_inside(poly.coords[0])
+		for i in range(poly.num_coords - 1):
+			curr_node           = poly.coords[i]
+			curr_poly_edge      = LineSegment(poly.coords[i], poly.coords[i + 1])
+			intersection_points = []
+			for j in range(clip_poly.num_coords - 1):
+				curr_clip_edge     = LineSegment(clip_poly.coords[j], clip_poly.coords[j + 1])
+				intersection_point = curr_poly_edge.intersection(curr_clip_edge)
+				if intersection_point != None:
+					intersection_points.append(intersection_point)
+			# Sort intersection points by distance from current node
+			# Add the intersection point connections to the graph
+			intersection_points = sorted(intersection_points, key=lambda x:x.distance_from(curr_node))
+			while intersection_points:
+				intersection_point = intersection_points.pop(0)
+				if intersection_point not in wa_graph:
+					wa_graph[intersection_point] = [[], []]
+					if inside_clip_region:
+						outgoing_vertices.add(intersection_point)
+					else: 
+						incoming_vertices.add(intersection_point)
+					inside_clip_region = not inside_clip_region
+				wa_graph[curr_node][0].append(intersection_point)
+				curr_node = intersection_point
+			wa_graph[curr_node][0].append(poly.coords[i + 1])
+
+		# Add edges between clip_poly vertices and intersection points
+		for i in range(clip_poly.num_coords - 1):
+			curr_node           = clip_poly.coords[i]
+			curr_clip_edge      = LineSegment(clip_poly.coords[i], clip_poly.coords[i + 1])
+			intersection_points = []
+			# Find all intersection point between current clipping polygon
+			# and the subject polygon.
+			for j in range(poly.num_coords - 1):
+				curr_poly_edge     = LineSegment(poly.coords[j], poly.coords[j + 1])
+				intersection_point = curr_clip_edge.intersection(curr_poly_edge)
+				if intersection_point != None:
+					intersection_points.append(intersection_point)
+			# Sort intersection points by distance from current node
+			# Add the intersection point connections to the graph
+			intersection_points = sorted(intersection_points, key=lambda x:x.distance_from(curr_node))
+			while intersection_points:
+				wa_graph[curr_node][1].append(intersection_points.pop(0))
+				curr_node = wa_graph[curr_node][1][-1]
+			wa_graph[curr_node][1].append(clip_poly.coords[i + 1])
+
+		# Start at exit intersection, walk graph to create clipped polygon(s)
+		polys = []
+		while len(outgoing_vertices) != 0:
+			walk_edge_index = 1
+			start_vertex = outgoing_vertices.pop()
+			poly_coords  = [start_vertex]
+
+			# Construct polygon coords
+			curr_vertex = wa_graph[start_vertex][walk_edge_index][0]
+			while curr_vertex != start_vertex:
+				# Add vertex to current polygon coords
+				poly_coords.append(curr_vertex)
+
+				# Change border being walked if needed
+				if curr_vertex in incoming_vertices or curr_vertex in outgoing_vertices:
+					walk_edge_index = (walk_edge_index + 1) % 2
+					
+					# Remove from list of outgoing_vertices if needed
+					if curr_vertex in outgoing_vertices:
+						outgoing_vertices.remove(curr_vertex)
+
+				# Update current vertex
+				curr_vertex = wa_graph[curr_vertex][walk_edge_index][0]
+			poly_coords.append(start_vertex)
+
+			# Construct new polygon object
+			polys.append(Polygon(poly_coords))
+
+		return polys
 
 	def get_x_coords(self):
 		x_coords = []
@@ -231,6 +343,7 @@ class Polygon():
 
 	def plot(self):
 		plt.plot(self.get_x_coords(), self.get_y_coords())
+		plt.grid()
 		plt.show()
 
 	def rotate(self, degrees):
@@ -273,68 +386,86 @@ class Polygon():
 		if offset_x != 0 or offset_y != 0:
 			self.shift_x_y(offset_x, offset_y)
 
-	def ray_intersects_segment(self, x, y, point_1, point_2):
-		# NOTE: Point 1 is MUST BE below Point 2 for this function to work
-		if point_1.y > point_2.y:
-			print "ERROR %s: point_1 must be below point_2." % (inspect.stack()[1][3])
-			sys.exit(4)
+	# def ray_intersects_segment(self, x, y, point_1, point_2):
+	# 	# NOTE: Point 1 is MUST BE below Point 2 for this function to work
+	# 	if point_1.y > point_2.y:
+	# 		print "ERROR %s: point_1 must be below point_2." % (inspect.stack()[1][3])
+	# 		sys.exit(4)
 
-		if y < point_1.y or y > point_2.y:
-			return False
-		elif x > max(point_1.x, point_2.x):
-			return False
-		else:
-			if x < max(point_1.x, point_2.x):
-				return True
-			else:
-				if point_1.x != point_2.x:
-					slope_a = (point_2.y - point_1.y) / (point_2.x - point_1.x)
-				else:
-					slope_a = sys.float_info.max
-				if point_1.x != x:
-					slope_b = (y - point_1.y) / (x - point_1.x)
-				else:
-					slope_b = sys.float_info.max
-				# Compare slopes (i.e. angles)
-				if slope_b >= slope_a:
-					return True
-				else:
-					return False
+	# 	if y < point_1.y or y > point_2.y:
+	# 		return False
+	# 	elif x > max(point_1.x, point_2.x):
+	# 		return False
+	# 	else:
+	# 		if x < max(point_1.x, point_2.x):
+	# 			return True
+	# 		else:
+	# 			if point_1.x != point_2.x:
+	# 				slope_a = (point_2.y - point_1.y) / (point_2.x - point_1.x)
+	# 			else:
+	# 				slope_a = sys.float_info.max
+	# 			if point_1.x != x:
+	# 				slope_b = (y - point_1.y) / (x - point_1.x)
+	# 			else:
+	# 				slope_b = sys.float_info.max
+	# 			# Compare slopes (i.e. angles)
+	# 			if slope_b >= slope_a:
+	# 				return True
+	# 			else:
+	# 				return False
 
-	def is_point_a_vertext(self, x, y):
-		for coord in self.coords:
-			if x == coord.x and y == coord.y:
-				return True
-		return False
+	# def is_point_a_vertext(self, x, y):
+	# 	for coord in self.coords:
+	# 		if x == coord.x and y == coord.y:
+	# 			return True
+	# 	return False
+
+	# # Ray Casting Algorithm 
+	# # @TODO Clean-up checking if point on an edge
+	# def is_point_inside(self, x, y):
+	# 	# Check if the point lies on a vertex
+	# 	if self.is_point_a_vertext(x, y):
+	# 		return True
+
+	# 	# Check if the point lies on an edge
+	# 	for i in range(self.num_coords - 1):
+	# 		curr_line_seg = LineSegment(self.coords[i], self.coords[i + 1])
+	# 		if curr_line_seg.orientation_of_points(self.coords[i], Point(x, y), self.coords[i + 1]) == 0 and curr_line_seg.on_segment(Point (x, y)):
+	# 			return True
+
+	# 	# Check if point lies inside the polygon
+	# 	intersect_count = 0
+	# 	for i in range(self.num_coords - 1):
+	# 		if self.coords[i].y <= self.coords[i + 1].y:
+	# 			if self.ray_intersects_segment(x, y, self.coords[i], self.coords[i + 1]):
+	# 				intersect_count += 1
+	# 		else:
+	# 			if self.ray_intersects_segment(x, y, self.coords[i + 1], self.coords[i]):
+	# 				intersect_count += 1
+
+	# 	# If intersect_count is odd, return TRUE
+	# 	if intersect_count % 2 == 1:
+	# 		return True
+	# 	else:
+	# 		return False
 
 	# Ray Casting Algorithm 
-	# @TODO Clean-up checking if point on an edge
-	def is_point_inside(self, x, y):
-		# Check if the point lies on a vertex
-		if self.is_point_a_vertext(x, y):
-			return True
-
-		# Check if the point lies on an edge
-		for i in range(self.num_coords - 1):
-			curr_line_seg = LineSegment(self.coords[i], self.coords[i + 1])
-			if curr_line_seg.orientation_of_points(self.coords[i], Point(x, y), self.coords[i + 1]) == 0 and curr_line_seg.on_segment(Point (x, y)):
-				return True
-
-		# Check if point lies inside the polygon
-		intersect_count = 0
-		for i in range(self.num_coords - 1):
-			if self.coords[i].y <= self.coords[i + 1].y:
-				if self.ray_intersects_segment(x, y, self.coords[i], self.coords[i + 1]):
-					intersect_count += 1
-			else:
-				if self.ray_intersects_segment(x, y, self.coords[i + 1], self.coords[i]):
-					intersect_count += 1
-
-		# If intersect_count is odd, return TRUE
-		if intersect_count % 2 == 1:
-			return True
-		else:
-			return False
+	# @TODO: Compare performance with above commented-out
+	# ray casting algorithm. Also check if point lies on boundary.
+	def is_point_inside(self, P):
+		inside = False
+		p1 = self.coords[0]
+		for i in range(1, self.num_coords):
+			p2 = self.coords[i]
+			if P.y > min(p1.y, p2.y):
+				if P.y <= max(p1.y, p2.y):
+					if P.x <= max(p1.x, p2.x):
+						if p1.y != p2.y:
+							x_intersection = ((P.y - p1.y) * ((p2.x - p1.x) / (p2.y - p1.y))) + p1.x
+						if p1.x == p2.x or P.x <= x_intersection:
+							inside = not inside
+			p1 = p2
+		return inside
 
 	# Returns True if the provided bounding box overlaps the bounding
 	# box of the polygon. Otherwise, returns False.
