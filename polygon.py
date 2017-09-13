@@ -33,7 +33,16 @@ class Point():
 		return cls(x, y)
 
 	def __eq__(self, other_point):
-		return (self.x == other_point.x and self.y == other_point.y)
+		if other_point != None:
+			return (self.x == other_point.x and self.y == other_point.y)
+		else:
+			return False
+
+	def __ne__(self, other_point):
+		if other_point != None:
+			return (self.x != other_point.x or self.y != other_point.y)
+		else:
+			return True
 
 	def __hash__(self):
 		return hash(self.point_tuple)
@@ -244,9 +253,10 @@ class Polygon():
 			if vertex not in wa_graph:
 				wa_graph[vertex] = [[], []]
 
+		# Add all poly nodes to graph.
 		# Add edges between poly vertices and intersection points, 
 		# keeping track of direction entering(False)/exiting(True) 
-		# of intersection points with curr_location
+		# of intersection points with curr_location.
 		inside_clip_region = clip_poly.is_point_inside(poly.coords[0])
 		for i in range(poly.num_coords - 1):
 			curr_node           = poly.coords[i]
@@ -255,7 +265,7 @@ class Polygon():
 			for j in range(clip_poly.num_coords - 1):
 				curr_clip_edge     = LineSegment(clip_poly.coords[j], clip_poly.coords[j + 1])
 				intersection_point = curr_poly_edge.intersection(curr_clip_edge)
-				if intersection_point != None:
+				if intersection_point != None and intersection_point not in intersection_points and intersection_point != curr_node:
 					intersection_points.append(intersection_point)
 			# Sort intersection points by distance from current node
 			# Add the intersection point connections to the graph
@@ -269,9 +279,11 @@ class Polygon():
 					else: 
 						incoming_vertices.add(intersection_point)
 					inside_clip_region = not inside_clip_region
-				wa_graph[curr_node][0].append(intersection_point)
-				curr_node = intersection_point
-			wa_graph[curr_node][0].append(poly.coords[i + 1])
+				if intersection_point not in wa_graph[curr_node][0]:	
+					wa_graph[curr_node][0].append(intersection_point)
+					curr_node = intersection_point
+			if curr_node != poly.coords[i + 1]:
+				wa_graph[curr_node][0].append(poly.coords[i + 1])
 
 		# Add edges between clip_poly vertices and intersection points
 		for i in range(clip_poly.num_coords - 1):
@@ -283,15 +295,22 @@ class Polygon():
 			for j in range(poly.num_coords - 1):
 				curr_poly_edge     = LineSegment(poly.coords[j], poly.coords[j + 1])
 				intersection_point = curr_clip_edge.intersection(curr_poly_edge)
-				if intersection_point != None:
+				if intersection_point != None and intersection_point not in intersection_points and intersection_point != curr_node:
 					intersection_points.append(intersection_point)
 			# Sort intersection points by distance from current node
 			# Add the intersection point connections to the graph
 			intersection_points = sorted(intersection_points, key=lambda x:x.distance_from(curr_node))
 			while intersection_points:
-				wa_graph[curr_node][1].append(intersection_points.pop(0))
-				curr_node = wa_graph[curr_node][1][-1]
-			wa_graph[curr_node][1].append(clip_poly.coords[i + 1])
+				intersection_point = intersection_points.pop(0)
+				if intersection_point not in wa_graph[curr_node][1]:
+					wa_graph[curr_node][1].append(intersection_point)
+					curr_node = wa_graph[curr_node][1][-1]
+			if curr_node != clip_poly.coords[i + 1]:
+				wa_graph[curr_node][1].append(clip_poly.coords[i + 1])
+
+		# dbg.debug_print_wa_graph(wa_graph)
+		# dbg.debug_print_wa_incoming_points(incoming_vertices)
+		# dbg.debug_print_wa_outgoing_points(outgoing_vertices)
 
 		# Start at exit intersection, walk graph to create clipped polygon(s)
 		polys = []

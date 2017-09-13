@@ -117,30 +117,30 @@ def main():
 
 	overall_start_time        = time.time()
 
-	# dbg.debug_weiler_atherton_algorithm()
-	# Load layout and critical nets
-	layout = Layout( \
-		TOP_LEVEL_MODULE, \
-		INPUT_LEF_FILE_PATH, \
-		INPUT_LAYER_MAP_FILE_PATH, \
-		INPUT_GDSII_FILE_PATH, \
-		INPUT_DOT_FILE_PATH)
+	dbg.debug_weiler_atherton_algorithm()
+	# # Load layout and critical nets
+	# layout = Layout( \
+	# 	TOP_LEVEL_MODULE, \
+	# 	INPUT_LEF_FILE_PATH, \
+	# 	INPUT_LAYER_MAP_FILE_PATH, \
+	# 	INPUT_GDSII_FILE_PATH, \
+	# 	INPUT_DOT_FILE_PATH)
 
-	if DEBUG_PRINTS:
-		dbg.debug_print_lib_obj(layout.gdsii_lib)
-		print "----------------------------------------------"
-		dbg.debug_print_gdsii_stats(layout.gdsii_lib)
-		print "----------------------------------------------"
-		dbg.debug_print_gdsii_hierarchy(layout.gdsii_lib)
-		print "----------------------------------------------"
+	# if DEBUG_PRINTS:
+	# 	dbg.debug_print_lib_obj(layout.gdsii_lib)
+	# 	print "----------------------------------------------"
+	# 	dbg.debug_print_gdsii_stats(layout.gdsii_lib)
+	# 	print "----------------------------------------------"
+	# 	dbg.debug_print_gdsii_hierarchy(layout.gdsii_lib)
+	# 	print "----------------------------------------------"
 		
-	# Analyze blockage of security critical nets in GDSII
-	start_time = time.time()
-	print "Starting Blockage Analysis:"
-	blockage_percentage = analyze_critical_net_blockage(layout)
-	print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
-	print "Blockage Percentage: %.4f" % (blockage_percentage) 
-	print "----------------------------------------------"
+	# # Analyze blockage of security critical nets in GDSII
+	# start_time = time.time()
+	# print "Starting Blockage Analysis:"
+	# blockage_percentage = analyze_critical_net_blockage(layout)
+	# print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
+	# print "Blockage Percentage: %.4f" % (blockage_percentage) 
+	# print "----------------------------------------------"
 
 	# Analyze empty space for implanting triggers in GDSII
 	# start_time = time.time()
