@@ -14,8 +14,6 @@ import inspect
 import sys
 import pprint
 
-COMPUTATION_TOLERANCE = 0.001
-
 class Point():
 	def __init__(self, x, y):
 		self.x           = float(x)
@@ -39,10 +37,7 @@ class Point():
 			return False
 
 	def __ne__(self, other_point):
-		if other_point != None:
-			return (self.x != other_point.x or self.y != other_point.y)
-		else:
-			return True
+		return not self.__eq__(other_point)
 
 	def __hash__(self):
 		return hash(self.point_tuple)
@@ -135,9 +130,6 @@ class LineSegment():
 	# Cramer's Method
 	def intersection(self, line):
 		if self.intersects(line):
-			# print "Intersection Found: "
-			# print "	Line -- P1(%f, %f), P2(%f, %f), A(%f), B(%f), C(%f)" % (line.p1.x, line.p1.y, line.p2.x, line.p2.y, line.a, line.b, line.c)
-			# print "	Self -- P1(%f, %f), P2(%f, %f), A(%f), B(%f), C(%f)" % (self.p1.x, self.p1.y, self.p2.x, self.p2.y, self.a, self.b, self.c)
 			determinant   = (self.a * line.b) - (line.a * self.b)
 			determinant_x = (self.c * line.b) - (line.c * self.b)
 			determinant_y = (self.a * line.c) - (line.a * self.c)
@@ -146,6 +138,14 @@ class LineSegment():
 				y = determinant_y / determinant
 				return Point(x, y)
 		return None
+
+	def is_endpoint(self, P):
+		if self.p1 == P or self.p2 == P:
+			return True
+		return False
+
+	def print_segment(self):
+		print "P1(x: %5.2f; y: %5.2f) --- P2(x: %5.2f; y: %5.2f)" % (self.p1.x, self.p1.y, self.p2.x, self.p2.y)
 
 class BBox():
 	def __init__(self, ll, ur):
@@ -182,7 +182,6 @@ class Polygon():
 		self.coords     = coords
 		self.bbox       = BBox.from_polygon(self)
 
-	# @TODO: Clean this up
 	@classmethod
 	def from_gdsii_path(cls, path):
 		if is_path_type_supported(path):
@@ -253,77 +252,71 @@ class Polygon():
 			if vertex not in wa_graph:
 				wa_graph[vertex] = [[], []]
 
-		# Add all poly nodes to graph.
 		# Add edges between poly vertices and intersection points, 
 		# keeping track of direction entering(False)/exiting(True) 
 		# of intersection points with curr_location.
 		inside_clip_region = clip_poly.is_point_inside(poly.coords[0])
-		for i in range(poly.num_coords - 1):
-			curr_node           = poly.coords[i]
-			curr_poly_edge      = LineSegment(poly.coords[i], poly.coords[i + 1])
-			intersection_points = []
-			for j in range(clip_poly.num_coords - 1):
-				curr_clip_edge     = LineSegment(clip_poly.coords[j], clip_poly.coords[j + 1])
-				intersection_point = curr_poly_edge.intersection(curr_clip_edge)
-				if intersection_point != None and intersection_point not in intersection_points and intersection_point != curr_node:
-					intersection_points.append(intersection_point)
-			# Sort intersection points by distance from current node
-			# Add the intersection point connections to the graph
-			intersection_points = sorted(intersection_points, key=lambda x:x.distance_from(curr_node))
+		for poly_edge in poly.edges():
+			intersection_points = set()
+			current_point       = poly_edge.p1
+			# Find intections between polygon edges and clip polygon edges
+			for clip_edge in clip_poly.edges():
+				intersection = poly_edge.intersection(clip_edge)
+				if intersection:
+					if not poly_edge.is_endpoint(intersection):
+						intersection_points.add(intersection)
+			# Sort intersection points by distance from polgon segment start point.
+			# Add the intersection point connections to the graph.
+			intersection_points = sorted(intersection_points, key=lambda x:x.distance_from(poly_edge.p1))
 			while intersection_points:
-				intersection_point = intersection_points.pop(0)
-				if intersection_point not in wa_graph:
-					wa_graph[intersection_point] = [[], []]
+				intersection = intersection_points.pop(0)
+				# Add intersection node to graph and incoming/outgoing set(s)
+				if intersection not in wa_graph:
+					wa_graph[intersection] = [[], []]
 					if inside_clip_region:
-						outgoing_vertices.add(intersection_point)
+						outgoing_vertices.add(intersection)
 					else: 
-						incoming_vertices.add(intersection_point)
+						incoming_vertices.add(intersection)
 					inside_clip_region = not inside_clip_region
-				if intersection_point not in wa_graph[curr_node][0]:	
-					wa_graph[curr_node][0].append(intersection_point)
-					curr_node = intersection_point
-			if curr_node != poly.coords[i + 1]:
-				wa_graph[curr_node][0].append(poly.coords[i + 1])
+				wa_graph[current_point][0].append(intersection)
+				current_point = intersection
+			# Add edge connecting last intersection point to 
+			# poly edge end-point to wa_graph.
+			wa_graph[current_point][0].append(poly_edge.p2)
 
+		# Add all clip_poly vertices to graph.
 		# Add edges between clip_poly vertices and intersection points
-		for i in range(clip_poly.num_coords - 1):
-			curr_node           = clip_poly.coords[i]
-			curr_clip_edge      = LineSegment(clip_poly.coords[i], clip_poly.coords[i + 1])
-			intersection_points = []
+		for clip_edge in clip_poly.edges():
+			intersection_points = set()
+			current_point       = clip_edge.p1
 			# Find all intersection point between current clipping polygon
 			# and the subject polygon.
-			for j in range(poly.num_coords - 1):
-				curr_poly_edge     = LineSegment(poly.coords[j], poly.coords[j + 1])
-				intersection_point = curr_clip_edge.intersection(curr_poly_edge)
-				if intersection_point != None and intersection_point not in intersection_points and intersection_point != curr_node:
-					intersection_points.append(intersection_point)
+			for poly_edge in poly.edges():
+				intersection = clip_edge.intersection(poly_edge)
+				if intersection:
+					if not clip_edge.is_endpoint(intersection):
+						intersection_points.add(intersection)
 			# Sort intersection points by distance from current node
 			# Add the intersection point connections to the graph
-			intersection_points = sorted(intersection_points, key=lambda x:x.distance_from(curr_node))
+			intersection_points = sorted(intersection_points, key=lambda x:x.distance_from(clip_edge.p1))
 			while intersection_points:
-				intersection_point = intersection_points.pop(0)
-				if intersection_point not in wa_graph[curr_node][1]:
-					wa_graph[curr_node][1].append(intersection_point)
-					curr_node = wa_graph[curr_node][1][-1]
-			if curr_node != clip_poly.coords[i + 1]:
-				wa_graph[curr_node][1].append(clip_poly.coords[i + 1])
-
-		# dbg.debug_print_wa_graph(wa_graph)
-		# dbg.debug_print_wa_incoming_points(incoming_vertices)
-		# dbg.debug_print_wa_outgoing_points(outgoing_vertices)
+				intersection = intersection_points.pop(0)
+				wa_graph[current_point][1].append(intersection)
+				current_point = intersection
+			wa_graph[current_point][1].append(clip_edge.p2)
 
 		# Start at exit intersection, walk graph to create clipped polygon(s)
-		polys = []
-		while len(outgoing_vertices) != 0:
+		new_polys = []
+		while outgoing_vertices:
 			walk_edge_index = 1
-			start_vertex = outgoing_vertices.pop()
-			poly_coords  = [start_vertex]
+			start_vertex    = outgoing_vertices.pop()
+			new_poly_coords = [start_vertex]
 
 			# Construct polygon coords
 			curr_vertex = wa_graph[start_vertex][walk_edge_index][0]
 			while curr_vertex != start_vertex:
 				# Add vertex to current polygon coords
-				poly_coords.append(curr_vertex)
+				new_poly_coords.append(curr_vertex)
 
 				# Change border being walked if needed
 				if curr_vertex in incoming_vertices or curr_vertex in outgoing_vertices:
@@ -335,12 +328,18 @@ class Polygon():
 
 				# Update current vertex
 				curr_vertex = wa_graph[curr_vertex][walk_edge_index][0]
-			poly_coords.append(start_vertex)
+			new_poly_coords.append(start_vertex)
 
 			# Construct new polygon object
-			polys.append(Polygon(poly_coords))
+			new_polys.append(Polygon(new_poly_coords))
 
-		return polys
+		return new_polys
+
+	# Generator that yields edges of the polygon
+	# as LineSegment objects.
+	def edges(self):
+		for i in range(self.num_coords - 1):
+			yield LineSegment(self.coords[i], self.coords[i + 1])
 
 	def get_x_coords(self):
 		x_coords = []
@@ -356,8 +355,8 @@ class Polygon():
 
 	def get_area(self):
 		cross_product = 0.0
-		for i in range(self.num_coords - 1):
-			cross_product += ((self.coords[i].x * self.coords[i + 1].y) - (self.coords[i + 1].y * self.coords[i].x))
+		for edge in self.edges()
+			cross_product += ((edge.p1.x * edge.p2.y) - (edge.p2.y * edge.p1.x))
 		return abs(float(cross_product) / 2.0)
 
 	def plot(self):

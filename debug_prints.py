@@ -316,6 +316,10 @@ def debug_print_wa_graph(wa_graph):
 		print
 	print
 
+def debug_polygon_edge_generator(poly):
+	for edge in poly.edges():
+		edge.print_segment()
+
 def debug_print_wa_outgoing_points(outgoing_points):
 	print "Outgoing Points: "
 	debug_print_points(outgoing_points)
@@ -350,8 +354,8 @@ def debug_weiler_atherton_algorithm():
 	p8 = Point(1, 2)
 	poly_2 = Polygon([p1, p2, p3, p4, p5, p6, p7, p8, p1])
 
-	# # Create polygon 3 from clipping 2 with 1
-	# poly_3 = Polygon.from_polygon_clip(poly_2, poly_1)[0]
+	# Create polygon 3 from clipping 2 with 1
+	poly_3 = Polygon.from_polygon_clip(poly_2, poly_1)[0]
 
 	# # Plot both polygons
 	# plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
@@ -370,8 +374,8 @@ def debug_weiler_atherton_algorithm():
 	p7 = Point(-1, 3)
 	poly_4 = Polygon([p1, p2, p3, p4, p5, p6, p7, p1])
 
-	# # Create polygon 5 from clipping 4 with 1
-	# poly_5 = Polygon.from_polygon_clip(poly_4, poly_1)[0]
+	# Create polygon 5 from clipping 4 with 1
+	poly_5 = Polygon.from_polygon_clip(poly_4, poly_1)[0]
 
 	# # Plot both polygons
 	# plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
@@ -389,8 +393,8 @@ def debug_weiler_atherton_algorithm():
 	p6 = Point(1, 5)
 	poly_6 = Polygon([p1, p2, p3, p4, p5, p6, p1])
 
-	# # Create polygon 7 from clipping 6 with 1
-	# poly_7 = Polygon.from_polygon_clip(poly_6, poly_1)[0]
+	# Create polygon 7 from clipping 6 with 1
+	poly_7 = Polygon.from_polygon_clip(poly_6, poly_1)[0]
 
 	# # Plot both polygons
 	# plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
