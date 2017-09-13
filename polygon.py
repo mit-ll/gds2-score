@@ -355,7 +355,7 @@ class Polygon():
 
 	def get_area(self):
 		cross_product = 0.0
-		for edge in self.edges()
+		for edge in self.edges():
 			cross_product += ((edge.p1.x * edge.p2.y) - (edge.p2.y * edge.p1.x))
 		return abs(float(cross_product) / 2.0)
 
@@ -495,4 +495,19 @@ class Polygon():
 		if self.bbox.ur.y < bbox.ll.y or bbox.ur.y < self.bbox.ll.y:
 			return False
 		return True
+
+# def group_polys_by_overlapping(polys):
+# 	grouped_polys = {}
+# 	for poly_1 in polys:
+# 		grouped_polys[poly_1] = set()
+# 		for poly_2 in polys:
+# 			if poly_1.overlaps(poly_2) and poly_1 not in grouped_polys[poly_2]:
+# 				grouped_polys[poly_1].append(poly_2)
+# 	return grouped_polys
+
+
+
+
+
+
 

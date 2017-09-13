@@ -106,7 +106,8 @@ class LEF:
 			return None
 		else:
 			if gds_data_type not in layer_map[gds_layer_num]:
-				return None
+				# Just grab an aribitrary layer name
+				return layer_map[gds_layer_num].itervalues().next()
 			else:
 				return layer_map[gds_layer_num][gds_data_type]
 

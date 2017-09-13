@@ -425,3 +425,21 @@ def debug_weiler_atherton_algorithm():
 	plt.grid()
 	plt.show()
 
+	# # Polygons below do not overlap
+	# # Create polygon 10
+	# p1 = Point(5, 0)
+	# p2 = Point(9, 0)
+	# p3 = Point(9, 4)
+	# p4 = Point(5, 4)
+	# poly_10 = Polygon([p1, p2, p3, p4, p1])
+
+	# # Create polygon 11 from clipping 10 with 1
+	# poly_11 = Polygon.from_polygon_clip(poly_10, poly_1)[0]
+
+	# # Plot both polygons
+	# plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	# plt.plot(poly_10.get_x_coords(), poly_10.get_y_coords())
+	# plt.plot(poly_11.get_x_coords(), poly_11.get_y_coords())
+	# plt.grid()
+	# plt.show()
+

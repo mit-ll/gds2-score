@@ -12,6 +12,8 @@ from gdsii.elements import *
 import time
 import inspect
 import sys
+import itertools
+import pprint
 
 DEBUG_PRINTS = False
 VERBOSE      = True
@@ -29,7 +31,7 @@ def check_blockage(net_segment, layout, step_size, check_distance):
 	num_units_blocked = 0
 
 	# Scan all 4 perimeter sides to check for blockages
-	for direction in ['N', 'E', 'S', 'W']:
+	for direction in ['N', 'E', 'S', 'W', 'T', 'B']:
 		if direction == 'N':
 			curr_scan_coord  = net_segment.bbox.ll.x
 			end_scan_coord   = net_segment.bbox.ur.x
@@ -63,23 +65,36 @@ def check_blockage(net_segment, layout, step_size, check_distance):
 						if poly.is_point_inside(Point(curr_fixed_coord, curr_scan_coord)):
 							num_units_blocked += 1
 				curr_scan_coord += step_size
-		# else:
-			# Calculate disjoint set of areas of intersection of nearby polygons
-	return num_units_blocked
+		else:
+			# Calculate areas of intersection of nearby polygons
+			# Calculate all clipped polygons
+			overlapping_polys  = []
+			total_overlap_area = 0
+			for poly in net_segment.nearby_al_polygons:
+				clipped_polys = Polygon.from_polygon_clip(poly, net_segment.polygon)
+				if clipped_polys:
+					overlapping_polys.extend(clipped_polys)
+					for clipped_poly in clipped_polys:
+						total_overlap_area += clipped_poly.get_area()
+			# Calculate Overlap Area
+			# Split polygons in to groups of potential overlappings
+				
+	return (num_units_blocked + total_overlap_area)
 	
 def analyze_critical_net_blockage(layout):
-	total_perimeter = 0
+	total_area      = 0
 	total_blockage  = 0 
 	for net in layout.critical_nets:
 		print "Analying Net: ", net.fullname
 		path_segment_counter = 1
 		for net_segment in net.segments:
-			total_perimeter += net_segment.bbox.get_perimeter()
+			total_area += net_segment.bbox.get_perimeter() + (net_segment.polygon.get_area() * 2)
 			# Report Path Segment Condition
 			if VERBOSE:
 				print "	Analyzing Net Segment", path_segment_counter
 				print "		Layer:                ", net_segment.layer_num
 				print "		Perimeter:            ", net_segment.bbox.get_perimeter()
+				print "     Top and Bottom Area:  ", (net_segment.polygon.get_area() * 2)
 				print "		BBox (M-Units):       ", net_segment.bbox.get_bbox_as_list()
 				print "		BBox (Microns):       ", net_segment.bbox.get_bbox_as_list_microns(1.0 / layout.lef.database_units)
 				print "		Nearby BBox (M-Units):", net_segment.nearby_bbox.get_bbox_as_list()
@@ -97,15 +112,15 @@ def analyze_critical_net_blockage(layout):
 			check_distance = layout.lef.layers[net_segment.layer_name].pitch * layout.lef.database_units
 			
 			# Check N, E, S, W, T, B
-			start_time        = time.time()
-			perimeter_blocked = check_blockage(net_segment, layout, step_size, check_distance)
-			total_blockage   += perimeter_blocked
-			print "		Perimeter Blocked: ", perimeter_blocked
+			start_time     = time.time()
+			units_blocked  = check_blockage(net_segment, layout, step_size, check_distance)
+			total_blockage += units_blocked
+			print "		Area Blocked:       ", units_blocked
 			print "		Done - Time Elapsed:", (time.time() - start_time), "seconds."
 			print "		----------------------------------------------"
 			path_segment_counter += 1
 
-	return (float(total_blockage) / float(total_perimeter))
+	return (float(total_blockage) / float(total_area))
 
 def main():
 	# Input Filenames
@@ -116,6 +131,13 @@ def main():
 	INPUT_DOT_FILE_PATH       = 'graphs/MAL_TOP_par.supv_2.dot'
 
 	overall_start_time        = time.time()
+
+	# a = [1,2,3,4]
+	# for i in range(1, len(a) + 1):
+	# 	for value in itertools.combinations(a, i):
+	# 		print value
+	# dbg.debug_weiler_atherton_algorithm()
+	# return 	
 
 	# Load layout and critical nets
 	layout = Layout( \

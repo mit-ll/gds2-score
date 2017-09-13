@@ -29,9 +29,8 @@ class Layout():
 
 	def is_element_nearby(self, element, net_segment, offset_x, offset_y, x_reflection, degrees):
 		if isinstance(element, Path) or isinstance(element, Boundary):
-			if (net_segment.gdsii_path.layer == element.layer): 
-				#or \
-				# self.lef.is_gdsii_layer_above_below(net_segment.gdsii_path, element, self.layer_map):
+			if (net_segment.gdsii_path.layer == element.layer) or \
+				self.lef.is_gdsii_layer_above_below(net_segment.gdsii_path, element, self.layer_map):
 				# Compute polygon from element
 				if isinstance(element, Path):
 					# Element is a Path object
@@ -43,17 +42,17 @@ class Layout():
 				# Compute translations if any
 				poly.compute_translations(offset_x, offset_y, x_reflection, degrees)
 				
-				# # Check if polygon is nearby
-				# if net_segment.gdsii_path.layer == element.layer:
-				# 	# Element on the same layer as net_segment
-				if poly.overlaps_bbox(net_segment.nearby_bbox):
-					net_segment.nearby_sl_polygons.append(copy.deepcopy(poly))
-				# else:
-				# 	# Element is either one layer above or below the net_segment.
-				# 	# Element is only considered "nearyby" if it insects with the
-				# 	# bounding box of the path object projected one layer above/below.
-				# 	if poly.overlaps_bbox(net_segment.bbox):
-				# 		net_segment.nearby_al_polygons.append(copy.deepcopy(poly))
+				# Check if polygon is nearby
+				if net_segment.gdsii_path.layer == element.layer:
+					# Element on the same layer as net_segment
+					if poly.overlaps_bbox(net_segment.nearby_bbox):
+						net_segment.nearby_sl_polygons.append(copy.deepcopy(poly))
+				else:
+					# Element is either one layer above or below the net_segment.
+					# Element is only considered "nearyby" if it insects with the
+					# bounding box of the path object projected one layer above/below.
+					if poly.overlaps_bbox(net_segment.bbox):
+						net_segment.nearby_al_polygons.append(copy.deepcopy(poly))
 		elif isinstance(element, SRef):
 			# Check if SRef properties are supported by this tool
 			# and that the structure pointed to exists.
