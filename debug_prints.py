@@ -357,12 +357,13 @@ def debug_weiler_atherton_algorithm():
 	# Create polygon 3 from clipping 2 with 1
 	poly_3 = Polygon.from_polygon_clip(poly_2, poly_1)[0]
 
-	# # Plot both polygons
-	# plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
-	# plt.plot(poly_2.get_x_coords(), poly_2.get_y_coords())
-	# plt.plot(poly_3.get_x_coords(), poly_3.get_y_coords())
-	# plt.grid()
-	# plt.show()
+	# Plot both polygons
+	plt.figure(1)
+	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	plt.plot(poly_2.get_x_coords(), poly_2.get_y_coords())
+	plt.plot(poly_3.get_x_coords(), poly_3.get_y_coords())
+	plt.grid()
+	plt.show()
 
 	# Create polygon 4
 	p1 = Point(-1, 1)
@@ -377,12 +378,13 @@ def debug_weiler_atherton_algorithm():
 	# Create polygon 5 from clipping 4 with 1
 	poly_5 = Polygon.from_polygon_clip(poly_4, poly_1)[0]
 
-	# # Plot both polygons
-	# plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
-	# plt.plot(poly_4.get_x_coords(), poly_4.get_y_coords())
-	# plt.plot(poly_5.get_x_coords(), poly_5.get_y_coords())
-	# plt.grid()
-	# plt.show()
+	# Plot both polygons
+	plt.figure(2)
+	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	plt.plot(poly_4.get_x_coords(), poly_4.get_y_coords())
+	plt.plot(poly_5.get_x_coords(), poly_5.get_y_coords())
+	plt.grid()
+	plt.show()
 
 	# Create polygon 6
 	p1 = Point(1, -2)
@@ -396,12 +398,13 @@ def debug_weiler_atherton_algorithm():
 	# Create polygon 7 from clipping 6 with 1
 	poly_7 = Polygon.from_polygon_clip(poly_6, poly_1)[0]
 
-	# # Plot both polygons
-	# plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
-	# plt.plot(poly_6.get_x_coords(), poly_6.get_y_coords())
-	# plt.plot(poly_7.get_x_coords(), poly_7.get_y_coords())
-	# plt.grid()
-	# plt.show()
+	# Plot both polygons
+	plt.figure(3)
+	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	plt.plot(poly_6.get_x_coords(), poly_6.get_y_coords())
+	plt.plot(poly_7.get_x_coords(), poly_7.get_y_coords())
+	plt.grid()
+	plt.show()
 
 	# Create polygon 8
 	p1 = Point(-1, 1)
@@ -419,27 +422,65 @@ def debug_weiler_atherton_algorithm():
 	poly_9 = Polygon.from_polygon_clip(poly_8, poly_1)[0]
 
 	# Plot both polygons
+	plt.figure(4)
 	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
 	plt.plot(poly_8.get_x_coords(), poly_8.get_y_coords())
 	plt.plot(poly_9.get_x_coords(), poly_9.get_y_coords())
 	plt.grid()
 	plt.show()
 
-	# # Polygons below do not overlap
-	# # Create polygon 10
-	# p1 = Point(5, 0)
-	# p2 = Point(9, 0)
-	# p3 = Point(9, 4)
-	# p4 = Point(5, 4)
-	# poly_10 = Polygon([p1, p2, p3, p4, p1])
+	# Create polygon 10
+	p1 = Point(0, 3)
+	p2 = Point(4, 3)
+	p3 = Point(4, 5)
+	p4 = Point(0, 5)
+	poly_10 = Polygon([p1, p2, p3, p4, p1])
 
-	# # Create polygon 11 from clipping 10 with 1
-	# poly_11 = Polygon.from_polygon_clip(poly_10, poly_1)[0]
+	# Create polygon 11 from clipping 10 with 1
+	poly_11 = Polygon.from_polygon_clip(poly_10, poly_1)[0]
 
-	# # Plot both polygons
-	# plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
-	# plt.plot(poly_10.get_x_coords(), poly_10.get_y_coords())
-	# plt.plot(poly_11.get_x_coords(), poly_11.get_y_coords())
-	# plt.grid()
-	# plt.show()
+	# Plot both polygons
+	plt.figure(5)
+	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	plt.plot(poly_10.get_x_coords(), poly_10.get_y_coords())
+	plt.plot(poly_11.get_x_coords(), poly_11.get_y_coords())
+	plt.grid()
+	plt.show()
+
+	# Polygons below does not overlap clip ploygon
+	# Create polygon 12
+	p1 = Point(5, 0)
+	p2 = Point(9, 0)
+	p3 = Point(9, 4)
+	p4 = Point(5, 4)
+	poly_12 = Polygon([p1, p2, p3, p4, p1])
+
+	# Try to create a polygon from clipping 12 with 1
+	assert len(Polygon.from_polygon_clip(poly_12, poly_1)) == 0
+
+	# Plot both polygons
+	plt.figure(6)
+	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	plt.plot(poly_12.get_x_coords(), poly_12.get_y_coords())
+	plt.grid()
+	plt.show()
+
+	# Polygons below is completely contained inside the clip polygon
+	# Create polygon 13
+	p1 = Point(1, 1)
+	p2 = Point(3, 1)
+	p3 = Point(3, 3)
+	p4 = Point(1, 3)
+	poly_13 = Polygon([p1, p2, p3, p4, p1])
+
+	# Try to create a polygon from clipping 13 with 1
+	poly_14 = Polygon.from_polygon_clip(poly_13, poly_1)[0]
+
+	# Plot both polygons
+	plt.figure(7)
+	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	plt.plot(poly_13.get_x_coords(), poly_13.get_y_coords())
+	plt.plot(poly_14.get_x_coords(), poly_14.get_y_coords())
+	plt.grid()
+	plt.show()
 

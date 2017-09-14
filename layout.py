@@ -26,6 +26,7 @@ class Layout():
 		self.top_gdsii_structure = self.gdsii_structures[top_name]
 		self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname))
 		self.extract_nearby_polygons()
+		# self.extract_nearby_polygons_parallel()
 
 	def is_element_nearby(self, element, net_segment, offset_x, offset_y, x_reflection, degrees):
 		if isinstance(element, Path) or isinstance(element, Boundary):
@@ -108,6 +109,26 @@ class Layout():
 			for net in self.critical_nets:
 				for net_segment in net.segments:
 					self.is_element_nearby(element, net_segment, 0, 0, 0, 0)
+
+		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
+		print "----------------------------------------------"
+
+	def extract_nearby_polygons_parallel(self):
+		from multiprocessing import Pool 
+
+		start_time = time.time()
+		print "Extracting polygons near critical nets ..."
+		
+		num_processes = 4
+		pool = Pool(processes=num_processes)
+
+		for element in self.top_gdsii_structure:
+			for net in self.critical_nets:
+				for net_segment in net.segments:
+					pool.apply(self.is_element_nearby, (element, net_segment, 0, 0, 0, 0))
+		
+		pool.close()
+		pool.join()
 
 		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
 		print "----------------------------------------------"

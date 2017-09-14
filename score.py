@@ -48,7 +48,7 @@ def check_blockage(net_segment, layout, step_size, check_distance):
 			curr_scan_coord  = net_segment.bbox.ll.y
 			end_scan_coord   = net_segment.bbox.ur.y
 			curr_fixed_coord = net_segment.bbox.ll.x - check_distance
-		else:
+		elif direction != 'T' and direction != 'B':
 			print "ERROR %s: unknown scan direction (%s)." % (inspect.stack()[0][3], direction)
 			sys.exit(4)
 		
@@ -136,8 +136,8 @@ def main():
 	# for i in range(1, len(a) + 1):
 	# 	for value in itertools.combinations(a, i):
 	# 		print value
-	# dbg.debug_weiler_atherton_algorithm()
-	# return 	
+	dbg.debug_weiler_atherton_algorithm()
+	return 	
 
 	# Load layout and critical nets
 	layout = Layout( \

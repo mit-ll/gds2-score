@@ -14,6 +14,12 @@ import inspect
 import sys
 import pprint
 
+# Debug Print Flags
+DEBUG_INTERSECTION_CALCS     = False
+DEBUG_WA_ALGORITHM_VERBOSE   = False
+DEBUG_WA_ALGORITHM_POST_POLY = False
+DEBUG_WA_ALGORITHM_POST_CLIP = False
+
 class Point():
 	def __init__(self, x, y):
 		self.x           = float(x)
@@ -96,9 +102,14 @@ class LineSegment():
 	# Returns true if the point P lies on the line segment
 	# NOTE: Assumes points are colinear.
 	def on_segment(self, P):
-		if P.x <= max(self.p1.x, self.p2.x) and P.x >= min(self.p1.x, self.p2.x) and \
-			P.y <= max(self.p1.y, self.p2.y) and P.y >= min(self.p1.y, self.p2.y):
-			return True
+		if P.x <= max(self.p1.x, self.p2.x) and P.x >= min(self.p1.x, self.p2.x):
+			if P.y <= max(self.p1.y, self.p2.y) and P.y >= min(self.p1.y, self.p2.y):
+				# Debug Prints
+				if DEBUG_INTERSECTION_CALCS:
+					print "			ON SEGMENT: ", 
+					P.print_coords()
+					self.print_segment()
+				return True
 		return False
 
 	# Returns True if the line segments intersect.
@@ -109,20 +120,24 @@ class LineSegment():
 		orientation_3 = self.get_orientation_of_points(line.p1, line.p2, self.p1)
 		orientation_4 = self.get_orientation_of_points(line.p1, line.p2, self.p2)
 
+		# Debug Prints
+		if DEBUG_INTERSECTION_CALCS:
+			print "		Orientations: ", orientation_1, orientation_2, orientation_3, orientation_4
+
 		# General Case
 		if orientation_1 != orientation_2 and orientation_3 != orientation_4:
 			return True
 
 		# Special Cases
-		temp_line = LineSegment(self.p1, line.p1)
-		if orientation_1 == 0 and temp_line.on_segment(self.p2):
+		temp_line = LineSegment(self.p1, self.p2)
+		if orientation_1 == 0 and temp_line.on_segment(line.p1):
 			return True
 		if orientation_2 == 0 and temp_line.on_segment(line.p2):
 			return True
-		temp_line = LineSegment(self.p2, line.p2)
+		temp_line = LineSegment(line.p1, line.p2)
 		if orientation_3 == 0 and temp_line.on_segment(self.p1):
 			return True
-		if orientation_4 == 0 and temp_line.on_segment(line.p1):
+		if orientation_4 == 0 and temp_line.on_segment(self.p2):
 			return True
 
 		return False
@@ -137,6 +152,9 @@ class LineSegment():
 				x = determinant_x / determinant
 				y = determinant_y / determinant
 				return Point(x, y)
+			# else:
+				# Lines have multiple intersection points --> pick the p2 endpoint
+				# return line.p2
 		return None
 
 	def is_endpoint(self, P):
@@ -259,30 +277,71 @@ class Polygon():
 		for poly_edge in poly.edges():
 			intersection_points = set()
 			current_point       = poly_edge.p1
+			if DEBUG_WA_ALGORITHM_VERBOSE:
+				print "Poly Edge: ", 
+				poly_edge.print_segment()
 			# Find intections between polygon edges and clip polygon edges
 			for clip_edge in clip_poly.edges():
+				if DEBUG_WA_ALGORITHM_VERBOSE:
+					print "	Clip Edge: ", 
+					clip_edge.print_segment()
 				intersection = poly_edge.intersection(clip_edge)
 				if intersection:
 					if not poly_edge.is_endpoint(intersection):
+						if DEBUG_WA_ALGORITHM_VERBOSE:
+							print "		FOUND INTS: ",
+							intersection.print_coords()
+							print
 						intersection_points.add(intersection)
+					elif poly_edge.is_endpoint(intersection):
+						# Add intersection point to incoming/outgoing set(s)
+						if inside_clip_region:
+							outgoing_vertices.add(intersection)
+						else: 
+							incoming_vertices.add(intersection)
+						inside_clip_region = not inside_clip_region
+					elif clip_edge.is_endpoint(intersection):
+						# Add intersection point to incoming/outgoing set(s)
+						outgoing_vertices.add(intersection)
+						incoming_vertices.add(intersection)
 			# Sort intersection points by distance from polgon segment start point.
 			# Add the intersection point connections to the graph.
 			intersection_points = sorted(intersection_points, key=lambda x:x.distance_from(poly_edge.p1))
 			while intersection_points:
 				intersection = intersection_points.pop(0)
-				# Add intersection node to graph and incoming/outgoing set(s)
+				# Add intersection point to graph
 				if intersection not in wa_graph:
 					wa_graph[intersection] = [[], []]
+					# Add intersection point to incoming/outgoing set(s)
 					if inside_clip_region:
 						outgoing_vertices.add(intersection)
 					else: 
-						incoming_vertices.add(intersection)
-					inside_clip_region = not inside_clip_region
+					 	incoming_vertices.add(intersection)
+					inside_clip_region = not inside_clip_region	
+				if DEBUG_WA_ALGORITHM_VERBOSE:
+					print "	ADD INTS: ",
+					current_point.print_coords()
+					print "-->",
+					intersection.print_coords()
+					print
+				# Add edges to/from intersection point
 				wa_graph[current_point][0].append(intersection)
 				current_point = intersection
 			# Add edge connecting last intersection point to 
 			# poly edge end-point to wa_graph.
+			if DEBUG_WA_ALGORITHM_VERBOSE:
+				print "	ADD ENDPOINT: ",
+				current_point.print_coords() 
+				print "-->",
+				poly_edge.p2.print_coords()
+				print
 			wa_graph[current_point][0].append(poly_edge.p2)
+
+		if DEBUG_WA_ALGORITHM_POST_POLY:
+			print "Post Poly Edge Iteration:"
+			dbg.debug_print_wa_graph(wa_graph)
+			dbg.debug_print_wa_outgoing_points(outgoing_vertices)
+			dbg.debug_print_wa_incoming_points(incoming_vertices)
 
 		# Add all clip_poly vertices to graph.
 		# Add edges between clip_poly vertices and intersection points
@@ -301,15 +360,44 @@ class Polygon():
 			intersection_points = sorted(intersection_points, key=lambda x:x.distance_from(clip_edge.p1))
 			while intersection_points:
 				intersection = intersection_points.pop(0)
-				wa_graph[current_point][1].append(intersection)
+				try:
+					wa_graph[current_point][1].append(intersection)
+				except KeyError:
+					current_point.print_coords()
+					print
+					plt.plot(poly.get_x_coords(), poly.get_y_coords())
+					plt.plot(clip_poly.get_x_coords(), clip_poly.get_y_coords())
+					plt.grid()
+					plt.show()
 				current_point = intersection
 			wa_graph[current_point][1].append(clip_edge.p2)
 
-		# Start at exit intersection, walk graph to create clipped polygon(s)
+		if DEBUG_WA_ALGORITHM_POST_CLIP:
+			print "Post Clip Edge Iteration:"
+			dbg.debug_print_wa_graph(wa_graph)
+			dbg.debug_print_wa_outgoing_points(outgoing_vertices)
+			dbg.debug_print_wa_incoming_points(incoming_vertices)
+
+		# Remove intersection of ingoing/outgoing vertice sets
+		outgoing = outgoing_vertices - incoming_vertices
+		incoming = incoming_vertices - outgoing_vertices
+
 		new_polys = []
-		while outgoing_vertices:
+		
+		# If no outgoing points --> check if subject polygon
+		# is completely contained inside the clip polygon
+		if not outgoing:
+			contained_inside = True
+			for vertex in poly.coords:
+				if not clip_poly.is_point_inside(vertex):
+					contained_inside = False
+			if contained_inside:
+				new_polys.append(poly)
+
+		# Start at exit intersection, walk graph to create clipped polygon(s)
+		while outgoing:
 			walk_edge_index = 1
-			start_vertex    = outgoing_vertices.pop()
+			start_vertex    = outgoing.pop()
 			new_poly_coords = [start_vertex]
 
 			# Construct polygon coords
@@ -319,12 +407,12 @@ class Polygon():
 				new_poly_coords.append(curr_vertex)
 
 				# Change border being walked if needed
-				if curr_vertex in incoming_vertices or curr_vertex in outgoing_vertices:
+				if curr_vertex in incoming or curr_vertex in outgoing:
 					walk_edge_index = (walk_edge_index + 1) % 2
 					
 					# Remove from list of outgoing_vertices if needed
-					if curr_vertex in outgoing_vertices:
-						outgoing_vertices.remove(curr_vertex)
+					if curr_vertex in outgoing:
+						outgoing.remove(curr_vertex)
 
 				# Update current vertex
 				curr_vertex = wa_graph[curr_vertex][walk_edge_index][0]
@@ -469,20 +557,18 @@ class Polygon():
 
 	# Ray Casting Algorithm 
 	# @TODO: Compare performance with above commented-out
-	# ray casting algorithm. Also check if point lies on boundary.
+	# ray casting algorithm.
 	def is_point_inside(self, P):
 		inside = False
-		p1 = self.coords[0]
-		for i in range(1, self.num_coords):
-			p2 = self.coords[i]
-			if P.y > min(p1.y, p2.y):
-				if P.y <= max(p1.y, p2.y):
-					if P.x <= max(p1.x, p2.x):
-						if p1.y != p2.y:
-							x_intersection = ((P.y - p1.y) * ((p2.x - p1.x) / (p2.y - p1.y))) + p1.x
-						if p1.x == p2.x or P.x <= x_intersection:
+		for edge in self.edges():
+			if edge.on_segment(P):
+				return True
+			elif P.y > min(edge.p1.y, edge.p2.y) and P.y <= max(edge.p1.y, edge.p2.y):
+				if P.x <= max(edge.p1.x, edge.p2.x):
+					if edge.p1.y != edge.p2.y:
+						x_intersection = ((P.y - edge.p1.y) * ((edge.p2.x - edge.p1.x) / (edge.p2.y - edge.p1.y))) + edge.p1.x
+					if edge.p1.x == edge.p2.x or P.x <= x_intersection:
 							inside = not inside
-			p1 = p2
 		return inside
 
 	# Returns True if the provided bounding box overlaps the bounding
