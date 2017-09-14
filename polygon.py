@@ -370,7 +370,15 @@ class Polygon():
 					plt.grid()
 					plt.show()
 				current_point = intersection
-			wa_graph[current_point][1].append(clip_edge.p2)
+			try:
+				wa_graph[current_point][1].append(clip_edge.p2)
+			except KeyError:
+					current_point.print_coords()
+					print
+					plt.plot(poly.get_x_coords(), poly.get_y_coords())
+					plt.plot(clip_poly.get_x_coords(), clip_poly.get_y_coords())
+					plt.grid()
+					plt.show()
 
 		if DEBUG_WA_ALGORITHM_POST_CLIP:
 			print "Post Clip Edge Iteration:"

@@ -136,8 +136,8 @@ def main():
 	# for i in range(1, len(a) + 1):
 	# 	for value in itertools.combinations(a, i):
 	# 		print value
-	dbg.debug_weiler_atherton_algorithm()
-	return 	
+	# dbg.debug_weiler_atherton_algorithm()
+	# return 	
 
 	# Load layout and critical nets
 	layout = Layout( \
