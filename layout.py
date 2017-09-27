@@ -6,6 +6,7 @@ from gdsii.library import Library
 from gdsii.elements import *
 
 # Import Custom Modules
+import debug_prints as dbg
 from polygon import *
 from lef     import *
 from net     import *

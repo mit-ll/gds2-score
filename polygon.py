@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 
 # Other Imports
 import math
+import copy
 import inspect
 import sys
 import pprint
@@ -22,13 +23,12 @@ DEBUG_WA_ALGORITHM_POST_CLIP = False
 
 class Point():
 	def __init__(self, x, y):
-		self.x           = float(x)
-		self.y           = float(y)
-		self.point_tuple = (self.x, self.y)
+		self.x = x
+		self.y = y
 
 	@classmethod
-	def from_tuple(cls, point_tuple):
-		return cls(point_tuple[0], point_tuple[1])
+	def from_tuple(cls, tup):
+		return cls(tup[0], tup[1])
 
 	@classmethod
 	def from_point_and_offset(cls, point, x_offset, y_offset):
@@ -43,10 +43,10 @@ class Point():
 			return False
 
 	def __ne__(self, other_point):
-		return not self.__eq__(other_point)
+		return not(self == other_point)
 
 	def __hash__(self):
-		return hash(self.point_tuple)
+		return hash((self.x, self.y))
 
 	def shift(self, x_offset, y_offset):
 		self.x += x_offset
@@ -57,7 +57,8 @@ class Point():
 		return math.sqrt((P.x - self.x)**2 + (P.y - self.y)**2)
 
 	def print_coords(self):
-		print "(x: %5.2f; y: %5.2f)" % (self.x, self.y),
+		# print "(x: %5d; y: %5d)" % (self.x, self.y),
+		print "(x: %d; y: %d)" % (self.x, self.y),
 
 # Line Segment
 class LineSegment():
@@ -139,7 +140,6 @@ class LineSegment():
 			return True
 		if orientation_4 == 0 and temp_line.on_segment(self.p2):
 			return True
-
 		return False
 
 	# Cramer's Method
@@ -148,13 +148,17 @@ class LineSegment():
 			determinant   = (self.a * line.b) - (line.a * self.b)
 			determinant_x = (self.c * line.b) - (line.c * self.b)
 			determinant_y = (self.a * line.c) - (line.a * self.c)
+			if DEBUG_INTERSECTION_CALCS:
+				print "		Checking intersection of "
+				print "		P1(x: %5d; y: %5d) --- P2(x: %5d; y: %5d)" % (self.p1.x, self.p1.y, self.p2.x, self.p2.y)
+				print "			AND"
+				print "		P1(x: %5d; y: %5d) --- P2(x: %5d; y: %5d)" % (line.p1.x, line.p1.y, line.p2.x, line.p2.y)
+				print "		Determinants:", determinant, determinant_x, determinant_y
+				print
 			if determinant != 0:
-				x = determinant_x / determinant
-				y = determinant_y / determinant
+				x = int(determinant_x / determinant)
+				y = int(determinant_y / determinant)
 				return Point(x, y)
-			# else:
-				# Lines have multiple intersection points --> pick the p2 endpoint
-				# return line.p2
 		return None
 
 	def is_endpoint(self, P):
@@ -163,7 +167,7 @@ class LineSegment():
 		return False
 
 	def print_segment(self):
-		print "P1(x: %5.2f; y: %5.2f) --- P2(x: %5.2f; y: %5.2f)" % (self.p1.x, self.p1.y, self.p2.x, self.p2.y)
+		print "P1(x: %d; y: %d) --- P2(x: %d; y: %d)" % (self.p1.x, self.p1.y, self.p2.x, self.p2.y)
 
 class BBox():
 	def __init__(self, ll, ur):
@@ -270,6 +274,10 @@ class Polygon():
 			if vertex not in wa_graph:
 				wa_graph[vertex] = [[], []]
 
+		if DEBUG_WA_ALGORITHM_VERBOSE:
+			print "Initiated wa_graph."
+			dbg.debug_print_wa_graph(wa_graph)
+
 		# Add edges between poly vertices and intersection points, 
 		# keeping track of direction entering(False)/exiting(True) 
 		# of intersection points with curr_location.
@@ -288,11 +296,12 @@ class Polygon():
 				intersection = poly_edge.intersection(clip_edge)
 				if intersection:
 					if not poly_edge.is_endpoint(intersection):
+						# Intersection does NOT lie on an endpoint of the polygon segment
 						if DEBUG_WA_ALGORITHM_VERBOSE:
 							print "		FOUND INTS: ",
 							intersection.print_coords()
 							print
-						intersection_points.add(intersection)
+						intersection_points.add(copy.deepcopy(intersection))
 					elif poly_edge.is_endpoint(intersection):
 						# Add intersection point to incoming/outgoing set(s)
 						if inside_clip_region:
@@ -311,6 +320,10 @@ class Polygon():
 				intersection = intersection_points.pop(0)
 				# Add intersection point to graph
 				if intersection not in wa_graph:
+					if DEBUG_WA_ALGORITHM_VERBOSE:
+						print "	INT NOT FOUND IN WA_GRAPH: ",
+						intersection.print_coords()
+						print
 					wa_graph[intersection] = [[], []]
 					# Add intersection point to incoming/outgoing set(s)
 					if inside_clip_region:
@@ -354,31 +367,25 @@ class Polygon():
 				intersection = clip_edge.intersection(poly_edge)
 				if intersection:
 					if not clip_edge.is_endpoint(intersection):
-						intersection_points.add(intersection)
+						intersection_points.add(copy.deepcopy(intersection))
 			# Sort intersection points by distance from current node
 			# Add the intersection point connections to the graph
 			intersection_points = sorted(intersection_points, key=lambda x:x.distance_from(clip_edge.p1))
 			while intersection_points:
 				intersection = intersection_points.pop(0)
-				try:
-					wa_graph[current_point][1].append(intersection)
-				except KeyError:
-					current_point.print_coords()
-					print
-					plt.plot(poly.get_x_coords(), poly.get_y_coords())
-					plt.plot(clip_poly.get_x_coords(), clip_poly.get_y_coords())
-					plt.grid()
-					plt.show()
+				wa_graph[current_point][1].append(intersection)
 				current_point = intersection
-			try:
-				wa_graph[current_point][1].append(clip_edge.p2)
-			except KeyError:
-					current_point.print_coords()
-					print
-					plt.plot(poly.get_x_coords(), poly.get_y_coords())
-					plt.plot(clip_poly.get_x_coords(), clip_poly.get_y_coords())
-					plt.grid()
-					plt.show()
+			# try:
+			wa_graph[current_point][1].append(clip_edge.p2)
+			# except KeyError:
+			# 		print "ERROR INSERTING CLIP EDGE P2"
+			# 		current_point.print_coords()
+			# 		print
+			# 		dbg.debug_print_wa_graph(wa_graph)
+			# 		plt.plot(poly.get_x_coords(), poly.get_y_coords())
+			# 		plt.plot(clip_poly.get_x_coords(), clip_poly.get_y_coords())
+			# 		plt.grid()
+			# 		plt.show()
 
 		if DEBUG_WA_ALGORITHM_POST_CLIP:
 			print "Post Clip Edge Iteration:"
@@ -430,6 +437,19 @@ class Polygon():
 			new_polys.append(Polygon(new_poly_coords))
 
 		return new_polys
+
+	def __eq__(self, other_poly):
+		sorted
+		if other_point != None:
+			return (self.x == other_point.x and self.y == other_point.y)
+		else:
+			return False
+
+	def __ne__(self, other_point):
+		return not(self == other_point)
+
+	def __hash__(self):
+		return hash((self.x, self.y))
 
 	# Generator that yields edges of the polygon
 	# as LineSegment objects.

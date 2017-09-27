@@ -120,33 +120,62 @@ def debug_print_text_obj(text_obj):
 	print "	properties:   ", text_obj.properties
 	print
 
+def get_num_element_coords_floats(element):
+	num_float_coords = 0
+	num_int_coords   = 0
+	for coord in element.xy:
+		if isinstance(coord[0], int) and isinstance(coord[1], int):
+			num_int_coords += 1
+		elif isinstance(coord[0], float) and isinstance(coord[1], float):
+			num_float_coords += 1
+		elif isinstance(coord[0], int) and isinstance(coord[1], float) or isinstance(coord[0], float) and isinstance(coord[1], int):
+			print "PARTIAL",
+			print coord
+			num_int_coords   += 1
+			num_float_coords += 1
+		else:
+			print "UNKOWN COORD TYPE",
+			print coord
+
+	if num_float_coords > 0:
+		print element.xy
+	return num_int_coords, num_float_coords
+
 def debug_print_gdsii_stats(gdsii_lib):
 	# Compute number/type of elements in GDSII
 	# Structures
-	num_structures  = 0
+	num_structures   = 0
 	# Elements
-	num_paths 	    = 0
-	num_boundaries  = 0
- 	num_nodes 	    = 0
-	num_boxes 	    = 0
-	num_srefs 	    = 0
-	num_arefs 	    = 0
-	num_texts 	    = 0
-	path_coords     = {}
-	boundary_coords = {}
-	max_boundary    = None
-	min_boundary    = None
+	num_paths 	     = 0
+	num_boundaries   = 0
+ 	num_nodes 	     = 0
+	num_boxes 	     = 0
+	num_srefs 	     = 0
+	num_arefs 	     = 0
+	num_texts 	     = 0
+	path_coords      = {}
+	boundary_coords  = {}
+	max_boundary     = None
+	min_boundary     = None
+	num_float_coords = 0
+	num_int_coords   = 0
 	for structure in gdsii_lib:
 		num_structures += 1
 		for element in structure:
 			if isinstance(element, Path):
 				num_paths += 1
+				# coord_type_counts = get_num_element_coords_floats(element)
+				# num_int_coords    += coord_type_counts[0]
+				# num_float_coords  += coord_type_counts[1]
 				# if len(element.xy) not in path_coords:
 				# 	path_coords[len(element.xy)] = 1
 				# else:
 				# 	path_coords[len(element.xy)] += 1
 			elif isinstance(element, Boundary):
 				num_boundaries += 1
+				# coord_type_counts = get_num_element_coords_floats(element)
+				# num_int_coords    += coord_type_counts[0]
+				# num_float_coords  += coord_type_counts[1]
 				# if len(element.xy) not in boundary_coords:
 				# 	boundary_coords[len(element.xy)] = 1
 				# else:
@@ -167,10 +196,19 @@ def debug_print_gdsii_stats(gdsii_lib):
 				num_nodes += 1
 			elif isinstance(element, SRef):
 				num_srefs += 1
+				# coord_type_counts = get_num_element_coords_floats(element)
+				# num_int_coords    += coord_type_counts[0]
+				# num_float_coords  += coord_type_counts[1]
 			elif isinstance(element, ARef):
 				num_arefs += 1
+				# coord_type_counts = get_num_element_coords_floats(element)
+				# num_int_coords    += coord_type_counts[0]
+				# num_float_coords  += coord_type_counts[1]
 			elif isinstance(element, Text):
 				num_texts += 1
+				# coord_type_counts = get_num_element_coords_floats(element)
+				# num_int_coords    += coord_type_counts[0]
+				# num_float_coords  += coord_type_counts[1]
 
 	# Print stats
 	print "GDSII Stats:"
@@ -200,6 +238,10 @@ def debug_print_gdsii_stats(gdsii_lib):
 	# print "Min Boundary:"
 	# print "---------------------"
 	# debug_print_boundary_obj(min_boundary)
+	# print
+	# print "---------------------"
+	# print "Number of Int Coords:  ", num_int_coords
+	# print "Number of Float Coords:", num_float_coords
 	# print
 
 def debug_print_gdsii_sref_strans_stats(gdsii_lib):
@@ -297,6 +339,7 @@ def debug_print_wa_graph(wa_graph):
 	# Print Polygon Edges
 	print "Polygon Edges:"
 	for point in wa_graph.keys():
+		print "Key:", point, " = ",
 		point.print_coords()
 		print ":",
 		for connection_point in wa_graph[point][0]:
@@ -308,6 +351,7 @@ def debug_print_wa_graph(wa_graph):
 	# Print Polygon Clip Edges
 	print "Polygon Clip Edges:"
 	for point in wa_graph.keys():
+		print "Key:", point, " = ",
 		point.print_coords()
 		print ":",
 		for connection_point in wa_graph[point][1]:
@@ -336,151 +380,177 @@ def debug_print_points(points):
 		print
 
 def debug_weiler_atherton_algorithm():
-	# Create polygon 1
-	r1 = Point(0, 0)
-	r2 = Point(4, 0)
-	r3 = Point(4, 4)
-	r4 = Point(0, 4)
-	poly_1 = Polygon([r1, r2, r3, r4, r1])
+	# # Create polygon 1
+	# r1 = Point(0, 0)
+	# r2 = Point(4, 0)
+	# r3 = Point(4, 4)
+	# r4 = Point(0, 4)
+	# poly_1 = Polygon([r1, r2, r3, r4, r1])
 
-	# Create polygon 2
-	p1 = Point(1, -2)
-	p2 = Point(5, -2)
-	p3 = Point(5, 5)
-	p4 = Point(1, 5)
-	p5 = Point(1, 3)
-	p6 = Point(2, 3)
-	p7 = Point(2, 2)
-	p8 = Point(1, 2)
-	poly_2 = Polygon([p1, p2, p3, p4, p5, p6, p7, p8, p1])
+	# # Create polygon 2
+	# p1 = Point(1, -2)
+	# p2 = Point(5, -2)
+	# p3 = Point(5, 5)
+	# p4 = Point(1, 5)
+	# p5 = Point(1, 3)
+	# p6 = Point(2, 3)
+	# p7 = Point(2, 2)
+	# p8 = Point(1, 2)
+	# poly_2 = Polygon([p1, p2, p3, p4, p5, p6, p7, p8, p1])
 
-	# Create polygon 3 from clipping 2 with 1
-	poly_3 = Polygon.from_polygon_clip(poly_2, poly_1)[0]
+	# # Create polygon 3 from clipping 2 with 1
+	# poly_3 = Polygon.from_polygon_clip(poly_2, poly_1)[0]
+
+	# # Plot both polygons
+	# plt.figure(1)
+	# plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	# plt.plot(poly_2.get_x_coords(), poly_2.get_y_coords())
+	# plt.plot(poly_3.get_x_coords(), poly_3.get_y_coords())
+	# plt.grid()
+	# plt.show()
+
+	# # Create polygon 4
+	# p1 = Point(-1, 1)
+	# p2 = Point(1, 1)
+	# p3 = Point(2, -1)
+	# p4 = Point(3, 1)
+	# p5 = Point(3, 3)
+	# p6 = Point(2, 5)
+	# p7 = Point(-1, 3)
+	# poly_4 = Polygon([p1, p2, p3, p4, p5, p6, p7, p1])
+
+	# # Create polygon 5 from clipping 4 with 1
+	# poly_5 = Polygon.from_polygon_clip(poly_4, poly_1)[0]
+
+	# # Plot both polygons
+	# plt.figure(2)
+	# plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	# plt.plot(poly_4.get_x_coords(), poly_4.get_y_coords())
+	# plt.plot(poly_5.get_x_coords(), poly_5.get_y_coords())
+	# plt.grid()
+	# plt.show()
+
+	# # Create polygon 6
+	# p1 = Point(1, -2)
+	# p2 = Point(3, -2)
+	# p3 = Point(3, 1)
+	# p4 = Point(6, 1)
+	# p5 = Point(6, 5)
+	# p6 = Point(1, 5)
+	# poly_6 = Polygon([p1, p2, p3, p4, p5, p6, p1])
+
+	# # Create polygon 7 from clipping 6 with 1
+	# poly_7 = Polygon.from_polygon_clip(poly_6, poly_1)[0]
+
+	# # Plot both polygons
+	# plt.figure(3)
+	# plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	# plt.plot(poly_6.get_x_coords(), poly_6.get_y_coords())
+	# plt.plot(poly_7.get_x_coords(), poly_7.get_y_coords())
+	# plt.grid()
+	# plt.show()
+
+	# # Create polygon 8
+	# p1 = Point(-1, 1)
+	# p2 = Point(1, 1)
+	# p3 = Point(2, 0)
+	# p4 = Point(3, 1)
+	# p5 = Point(5, 1)
+	# p6 = Point(5, 3)
+	# p7 = Point(3, 3)
+	# p8 = Point(1, 5)
+	# p9 = Point(-1, 3)
+	# poly_8 = Polygon([p1, p2, p3, p4, p5, p6, p7, p8, p9, p1])
+
+	# # Create polygon 9 from clipping 8 with 1
+	# poly_9 = Polygon.from_polygon_clip(poly_8, poly_1)[0]
+
+	# # Plot both polygons
+	# plt.figure(4)
+	# plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	# plt.plot(poly_8.get_x_coords(), poly_8.get_y_coords())
+	# plt.plot(poly_9.get_x_coords(), poly_9.get_y_coords())
+	# plt.grid()
+	# plt.show()
+
+	# # Create polygon 10
+	# p1 = Point(0, 3)
+	# p2 = Point(4, 3)
+	# p3 = Point(4, 5)
+	# p4 = Point(0, 5)
+	# poly_10 = Polygon([p1, p2, p3, p4, p1])
+
+	# # Create polygon 11 from clipping 10 with 1
+	# poly_11 = Polygon.from_polygon_clip(poly_10, poly_1)[0]
+
+	# # Plot both polygons
+	# plt.figure(5)
+	# plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	# plt.plot(poly_10.get_x_coords(), poly_10.get_y_coords())
+	# plt.plot(poly_11.get_x_coords(), poly_11.get_y_coords())
+	# plt.grid()
+	# plt.show()
+
+	# # Polygons below does not overlap clip ploygon
+	# # Create polygon 12
+	# p1 = Point(5, 0)
+	# p2 = Point(9, 0)
+	# p3 = Point(9, 4)
+	# p4 = Point(5, 4)
+	# poly_12 = Polygon([p1, p2, p3, p4, p1])
+
+	# # Try to create a polygon from clipping 12 with 1
+	# assert len(Polygon.from_polygon_clip(poly_12, poly_1)) == 0
+
+	# # Plot both polygons
+	# plt.figure(6)
+	# plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	# plt.plot(poly_12.get_x_coords(), poly_12.get_y_coords())
+	# plt.grid()
+	# plt.show()
+
+	# # Polygons below is completely contained inside the clip polygon
+	# # Create polygon 13
+	# p1 = Point(1, 1)
+	# p2 = Point(3, 1)
+	# p3 = Point(3, 3)
+	# p4 = Point(1, 3)
+	# poly_13 = Polygon([p1, p2, p3, p4, p1])
+
+	# # Try to create a polygon from clipping 13 with 1
+	# poly_14 = Polygon.from_polygon_clip(poly_13, poly_1)[0]
+
+	# # Plot both polygons
+	# plt.figure(7)
+	# plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	# plt.plot(poly_13.get_x_coords(), poly_13.get_y_coords())
+	# plt.plot(poly_14.get_x_coords(), poly_14.get_y_coords())
+	# plt.grid()
+	# plt.show()
+
+	# Polygons clip are same length and overlap
+	# Create polygon 15
+	p1 = Point(535150.00, 539070.00)
+	p2 = Point(535290.00, 539070.00)
+	p3 = Point(535290.00, 545090.00)
+	p4 = Point(535150.00, 545090.00)
+	poly_15 = Polygon([p1, p2, p3, p4, p1])
+
+	# Create polygon 16
+	p1 = Point(535150.00, 544950.00)
+	p2 = Point(535290.00, 544950.00)
+	p3 = Point(535290.00, 545370.00)
+	p4 = Point(535150.00, 545370.00)
+	poly_16 = Polygon([p1, p2, p3, p4, p1])
+
+	# Try to create a polygon from clipping 15 with 16
+	poly_17 = Polygon.from_polygon_clip(poly_15, poly_16)[0]
 
 	# Plot both polygons
-	plt.figure(1)
-	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
-	plt.plot(poly_2.get_x_coords(), poly_2.get_y_coords())
-	plt.plot(poly_3.get_x_coords(), poly_3.get_y_coords())
-	plt.grid()
-	plt.show()
-
-	# Create polygon 4
-	p1 = Point(-1, 1)
-	p2 = Point(1, 1)
-	p3 = Point(2, -1)
-	p4 = Point(3, 1)
-	p5 = Point(3, 3)
-	p6 = Point(2, 5)
-	p7 = Point(-1, 3)
-	poly_4 = Polygon([p1, p2, p3, p4, p5, p6, p7, p1])
-
-	# Create polygon 5 from clipping 4 with 1
-	poly_5 = Polygon.from_polygon_clip(poly_4, poly_1)[0]
-
-	# Plot both polygons
-	plt.figure(2)
-	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
-	plt.plot(poly_4.get_x_coords(), poly_4.get_y_coords())
-	plt.plot(poly_5.get_x_coords(), poly_5.get_y_coords())
-	plt.grid()
-	plt.show()
-
-	# Create polygon 6
-	p1 = Point(1, -2)
-	p2 = Point(3, -2)
-	p3 = Point(3, 1)
-	p4 = Point(6, 1)
-	p5 = Point(6, 5)
-	p6 = Point(1, 5)
-	poly_6 = Polygon([p1, p2, p3, p4, p5, p6, p1])
-
-	# Create polygon 7 from clipping 6 with 1
-	poly_7 = Polygon.from_polygon_clip(poly_6, poly_1)[0]
-
-	# Plot both polygons
-	plt.figure(3)
-	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
-	plt.plot(poly_6.get_x_coords(), poly_6.get_y_coords())
-	plt.plot(poly_7.get_x_coords(), poly_7.get_y_coords())
-	plt.grid()
-	plt.show()
-
-	# Create polygon 8
-	p1 = Point(-1, 1)
-	p2 = Point(1, 1)
-	p3 = Point(2, 0)
-	p4 = Point(3, 1)
-	p5 = Point(5, 1)
-	p6 = Point(5, 3)
-	p7 = Point(3, 3)
-	p8 = Point(1, 5)
-	p9 = Point(-1, 3)
-	poly_8 = Polygon([p1, p2, p3, p4, p5, p6, p7, p8, p9, p1])
-
-	# Create polygon 9 from clipping 8 with 1
-	poly_9 = Polygon.from_polygon_clip(poly_8, poly_1)[0]
-
-	# Plot both polygons
-	plt.figure(4)
-	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
-	plt.plot(poly_8.get_x_coords(), poly_8.get_y_coords())
-	plt.plot(poly_9.get_x_coords(), poly_9.get_y_coords())
-	plt.grid()
-	plt.show()
-
-	# Create polygon 10
-	p1 = Point(0, 3)
-	p2 = Point(4, 3)
-	p3 = Point(4, 5)
-	p4 = Point(0, 5)
-	poly_10 = Polygon([p1, p2, p3, p4, p1])
-
-	# Create polygon 11 from clipping 10 with 1
-	poly_11 = Polygon.from_polygon_clip(poly_10, poly_1)[0]
-
-	# Plot both polygons
-	plt.figure(5)
-	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
-	plt.plot(poly_10.get_x_coords(), poly_10.get_y_coords())
-	plt.plot(poly_11.get_x_coords(), poly_11.get_y_coords())
-	plt.grid()
-	plt.show()
-
-	# Polygons below does not overlap clip ploygon
-	# Create polygon 12
-	p1 = Point(5, 0)
-	p2 = Point(9, 0)
-	p3 = Point(9, 4)
-	p4 = Point(5, 4)
-	poly_12 = Polygon([p1, p2, p3, p4, p1])
-
-	# Try to create a polygon from clipping 12 with 1
-	assert len(Polygon.from_polygon_clip(poly_12, poly_1)) == 0
-
-	# Plot both polygons
-	plt.figure(6)
-	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
-	plt.plot(poly_12.get_x_coords(), poly_12.get_y_coords())
-	plt.grid()
-	plt.show()
-
-	# Polygons below is completely contained inside the clip polygon
-	# Create polygon 13
-	p1 = Point(1, 1)
-	p2 = Point(3, 1)
-	p3 = Point(3, 3)
-	p4 = Point(1, 3)
-	poly_13 = Polygon([p1, p2, p3, p4, p1])
-
-	# Try to create a polygon from clipping 13 with 1
-	poly_14 = Polygon.from_polygon_clip(poly_13, poly_1)[0]
-
-	# Plot both polygons
-	plt.figure(7)
-	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
-	plt.plot(poly_13.get_x_coords(), poly_13.get_y_coords())
-	plt.plot(poly_14.get_x_coords(), poly_14.get_y_coords())
-	plt.grid()
-	plt.show()
+	# plt.figure(8)
+	# plt.plot(poly_15.get_x_coords(), poly_15.get_y_coords())
+	# plt.plot(poly_16.get_x_coords(), poly_16.get_y_coords())
+	# plt.plot(poly_17.get_x_coords(), poly_17.get_y_coords())
+	# plt.grid()
+	# plt.show()
 
