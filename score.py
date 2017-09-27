@@ -76,14 +76,19 @@ def check_blockage(net_segment, layout, step_size, check_distance):
 					overlapping_polys.extend(clipped_polys)
 					for clipped_poly in clipped_polys:
 						total_overlap_area += clipped_poly.get_area()
-			# Calculate Overlap Area
-			# Split polygons in to groups of potential overlappings
+			# Calculate Overlap Area to Subtract Out
+			# @TODO
 				
 	return (num_units_blocked + total_overlap_area)
 	
 def analyze_critical_net_blockage(layout):
 	total_area      = 0
 	total_blockage  = 0 
+
+	# Extract all GDSII elements near security-critical nets
+	layout.extract_nearby_polygons()
+	# layout.extract_nearby_polygons_parallel()
+
 	for net in layout.critical_nets:
 		print "Analying Net: ", net.fullname
 		path_segment_counter = 1
@@ -122,6 +127,15 @@ def analyze_critical_net_blockage(layout):
 
 	return (float(total_blockage) / float(total_area))
 
+# ------------------------------------------------------------------
+# Critical Net Blockage Metric
+# ------------------------------------------------------------------
+def analyze_open_space_for_triggers(layout):
+	return
+
+# ------------------------------------------------------------------
+# Main Entry Point of GDSII-Score
+# ------------------------------------------------------------------
 def main():
 	# Input Filenames
 	TOP_LEVEL_MODULE          = 'MAL_TOP'
@@ -164,11 +178,11 @@ def main():
 	print "----------------------------------------------"
 
 	# Analyze empty space for implanting triggers in GDSII
-	# start_time = time.time()
-	# print "Starting Trigger Space Analysis:"
-	# analyze_open_space_for_triggers(layout)
-	# print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
-	# print "----------------------------------------------"
+	start_time = time.time()
+	print "Starting Trigger Space Analysis:"
+	analyze_open_space_for_triggers(layout)
+	print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
+	print "----------------------------------------------"
 
 	# Calculate and print total execution time
 	overall_end_time = time.time()
