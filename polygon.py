@@ -375,17 +375,7 @@ class Polygon():
 				intersection = intersection_points.pop(0)
 				wa_graph[current_point][1].append(intersection)
 				current_point = intersection
-			# try:
 			wa_graph[current_point][1].append(clip_edge.p2)
-			# except KeyError:
-			# 		print "ERROR INSERTING CLIP EDGE P2"
-			# 		current_point.print_coords()
-			# 		print
-			# 		dbg.debug_print_wa_graph(wa_graph)
-			# 		plt.plot(poly.get_x_coords(), poly.get_y_coords())
-			# 		plt.plot(clip_poly.get_x_coords(), clip_poly.get_y_coords())
-			# 		plt.grid()
-			# 		plt.show()
 
 		if DEBUG_WA_ALGORITHM_POST_CLIP:
 			print "Post Clip Edge Iteration:"
@@ -475,6 +465,12 @@ class Polygon():
 			cross_product += ((edge.p1.x * edge.p2.y) - (edge.p2.y * edge.p1.x))
 		return abs(float(cross_product) / 2.0)
 
+	def update_bbox(self):
+		x_coords     = self.get_x_coords()
+		y_coords     = self.get_y_coords()
+		self.bbox.ll = Point(min(x_coords), min(y_coords))
+		self.bbox.ur = Point(max(x_coords), max(y_coords))
+
 	def plot(self):
 		plt.plot(self.get_x_coords(), self.get_y_coords())
 		plt.grid()
@@ -513,12 +509,20 @@ class Polygon():
 			self.coords[i].y += offset_y
 
 	def compute_translations(self, offset_x, offset_y, x_reflection, degrees_rotation):
+		translation_computed = False
 		if x_reflection == REFLECTION_ABOUT_X_AXIS:
 			self.reflect_across_x_axis()
+			translation_computed = True
 		if degrees_rotation != 0 and degrees_rotation != None:
 			self.rotate(degrees_rotation)
+			translation_computed = True
 		if offset_x != 0 or offset_y != 0:
 			self.shift_x_y(offset_x, offset_y)
+			translation_computed = True
+
+		# Update the bounding box if a translation is computed
+		if translation_computed:
+			self.update_bbox()
 
 	# def ray_intersects_segment(self, x, y, point_1, point_2):
 	# 	# NOTE: Point 1 is MUST BE below Point 2 for this function to work

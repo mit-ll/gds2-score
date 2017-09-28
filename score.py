@@ -161,6 +161,8 @@ def main():
 		INPUT_GDSII_FILE_PATH, \
 		INPUT_DOT_FILE_PATH)
 
+	dbg.debug_print_lib_obj(layout.gdsii_lib)
+	
 	if DEBUG_PRINTS:
 		dbg.debug_print_lib_obj(layout.gdsii_lib)
 		print "----------------------------------------------"

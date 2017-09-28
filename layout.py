@@ -13,6 +13,7 @@ from net     import *
 from error   import *
 
 # Other Imports
+from functools import wraps
 import copy
 import time
 import sys
@@ -26,7 +27,101 @@ class Layout():
 		self.gdsii_structures    = self.index_gdsii_structures_by_name()
 		self.top_gdsii_structure = self.gdsii_structures[top_name]
 		self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname))
+		self.bbox                = BBox(Point(0,0), Point(0,0))
+		self.compute_layout_bbox()
 
+	# @TODO: Combine this function with is_element_nearby() function
+	# by creating a Python decorator with the core functionality.
+	def update_layout_bbox(self, element, offset_x, offset_y, x_reflection, degrees):
+		if isinstance(element, Path) or isinstance(element, Boundary):
+			if isinstance(element, Path):
+				# Element is a Path object
+				poly = Polygon.from_gdsii_path(element)
+			else:
+				# Element is a Boundary object
+				poly = Polygon.from_gdsii_boundary(element)
+
+			# Compute translations if any
+			poly.compute_translations(offset_x, offset_y, x_reflection, degrees)
+			
+			# Update UR x-coord
+			if max(poly.get_x_coords()) > self.bbox.ur.x:
+				self.bbox.ur.x = max(poly.get_x_coords())
+			# Update UR y-coord
+			if max(poly.get_y_coords()) > self.bbox.ur.y:
+				self.bbox.ur.y = max(poly.get_y_coords())
+			# Update LL x-coord
+			if min(poly.get_x_coords()) < self.bbox.ll.x:
+				poly_bbox = poly.bbox.get_bbox_as_list()
+				print element, element.xy, offset_x, offset_y, x_reflection, degrees, poly.num_coords, poly_bbox
+				self.bbox.ll.x = min(poly.get_x_coords())
+			# Update LL y-coord
+			if min(poly.get_y_coords()) < self.bbox.ll.y:
+				poly_bbox = poly.bbox.get_bbox_as_list()
+				print element, element.xy, offset_x, offset_y, x_reflection, degrees, poly.num_coords, poly_bbox
+				self.bbox.ll.y = min(poly.get_y_coords())
+		elif isinstance(element, SRef):
+			# Check if SRef properties are supported by this tool
+			# and that the structure pointed to exists.
+			if element.struct_name in self.gdsii_structures:
+				is_sref_type_supported(element, self.gdsii_structures[element.struct_name])
+			else:
+				print "ERROR %s: SRef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
+				sys.exit(1)
+
+			# Iterate over elements of referenced structure
+			for sub_element in self.gdsii_structures[element.struct_name]:
+				self.update_layout_bbox(sub_element, element.xy[0][0], element.xy[0][1], element.strans, element.angle)
+		elif isinstance(element, ARef):
+			# Check if SRef properties are supported by this tool
+			# and that the structure pointed to exists.
+			if element.struct_name in self.gdsii_structures:
+				is_aref_type_supported(element, self.gdsii_structures[element.struct_name])
+			else:
+				print "ERROR %s: ARef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
+				sys.exit(1)
+
+			# Retrieve row and column spacing
+			row_spacing_vector_length = Point.from_tuple(element.xy[0]).distance_from(Point.from_tuple(element.xy[2]))
+			col_spacing_vector_length = Point.from_tuple(element.xy[0]).distance_from(Point.from_tuple(element.xy[1]))
+			curr_x_offset = element.xy[0][0]
+			col_spacing   = col_spacing_vector_length / element.cols
+			curr_y_offset = element.xy[0][1]
+			row_spacing   = row_spacing_vector_length / element.rows
+
+			# Iterate over elements of referenced structures
+			for row_index in range(element.rows):
+				for col_index in range(element.cols):
+					for sub_element in self.gdsii_structures[element.struct_name]:
+						self.update_layout_bbox(sub_element, curr_x_offset, curr_y_offset, element.strans, element.angle)
+					curr_x_offset += col_spacing
+				curr_y_offset += row_spacing
+		# Ignore GDSII Text elements
+		# elif isinstance(element, Text):
+		elif isinstance(element, Box):
+			print "UNSUPPORTED %s: GDSII Box elements are not supported." % (inspect.stack()[1][3])
+			sys.exit(3)
+		elif isinstance(element, Node):
+			print "UNSUPPORTED %s: GDSII Node elements are not supported." % (inspect.stack()[1][3])
+			sys.exit(3)
+
+	def compute_layout_bbox(self):
+		start_time = time.time()
+		print "Computing layout grid bounding box ..."
+		
+		for element in self.top_gdsii_structure:
+			self.update_layout_bbox(element, 0, 0, 0, 0)
+
+		print "Bounding Box of Layout (man. units):"
+		print self.bbox.get_bbox_as_list()
+		print "Bounding Box of Layout (microns):"
+		print self.bbox.get_bbox_as_list_microns(1.0 / self.lef.database_units)
+
+		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
+		print "----------------------------------------------"
+
+	# @TODO: Combine this function with update_layout_bbox() function
+	# by creating a Python decorator with the core functionality.
 	def is_element_nearby(self, element, net_segment, offset_x, offset_y, x_reflection, degrees):
 		if isinstance(element, Path) or isinstance(element, Boundary):
 			if (net_segment.gdsii_path.layer == element.layer) or \
@@ -75,10 +170,12 @@ class Layout():
 				sys.exit(1)
 
 			# Retrieve row and column spacing
+			row_spacing_vector_length = Point.from_tuple(element.xy[0]).distance_from(Point.from_tuple(element.xy[2]))
+			col_spacing_vector_length = Point.from_tuple(element.xy[0]).distance_from(Point.from_tuple(element.xy[1]))
 			curr_x_offset = element.xy[0][0]
-			col_spacing   = (element.xy[1][0] - curr_x_offset) / element.cols
+			col_spacing   = col_spacing_vector_length / element.cols
 			curr_y_offset = element.xy[0][1]
-			row_spacing   = (element.xy[2][1] - curr_y_offset) / element.rows
+			row_spacing   = row_spacing_vector_length / element.rows
 
 			# Iterate over elements of referenced structures
 			for row_index in range(element.rows):
