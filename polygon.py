@@ -52,7 +52,7 @@ class Point():
 		self.x += x_offset
 		self.y += y_offset
 
-	# Computes the eulcidean distance itself to point P
+	# Computes the eulcidean distance_from itself to point P
 	def distance_from(self, P):
 		return math.sqrt((P.x - self.x)**2 + (P.y - self.y)**2)
 
@@ -199,11 +199,12 @@ class BBox():
 		return [(self.ll.x * scale_factor, self.ll.y * scale_factor,), (self.ur.x * scale_factor, self.ur.y * scale_factor)]
 
 class Polygon():
-	def __init__(self, coords):
-		self.num_coords = len(coords)
-		self.coords     = coords
-		self.bbox       = BBox.from_polygon(self)
-
+	def __init__(self, coords, gdsii_element=None):
+		self.num_coords    = len(coords)
+		self.coords        = coords
+		self.gdsii_element = gdsii_element
+		self.bbox          = BBox.from_polygon(self)
+		
 	@classmethod
 	def from_gdsii_path(cls, path):
 		if is_path_type_supported(path):
@@ -244,14 +245,14 @@ class Polygon():
 			# List of Coords -- 5 coords total -- first and last are the same
 			coords = [ll_corner, lr_corner, ur_corner, ul_corner, ll_corner]
 
-			return cls(coords)
+			return cls(coords, path)
 
 	@classmethod
 	def from_gdsii_boundary(cls, boundary):
 		coords = []
 		for coord in boundary.xy:
 			coords.append(Point(coord[0], coord[1]))
-		return cls(coords)
+		return cls(coords, boundary)
 
 	# Weiler-Atherton Algorithm
 	# Returns list of polygon objects as a result of a clipping operation
@@ -462,7 +463,7 @@ class Polygon():
 	def get_area(self):
 		cross_product = 0.0
 		for edge in self.edges():
-			cross_product += ((edge.p1.x * edge.p2.y) - (edge.p2.y * edge.p1.x))
+			cross_product += ((edge.p1.x * edge.p2.y) - (edge.p1.y * edge.p2.x))
 		return abs(float(cross_product) / 2.0)
 
 	def update_bbox(self):
@@ -510,12 +511,15 @@ class Polygon():
 
 	def compute_translations(self, offset_x, offset_y, x_reflection, degrees_rotation):
 		translation_computed = False
+		# Reflections are computed FIRST
 		if x_reflection == REFLECTION_ABOUT_X_AXIS:
 			self.reflect_across_x_axis()
 			translation_computed = True
+		# Rotations are computed SECOND
 		if degrees_rotation != 0 and degrees_rotation != None:
 			self.rotate(degrees_rotation)
 			translation_computed = True
+		# Offsets are computed LAST
 		if offset_x != 0 or offset_y != 0:
 			self.shift_x_y(offset_x, offset_y)
 			translation_computed = True

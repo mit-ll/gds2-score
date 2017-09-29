@@ -99,7 +99,7 @@ def analyze_critical_net_blockage(layout):
 				print "	Analyzing Net Segment", path_segment_counter
 				print "		Layer:                ", net_segment.layer_num
 				print "		Perimeter:            ", net_segment.bbox.get_perimeter()
-				print "     Top and Bottom Area:  ", (net_segment.polygon.get_area() * 2)
+				print "		Top and Bottom Area:  ", (net_segment.polygon.get_area() * 2)
 				print "		BBox (M-Units):       ", net_segment.bbox.get_bbox_as_list()
 				print "		BBox (Microns):       ", net_segment.bbox.get_bbox_as_list_microns(1.0 / layout.lef.database_units)
 				print "		Nearby BBox (M-Units):", net_segment.nearby_bbox.get_bbox_as_list()
@@ -151,7 +151,7 @@ def main():
 	# 	for value in itertools.combinations(a, i):
 	# 		print value
 	# dbg.debug_weiler_atherton_algorithm()
-	# return 	
+	# return
 
 	# Load layout and critical nets
 	layout = Layout( \
@@ -162,7 +162,7 @@ def main():
 		INPUT_DOT_FILE_PATH)
 
 	dbg.debug_print_lib_obj(layout.gdsii_lib)
-	
+
 	if DEBUG_PRINTS:
 		dbg.debug_print_lib_obj(layout.gdsii_lib)
 		print "----------------------------------------------"

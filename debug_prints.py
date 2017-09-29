@@ -379,6 +379,31 @@ def debug_print_points(points):
 		point.print_coords()
 		print
 
+def debug_polygon_translations():
+	# Create polygon 1
+	r1 = Point(0, 0)
+	r2 = Point(4, 0)
+	r3 = Point(4, 4)
+	r4 = Point(0, 4)
+	poly_1 = Polygon([r1, r2, r3, r4, r1])
+
+	# Create polygon 2
+	p1 = Point(1, -2)
+	p2 = Point(5, -2)
+	p3 = Point(5, 5)
+	p4 = Point(1, 5)
+	p5 = Point(1, 3)
+	p6 = Point(2, 3)
+	p7 = Point(2, 2)
+	p8 = Point(1, 2)
+
+	# Plot both polygons
+	plt.figure(1)
+	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	plt.plot(poly_2.get_x_coords(), poly_2.get_y_coords())
+	plt.grid()
+	plt.show()
+
 def debug_weiler_atherton_algorithm():
 	# # Create polygon 1
 	# r1 = Point(0, 0)
@@ -547,10 +572,10 @@ def debug_weiler_atherton_algorithm():
 	poly_17 = Polygon.from_polygon_clip(poly_15, poly_16)[0]
 
 	# Plot both polygons
-	# plt.figure(8)
-	# plt.plot(poly_15.get_x_coords(), poly_15.get_y_coords())
-	# plt.plot(poly_16.get_x_coords(), poly_16.get_y_coords())
-	# plt.plot(poly_17.get_x_coords(), poly_17.get_y_coords())
-	# plt.grid()
-	# plt.show()
+	plt.figure(8)
+	plt.plot(poly_15.get_x_coords(), poly_15.get_y_coords())
+	plt.plot(poly_16.get_x_coords(), poly_16.get_y_coords())
+	plt.plot(poly_17.get_x_coords(), poly_17.get_y_coords())
+	plt.grid()
+	plt.show()
 
