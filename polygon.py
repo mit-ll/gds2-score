@@ -474,8 +474,6 @@ class Polygon():
 
 	def plot(self):
 		plt.plot(self.get_x_coords(), self.get_y_coords())
-		plt.grid()
-		plt.show()
 
 	def rotate(self, degrees):
 		if degrees == 90:

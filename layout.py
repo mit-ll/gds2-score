@@ -13,10 +13,10 @@ from net     import *
 from error   import *
 
 # Other Imports
-from functools import wraps
 import copy
 import time
 import sys
+import pdb
 
 class Layout():
 	def __init__(self, top_name, lef_fname, layer_map_fname, gdsii_fname, dot_fname):
@@ -206,9 +206,9 @@ class Layout():
 				# Compute translations of sub elements
 				for poly in sub_polys:
 					poly.compute_translations(element.xy[0][0], element.xy[0][1], element.strans, element.angle)
-				polys.extend(copy.deepcopy(sub_polys))
+					polys.append(copy.copy(poly))
 		elif isinstance(element, ARef):
-			# Check if SRef properties are supported by this tool
+			# Check if ARef properties are supported by this tool
 			# and that the structure pointed to exists.
 			if element.struct_name in self.gdsii_structures:
 				is_aref_type_supported(element, self.gdsii_structures[element.struct_name])
@@ -234,11 +234,12 @@ class Layout():
 						# Compute translations of newly generated polygons
 						for poly in sub_polys:
 							poly.compute_translations(curr_x_offset, curr_y_offset, None, None)
-						polys.extend(copy.deepcopy(sub_polys))
+							polys.append(copy.copy(poly))
 					curr_x_offset += col_spacing
+				curr_x_offset = 0.0
 				curr_y_offset += row_spacing
 			# Compute overall translation of ARef element polygons
-			for poly in polys:
+			for poly in polys:				
 				poly.compute_translations(element.xy[0][0], element.xy[0][1], element.strans, element.angle)
 		elif isinstance(element, Path) or isinstance(element, Boundary):
 			# BASE CASE
@@ -271,13 +272,15 @@ class Layout():
 		# Update LL x-coord
 		if min(poly.get_x_coords()) < self.bbox.ll.x:
 			poly_bbox = poly.bbox.get_bbox_as_list()
-			print poly.num_coords, poly_bbox
+			print "ERROR: ASIC core LL corner should not be less than (0, 0)."
+			sys.exit(1)
 			self.bbox.ll.x = min(poly.get_x_coords())
 		
 		# Update LL y-coord
 		if min(poly.get_y_coords()) < self.bbox.ll.y:
 			poly_bbox = poly.bbox.get_bbox_as_list()
-			print poly.num_coords, poly_bbox
+			print "ERROR: ASIC core LL corner should not be less than (0, 0)."
+			sys.exit(1)
 			self.bbox.ll.y = min(poly.get_y_coords())
 
 	# Computes the minimum bounding box of the Layout.
@@ -285,10 +288,10 @@ class Layout():
 	def compute_layout_bbox(self):
 		start_time = time.time()
 		print "Computing layout grid bounding box ..."
-		all_polys_in_layout = []
+		print "Number of Top-Level GDSII Elements:", len(self.top_gdsii_structure)
+
 		for element in self.top_gdsii_structure:
 			polys = self.generate_polys_from_element(element)
-			# all_polys_in_layout.append(copy.deepcopy(polys))
 			for poly in polys:
 				self.update_layout_bbox(poly)
 
@@ -307,14 +310,14 @@ class Layout():
 			
 			# Element on the same layer as net_segment
 			if poly.overlaps_bbox(net_segment.nearby_bbox):
-				net_segment.nearby_sl_polygons.append(copy.deepcopy(poly))
+				net_segment.nearby_sl_polygons.append(copy.copy(poly))
 		elif self.lef.is_gdsii_layer_above_below(net_segment.gdsii_path, poly.gdsii_element, self.layer_map):
 			
 			# Element is either one layer above or below the net_segment.
 			# Element is only considered "nearyby" if it insects with the
 			# bounding box of the path object projected one layer above/below.
 			if poly.overlaps_bbox(net_segment.bbox):
-				net_segment.nearby_al_polygons.append(copy.deepcopy(poly))
+				net_segment.nearby_al_polygons.append(copy.copy(poly))
 
 	# Extracts a list of GDSII elements (converted to polygon objects) that are in close
 	# proimity to a given security-critical net segement. This is doen by finding all 

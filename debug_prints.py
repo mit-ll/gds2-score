@@ -10,6 +10,7 @@ from polygon import *
 
 # Other Imports
 import pprint
+import copy
 
 def debug_print_lib_obj(lib_obj):
 	print "Lib Object:"
@@ -379,13 +380,20 @@ def debug_print_points(points):
 		point.print_coords()
 		print
 
+def debug_plot_polygons(polys):
+	plt.figure(1)
+	for poly in polys:
+		poly.plot()
+	plt.grid()
+	plt.show()
+
 def debug_polygon_translations():
 	# Create polygon 1
 	r1 = Point(0, 0)
 	r2 = Point(4, 0)
 	r3 = Point(4, 4)
 	r4 = Point(0, 4)
-	poly_1 = Polygon([r1, r2, r3, r4, r1])
+	poly_1 = Polygon([r1, r2, r3, r4, copy.deepcopy(r1)])
 
 	# Create polygon 2
 	p1 = Point(1, -2)
@@ -396,10 +404,43 @@ def debug_polygon_translations():
 	p6 = Point(2, 3)
 	p7 = Point(2, 2)
 	p8 = Point(1, 2)
+	poly_2 = Polygon([p1, p2, p3, p4, p5, p6, p7, p8, copy.deepcopy(p1)])
 
 	# Plot both polygons
 	plt.figure(1)
 	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	plt.plot(poly_2.get_x_coords(), poly_2.get_y_coords())
+
+	# Reflect accross X-Axis
+	before_x_coords = poly_2.get_x_coords()
+	before_y_coords = poly_2.get_y_coords()
+	poly_2.compute_translations(0, 0, 32768, 0)
+	after_x_coords = poly_2.get_x_coords()
+	after_y_coords = poly_2.get_y_coords()
+
+	print "Before X-Coords:", before_x_coords
+	print "After  X-Coords:", after_x_coords
+	print
+	print "Before Y-Coords:", before_y_coords
+	print "After  Y-Coords:", after_y_coords
+
+	# Replot
+	plt.plot(poly_2.get_x_coords(), poly_2.get_y_coords())
+
+	# Rotate 90 degrees CCW
+	before_x_coords = poly_2.get_x_coords()
+	before_y_coords = poly_2.get_y_coords()
+	poly_2.compute_translations(0, 0, 0, 90)
+	after_x_coords = poly_2.get_x_coords()
+	after_y_coords = poly_2.get_y_coords()
+
+	print "Before X-Coords:", before_x_coords
+	print "After  X-Coords:", after_x_coords
+	print
+	print "Before Y-Coords:", before_y_coords
+	print "After  Y-Coords:", after_y_coords
+
+	# Replot
 	plt.plot(poly_2.get_x_coords(), poly_2.get_y_coords())
 	plt.grid()
 	plt.show()

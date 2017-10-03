@@ -125,7 +125,7 @@ def analyze_critical_net_blockage(layout):
 			print "		----------------------------------------------"
 			path_segment_counter += 1
 
-	return (float(total_blockage) / float(total_area))
+	return ((float(total_blockage) / float(total_area)) * 100.0)
 
 # ------------------------------------------------------------------
 # Critical Net Blockage Metric
@@ -151,6 +151,7 @@ def main():
 	# 	for value in itertools.combinations(a, i):
 	# 		print value
 	# dbg.debug_weiler_atherton_algorithm()
+	# dbg.debug_polygon_translations()
 	# return
 
 	# Load layout and critical nets
@@ -176,7 +177,7 @@ def main():
 	print "Starting Blockage Analysis:"
 	blockage_percentage = analyze_critical_net_blockage(layout)
 	print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
-	print "Blockage Percentage: %.4f" % (blockage_percentage) 
+	print "Blockage Percentage: %4.2f\%" % (blockage_percentage) 
 	print "----------------------------------------------"
 
 	# Analyze empty space for implanting triggers in GDSII
