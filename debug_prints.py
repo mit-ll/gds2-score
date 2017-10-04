@@ -365,6 +365,10 @@ def debug_polygon_edge_generator(poly):
 	for edge in poly.edges():
 		edge.print_segment()
 
+def debug_polygon_vertical_edge_generator(poly):
+	for v_edge in poly.vertical_edges():
+		v_edge.print_segment()
+
 def debug_print_wa_outgoing_points(outgoing_points):
 	print "Outgoing Points: "
 	debug_print_points(outgoing_points)
@@ -383,6 +387,14 @@ def debug_print_points(points):
 def debug_plot_polygons(polys):
 	plt.figure(1)
 	for poly in polys:
+		poly.plot()
+	plt.grid()
+	plt.show()
+
+def debug_plot_x_reflected_polygons(polys):
+	plt.figure(1)
+	for poly in polys:
+		poly.reflect_across_x_axis()
 		poly.plot()
 	plt.grid()
 	plt.show()
@@ -444,6 +456,39 @@ def debug_polygon_translations():
 	plt.plot(poly_2.get_x_coords(), poly_2.get_y_coords())
 	plt.grid()
 	plt.show()
+
+def debug_generate_polys():
+	# Create polygon 1
+	r1 = Point(0, 0)
+	r2 = Point(4, 0)
+	r3 = Point(4, 4)
+	r4 = Point(0, 4)
+	poly_1 = Polygon([r1, r2, r3, r4, copy.deepcopy(r1)])
+
+	# Create polygon 2
+	p1 = Point(10, 14)
+	p2 = Point(16, 14)
+	p3 = Point(16, 20)
+	p4 = Point(14, 20)
+	p5 = Point(14, 22)
+	p6 = Point(16, 22)
+	p7 = Point(16, 24)
+	p8 = Point(10, 24)
+	poly_2 = Polygon([p1, p2, p3, p4, p5, p6, p7, p8, copy.deepcopy(p1)])
+
+	# Create polygon 3
+	q1 = Point(0, 14)
+	q2 = Point(6, 14)
+	q3 = Point(6, 20)
+	q4 = Point(8, 20)
+	q5 = Point(8, 22)
+	q6 = Point(6, 22)
+	q7 = Point(6, 24)
+	q8 = Point(0, 24)
+	poly_3 = Polygon([q1, q2, q3, q4, q5, q6, q7, q8, copy.deepcopy(q1)])
+	poly_3.compute_translations(50, 20, None, 90)
+	
+	return [poly_1, poly_2, poly_3]
 
 def debug_weiler_atherton_algorithm():
 	# # Create polygon 1

@@ -83,13 +83,13 @@ class LineSegment():
 		c = -1.0 * ((self.p1.x * self.p2.y) - (self.p2.x * self.p1.y))
 		return (a, b, c)
 
-	# Returns the following values according to the 
-	# orientation of the points P, Q, R:
-	# 0 --> p, q and r are colinear
+	# Returns the following values according to the orientation 
+	# of the segment's points p1 and p2 with the provided point R:
+	# 0 --> p1, p2 and R are colinear
 	# 1 --> Clockwise
 	# 2 --> Counterclockwise
-	def get_orientation_of_points(self, P, Q, R):
-		orientation = ((Q.y - P.y) * (R.x - Q.x)) - ((Q.x - P.x) * (R.y - Q.y))
+	def get_orientation_of_points(self, R):
+		orientation = ((self.p2.y - self.p1.y) * (R.x - self.p2.x)) - ((self.p2.x - self.p1.x) * (R.y - self.p2.y))
 		if orientation == 0:
 			# Colinear
 			return 0
@@ -101,25 +101,25 @@ class LineSegment():
 			return 2
 
 	# Returns true if the point P lies on the line segment
-	# NOTE: Assumes points are colinear.
 	def on_segment(self, P):
-		if P.x <= max(self.p1.x, self.p2.x) and P.x >= min(self.p1.x, self.p2.x):
-			if P.y <= max(self.p1.y, self.p2.y) and P.y >= min(self.p1.y, self.p2.y):
-				# Debug Prints
-				if DEBUG_INTERSECTION_CALCS:
-					print "			ON SEGMENT: ", 
-					P.print_coords()
-					self.print_segment()
-				return True
+		if self.get_orientation_of_points(P) == 0:
+			if P.x <= max(self.p1.x, self.p2.x) and P.x >= min(self.p1.x, self.p2.x):
+				if P.y <= max(self.p1.y, self.p2.y) and P.y >= min(self.p1.y, self.p2.y):
+					# Debug Prints
+					if DEBUG_INTERSECTION_CALCS:
+						print "			ON SEGMENT: ", 
+						P.print_coords()
+						self.print_segment()
+					return True
 		return False
 
 	# Returns True if the line segments intersect.
 	# Returns False otherwise.
 	def intersects(self, line):
-		orientation_1 = self.get_orientation_of_points(self.p1, self.p2, line.p1)
-		orientation_2 = self.get_orientation_of_points(self.p1, self.p2, line.p2)
-		orientation_3 = self.get_orientation_of_points(line.p1, line.p2, self.p1)
-		orientation_4 = self.get_orientation_of_points(line.p1, line.p2, self.p2)
+		orientation_1 = self.get_orientation_of_points(line.p1)
+		orientation_2 = self.get_orientation_of_points(line.p2)
+		orientation_3 = line.get_orientation_of_points(self.p1)
+		orientation_4 = line.get_orientation_of_points(self.p2)
 
 		# Debug Prints
 		if DEBUG_INTERSECTION_CALCS:
@@ -131,14 +131,14 @@ class LineSegment():
 
 		# Special Cases
 		temp_line = LineSegment(self.p1, self.p2)
-		if orientation_1 == 0 and temp_line.on_segment(line.p1):
+		if temp_line.on_segment(line.p1):
 			return True
-		if orientation_2 == 0 and temp_line.on_segment(line.p2):
+		if temp_line.on_segment(line.p2):
 			return True
 		temp_line = LineSegment(line.p1, line.p2)
-		if orientation_3 == 0 and temp_line.on_segment(self.p1):
+		if temp_line.on_segment(self.p1):
 			return True
-		if orientation_4 == 0 and temp_line.on_segment(self.p2):
+		if temp_line.on_segment(self.p2):
 			return True
 		return False
 
@@ -163,6 +163,16 @@ class LineSegment():
 
 	def is_endpoint(self, P):
 		if self.p1 == P or self.p2 == P:
+			return True
+		return False
+
+	def is_vertical(self):
+		if self.p1.x == self.p2.x:
+			return True
+		return False
+
+	def is_horizontal(self):
+		if self.p1.y == self.p2.y:
 			return True
 		return False
 
@@ -447,6 +457,16 @@ class Polygon():
 	def edges(self):
 		for i in range(self.num_coords - 1):
 			yield LineSegment(self.coords[i], self.coords[i + 1])
+
+	# Generator that yields only the vertical edges of 
+	# the polygon as LineSegment objects.
+	def vertical_edges(self):
+		for i in range(self.num_coords - 1):
+			segment = LineSegment(self.coords[i], self.coords[i + 1])
+			if segment.is_vertical():
+				yield segment
+			else:
+				continue
 
 	def get_x_coords(self):
 		x_coords = []
