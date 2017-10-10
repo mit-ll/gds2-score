@@ -1,3 +1,6 @@
+# Import Custom Modules
+from polygon import *
+
 # Other Imports
 import sys
 import time
@@ -8,6 +11,7 @@ class LEF:
 		self.database_units     = 0
 		self.manufacturing_grid = 0
 		self.layers             = {}
+		self.placement_sites    = {}
 		self.load_lef_file(lef_fname)
 
 	def load_lef_file(self, lef_fname):
@@ -91,6 +95,30 @@ class LEF:
 								layer_index += 1
 							# Via Layer
 							# elif "CUT" in layer_type:
+					# Placement Site Definitions
+					elif "SITE" in line_list:
+						# Site Values
+						name        = ""
+						site_class  = ""
+						dimension_x = 0
+						dimension_y = 0
+						symmetry    = ""
+						line = line.rstrip(' ;\n').lstrip()
+						name = line.split(' ')[-1]
+						line = stream.next().rstrip(' ;\n').lstrip()
+						while "END" not in line:
+							if "CLASS" in line:
+								line_list = line.split(' ')
+								site_class = line_list[-1]
+							elif "SIZE" in line:
+								line_list = line.split(' ')
+								dimension_x = float(line_list[1]) * self.database_units
+								dimension_y = float(line_list[3]) * self.database_units
+							elif "SYMMETRY" in line:
+								line_list = line.split(' ')
+								site_class = line_list[-1]
+							line = stream.next().rstrip(' ;\n').lstrip()
+						self.placement_sites[name] = PlacementSite(name, site_class, Point(dimension_x, dimension_y), symmetry)
 
 		# Close LEF File
 		stream.close()
@@ -199,3 +227,12 @@ class Via_Layer:
 
 	def debug_print_attrs(self):
 		return
+
+# Placement site as defined in the LEF file.
+class PlacementSite():
+	def __init__(self, name, site_class, dim, symmetry):
+		self.name       = name
+		self.site_class = site_class
+		self.dimension  = dim # Point object in database units
+		self.symmetry   = symmetry
+

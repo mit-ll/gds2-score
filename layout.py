@@ -8,7 +8,8 @@ from gdsii.elements import *
 # Import Custom Modules
 import debug_prints as dbg
 from polygon import *
-from lef     import *
+from LEF     import *
+from DEF     import *
 from net     import *
 from error   import *
 
@@ -19,35 +20,39 @@ import sys
 import pdb
 
 class Layout():
-	def __init__(self, top_name, lef_fname, layer_map_fname, gdsii_fname, dot_fname):
+	def __init__(self, top_name, lef_fname, def_fname, layer_map_fname, gdsii_fname, dot_fname, fill_cell_names, first_metal_layer):
 		self.top_level_name      = top_name 
+		self.fill_cell_names     = fill_cell_names
+		self.first_metal_layer   = first_metal_layer
 		self.lef                 = LEF(lef_fname)
+		self.def_info            = DEF(def_fname, self.lef)
 		self.layer_map           = self.load_layer_map(layer_map_fname)
-		self.gdsii_lib           = self.load_gdsii_library(gdsii_fname)
+		# self.gdsii_lib           = self.load_gdsii_library(gdsii_fname)
 		self.gdsii_structures    = self.index_gdsii_structures_by_name()
 		self.top_gdsii_structure = self.gdsii_structures[top_name]
-		self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname))
-		self.bbox                = BBox(Point(0,0), Point(1279880, 999880))
+		# self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname))
 
-	def generate_polys_from_element(self, element):
+	def generate_polys_from_element(self, element, srefs_to_ignore={}):
 		polys = []
 		if isinstance(element, SRef):
-			# Check if SRef properties are supported by this tool
-			# and that the structure pointed to exists.
-			if element.struct_name in self.gdsii_structures:
-				is_sref_type_supported(element, self.gdsii_structures[element.struct_name])
-			else:
-				print "ERROR %s: SRef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
-				sys.exit(1)
+			# Check if SRef is to be ignored (i.e. fill cells)
+			if element.struct_name not in srefs_to_ignore:
+				# Check if SRef properties are supported by this tool
+				# and that the structure pointed to exists.
+				if element.struct_name in self.gdsii_structures:
+					is_sref_type_supported(element, self.gdsii_structures[element.struct_name])
+				else:
+					print "ERROR %s: SRef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
+					sys.exit(1)
 
-			# Iterate over elements of referenced structure
-			for sub_element in self.gdsii_structures[element.struct_name]:
-				sub_polys = self.generate_polys_from_element(sub_element)
-				
-				# Compute translations of sub elements
-				for poly in sub_polys:
-					poly.compute_translations(element.xy[0][0], element.xy[0][1], element.strans, element.angle)
-					polys.append(copy.copy(poly))
+				# Iterate over elements of referenced structure
+				for sub_element in self.gdsii_structures[element.struct_name]:
+					sub_polys = self.generate_polys_from_element(sub_element)
+					
+					# Compute translations of sub elements
+					for poly in sub_polys:
+						poly.compute_translations(element.xy[0][0], element.xy[0][1], element.strans, element.angle)
+						polys.append(copy.copy(poly))
 		elif isinstance(element, ARef):
 			# Check if ARef properties are supported by this tool
 			# and that the structure pointed to exists.
@@ -101,6 +106,18 @@ class Layout():
 			sys.exit(3)
 		return polys
 
+	# Generates a list of polygons on the device layer(s).
+	# The fill cells are ignored. Device layers must be defined
+	# per process technology.
+	def generate_device_layer_polys(self):
+		for element in self.top_gdsii_structure:
+			device_layer_polys = []
+			polys = self.generate_polys_from_element(element)
+			for poly in polys:
+				if poly.gdsii_element.layer < self.first_metal_layer:
+					device_layer_polys.append(copy.copy(poly))
+			yield device_layer_polys
+
 	def update_layout_bbox(self, poly):
 		# Update UR x-coord
 		if max(poly.get_x_coords()) > self.bbox.ur.x:
@@ -112,14 +129,12 @@ class Layout():
 		
 		# Update LL x-coord
 		if min(poly.get_x_coords()) < self.bbox.ll.x:
-			poly_bbox = poly.bbox.get_bbox_as_list()
 			print "ERROR: ASIC core LL corner should not be less than (0, 0)."
 			sys.exit(1)
 			self.bbox.ll.x = min(poly.get_x_coords())
 		
 		# Update LL y-coord
 		if min(poly.get_y_coords()) < self.bbox.ll.y:
-			poly_bbox = poly.bbox.get_bbox_as_list()
 			print "ERROR: ASIC core LL corner should not be less than (0, 0)."
 			sys.exit(1)
 			self.bbox.ll.y = min(poly.get_y_coords())

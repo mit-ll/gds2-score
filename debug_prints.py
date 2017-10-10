@@ -7,8 +7,10 @@ import matplotlib.pyplot as plt
 
 # Import custom modules
 from polygon import *
+from trigger_space import *
 
 # Other Imports
+import time
 import pprint
 import copy
 
@@ -665,3 +667,10 @@ def debug_weiler_atherton_algorithm():
 	plt.grid()
 	plt.show()
 
+def debug_trigger_space_metric():
+	start_time = time.time()
+	print "Starting Trigger Space Analysis:"
+	analyze_open_space_for_triggers()
+	print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
+	print "----------------------------------------------"
+	return

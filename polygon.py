@@ -192,6 +192,21 @@ class BBox():
 		ll       = Point(min(x_coords), min(y_coords))
 		ur       = Point(max(x_coords), max(y_coords))
 		return cls(ll, ur)
+
+	@classmethod
+	def from_multiple_polygons(cls, polys):
+		# Create list of all X and Y coords
+		all_x_coords = []
+		all_y_coords = []
+		for poly in polys:
+			all_x_coords.extend(copy.copy(poly.get_x_coords()))
+			all_y_coords.extend(copy.copy(poly.get_y_coords()))
+		
+		# Extract min/max values
+		ll = Point(min(all_x_coords), min(all_y_coords))
+		ur = Point(max(all_x_coords), max(all_y_coords))
+
+		return cls(ll, ur)
 		
 	@classmethod
 	def from_bbox_and_extension(cls, bbox, extension):
@@ -207,6 +222,31 @@ class BBox():
 
 	def get_bbox_as_list_microns(self, scale_factor):
 		return [(self.ll.x * scale_factor, self.ll.y * scale_factor,), (self.ur.x * scale_factor, self.ur.y * scale_factor)]
+
+	# Returns True if the provided point is inside the 
+	# bounding box. Otherwise, returns False.
+	def is_point_inside_bbox(self, point):
+		# Check if one box is to the left of another box
+		if point.x >= self.ll.x and point.x <= self.ur.x:
+			if point.y >= self.ll.y and point.y <= self.ur.y:
+				return True
+		return False
+
+	# Returns True if the provided bounding box overlaps the bounding
+	# box of the polygon. Otherwise, returns False.
+	def overlaps_bbox(self, bbox):
+		# Check if one box is to the left of another box
+		if self.ur.x < bbox.ll.x or bbox.ur.x < self.ll.x:
+			return False
+		# Check if one box is above the other box
+		if self.ur.y < bbox.ll.y or bbox.ur.y < self.ll.y:
+			return False
+		return True
+
+	def plot(self):
+		x_coords = [self.ll.x, self.ur.x, self.ur.x, self.ll.x, self.ll.x]
+		y_coords = [self.ll.y, self.ll.y, self.ur.y, self.ur.y, self.ll.y]
+		plt.plot(x_coords, y_coords)
 
 class Polygon():
 	def __init__(self, coords, gdsii_element=None):

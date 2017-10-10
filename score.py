@@ -65,16 +65,19 @@ def main(argv):
 	global NET_BLOCKAGE
 	global TRIGGER_SPACE
 
-	trigger_space_metric(None)
+	dbg.debug_trigger_space_metric()
 	return
 
 	# Input Filenames
 	TOP_LEVEL_MODULE          = 'MAL_TOP'
 	INPUT_LEF_FILE_PATH       = 'gds/tech_nominal_25c_3_20_20_00_00_02_LB.lef'
+	INPUT_DEF_FILE_PATH       = 'gds/MAL_TOP.def'
 	INPUT_LAYER_MAP_FILE_PATH = 'gds/tech_nominal_25c_3_20_20_00_00_02_LB.map'
 	INPUT_GDSII_FILE_PATH 	  = 'gds/MAL_TOP.merged.gds'
 	INPUT_DOT_FILE_PATH       = 'graphs/MAL_TOP_par.supv_2.dot'
-	# INPUT_DEF_FILE_PATH       = '.def'
+	# FILL_CELL_NAMES           = ["FILLDGCAP8_A12TR", "FILLDGCAP16_A12TR", "FILLDGCAP32_A12TR", "FILLDGCAP64_A12TR"]
+	FILL_CELL_NAMES           = []
+	FIRST_METAL_LAYER         = 17
 
 	# Load command line arguments
 	try:
@@ -120,9 +123,12 @@ def main(argv):
 	layout = Layout( \
 		TOP_LEVEL_MODULE, \
 		INPUT_LEF_FILE_PATH, \
+		INPUT_DEF_FILE_PATH, \
 		INPUT_LAYER_MAP_FILE_PATH, \
 		INPUT_GDSII_FILE_PATH, \
-		INPUT_DOT_FILE_PATH)
+		INPUT_DOT_FILE_PATH, \
+		FILL_CELL_NAMES, \
+		FIRST_METAL_LAYER)
 
 	if DEBUG_PRINTS:
 		dbg.debug_print_lib_obj(layout.gdsii_lib)
