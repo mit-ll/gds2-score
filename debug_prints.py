@@ -13,6 +13,7 @@ from trigger_space import *
 import time
 import pprint
 import copy
+import numpy
 
 def debug_print_lib_obj(lib_obj):
 	print "Lib Object:"
@@ -674,3 +675,22 @@ def debug_trigger_space_metric():
 	print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
 	print "----------------------------------------------"
 	return
+
+def debug_create_bitmap(rows, cols):
+	return numpy.random.choice([0, 1], size=(rows, cols), p=[1./2, 1./2])
+
+def debug_print_square_trace_step(device_layer_bitmap, current_point, orientation, connected_points):
+	temp_bitmap = copy.deepcopy(device_layer_bitmap)
+	temp_bitmap[current_point.y, current_point.x] = 8
+
+	# print bitmap
+	print "Current Point:",
+	current_point.print_coords()
+	print orientation
+	print "Num Connected Points:", len(connected_points)
+	for i in reversed(range(device_layer_bitmap.shape[0])):
+		print temp_bitmap[i], "	", device_layer_bitmap[i]
+	print
+
+	# Hit any key to continue
+	x = raw_input()

@@ -50,8 +50,13 @@ def blockage_metric(layout):
 def trigger_space_metric(layout):
 	start_time = time.time()
 	print "Starting Trigger Space Analysis:"
-	analyze_open_space_for_triggers(layout)
+	num_open_sites, tigger_space_histogram = analyze_open_space_for_triggers(layout)
 	print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
+	print "Open/Total Placement Sites: %d / %d" % (num_open_sites, (layout.def_info.num_placement_rows * layout.def_info.num_placement_cols))
+	print "Summary of Adjacent Placement Sites:"
+	print "size:freq"
+	for space_size in sorted(tigger_space_histogram):
+		print "%4d:%3d |%s" % (space_size, tigger_space_histogram[space_size], unichr(0x258E)*tigger_space_histogram[space_size])
 	print "----------------------------------------------"
 	return
 
@@ -64,9 +69,6 @@ def main(argv):
 	global VERBOSE
 	global NET_BLOCKAGE
 	global TRIGGER_SPACE
-
-	dbg.debug_trigger_space_metric()
-	return
 
 	# Input Filenames
 	TOP_LEVEL_MODULE          = 'MAL_TOP'

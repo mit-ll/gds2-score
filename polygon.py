@@ -223,10 +223,17 @@ class BBox():
 	def get_bbox_as_list_microns(self, scale_factor):
 		return [(self.ll.x * scale_factor, self.ll.y * scale_factor,), (self.ur.x * scale_factor, self.ur.y * scale_factor)]
 
+	# Returns True if the provided coords are inside the 
+	# bounding box. Otherwise, returns False.
+	def are_coords_inside_bbox(self, x, y):
+		if x >= self.ll.x and x <= self.ur.x:
+			if y >= self.ll.y and y <= self.ur.y:
+				return True
+		return False
+
 	# Returns True if the provided point is inside the 
 	# bounding box. Otherwise, returns False.
 	def is_point_inside_bbox(self, point):
-		# Check if one box is to the left of another box
 		if point.x >= self.ll.x and point.x <= self.ur.x:
 			if point.y >= self.ll.y and point.y <= self.ur.y:
 				return True

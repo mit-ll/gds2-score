@@ -28,9 +28,13 @@ class Layout():
 		self.def_info            = DEF(def_fname, self.lef)
 		self.layer_map           = self.load_layer_map(layer_map_fname)
 		# self.gdsii_lib           = self.load_gdsii_library(gdsii_fname)
-		self.gdsii_structures    = self.index_gdsii_structures_by_name()
-		self.top_gdsii_structure = self.gdsii_structures[top_name]
+		# self.gdsii_structures    = self.index_gdsii_structures_by_name()
+		# self.top_gdsii_structure = self.gdsii_structures[top_name]
 		# self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname))
+		self.gdsii_lib           = None
+		self.gdsii_structures    = None
+		self.top_gdsii_structure = None
+		self.critical_nets       = None
 
 	def generate_polys_from_element(self, element, srefs_to_ignore={}):
 		polys = []
