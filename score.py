@@ -54,9 +54,9 @@ def trigger_space_metric(layout):
 	print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
 	print "Open/Total Placement Sites: %d / %d" % (num_open_sites, (layout.def_info.num_placement_rows * layout.def_info.num_placement_cols))
 	print "Summary of Adjacent Placement Sites:"
-	print "size:freq"
+	print "size  : freq"
 	for space_size in sorted(tigger_space_histogram):
-		print "%4d:%3d |%s" % (space_size, tigger_space_histogram[space_size], unichr(0x258E)*tigger_space_histogram[space_size])
+		print "%6d:%3d |%s" % (space_size, tigger_space_histogram[space_size], unichr(0x2588)*tigger_space_histogram[space_size])
 	print "----------------------------------------------"
 	return
 
