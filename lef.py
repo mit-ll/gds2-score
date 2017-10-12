@@ -3,19 +3,25 @@ from polygon import *
 
 # Other Imports
 import sys
+import inspect
 import time
 import pprint
+import copy
 
 class LEF:
-	def __init__(self, lef_fname):
+	def __init__(self, metal_stack_lef_fname, std_cell_lef_name):
 		self.database_units     = 0
 		self.manufacturing_grid = 0
-		self.layers             = {}
-		self.placement_sites    = {}
-		self.load_lef_file(lef_fname)
+		self.layers             = {} # Maps layer name to layer object (only RoutingLayer)
+		self.placement_sites    = {} # Maps placement site name to placement site object
+		self.standard_cells     = {} # Maps standard cell name to standard cell object
+		
+		# Load LEF files
+		self.load_metal_stack_lef_file(metal_stack_lef_fname)
+		self.load_standard_cell_lef_file(std_cell_lef_name)
 
-	def load_lef_file(self, lef_fname):
-		print "Loading LEF file ..."
+	def load_metal_stack_lef_file(self, lef_fname):
+		print "Loading Metal Stack LEF file ..."
 		start_time = time.time()
 
 		layer_index = 1
@@ -68,7 +74,7 @@ class LEF:
 										elif "HORIZONTAL" in line:
 											direction = "H"
 										else:
-											print "ERROR <LEF.load_lef_file>: Routing layer direction not recognized."
+											print "ERROR %s: Routing layer direction not recognized." % (inspect.stack()[0][3])
 											sys.exit(1)
 									elif "PITCH" in line_list:
 										pitch = float(line_list[1])
@@ -98,11 +104,11 @@ class LEF:
 					# Placement Site Definitions
 					elif "SITE" in line_list:
 						# Site Values
-						name        = ""
-						site_class  = ""
+						name        = None
+						site_class  = None
 						dimension_x = 0
 						dimension_y = 0
-						symmetry    = ""
+						symmetry    = None
 						line = line.rstrip(' ;\n').lstrip()
 						name = line.split(' ')[-1]
 						line = stream.next().rstrip(' ;\n').lstrip()
@@ -116,10 +122,44 @@ class LEF:
 								dimension_y = float(line_list[3]) * self.database_units
 							elif "SYMMETRY" in line:
 								line_list = line.split(' ')
-								site_class = line_list[-1]
+								symmetry  = line_list[-1]
 							line = stream.next().rstrip(' ;\n').lstrip()
 						self.placement_sites[name] = PlacementSite(name, site_class, Point(dimension_x, dimension_y), symmetry)
 
+		# Close LEF File
+		stream.close()
+
+		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
+		print "----------------------------------------------"
+		return
+
+	def load_standard_cell_lef_file(self, lef_fname):
+		print "Loading Standard Cell LEF file ..."
+		start_time = time.time()
+
+		# Check that metal stack LEF file has already been loaded
+		if not self.layers and not self.placement_sites:
+			print "ERROR %s: must load metal stack LEF file prior to loading std cell LEF file." % (inspect.stack()[0][3])
+			sys.exit(1)
+
+		# Open LEF File
+		with open(lef_fname, 'rb') as stream:
+			for line in stream:
+				line = line.rstrip(' ;\n').lstrip()
+				# Do not process comment lines
+				if (len(line) > 0) and (line[0] != "#"):
+					line_list = line.split(' ')
+					# Ignore PROPERTYDEFINITIONS ... for now
+					if "MACRO" in line_list:
+						std_cell_name = line_list[-1]
+						line = stream.next().rstrip(' ;\n').lstrip()
+						while not ("END" in line and std_cell_name in line):
+							if "SIZE" in line:
+								size_line_list = line.split(' ')
+								if std_cell_name not in self.standard_cells:
+									self.standard_cells[std_cell_name] = StandardCell(std_cell_name, float(size_line_list[1]) * self.database_units, float(size_line_list[-1]) * self.database_units)
+							line = stream.next().rstrip(' ;\n').lstrip()
+		
 		# Close LEF File
 		stream.close()
 
@@ -228,7 +268,7 @@ class Via_Layer:
 	def debug_print_attrs(self):
 		return
 
-# Placement site as defined in the LEF file.
+# Placement site as defined in the metal stack LEF file.
 class PlacementSite():
 	def __init__(self, name, site_class, dim, symmetry):
 		self.name       = name
@@ -236,3 +276,21 @@ class PlacementSite():
 		self.dimension  = dim # Point object in database units
 		self.symmetry   = symmetry
 
+	def debug_print_attrs(self):
+		print "	NAME:", self.name
+		print "		CLASE:   ", self.site_class
+		print "		SYMMETRY:", self.symmetry
+		print "		WIDTH:   ", self.dimension.x
+		print "		HEIGHT:  ", self.dimension.y
+
+# Standard cell site as defined in the standard cell LEF file.
+class StandardCell():
+	def __init__(self, name, width, height):
+		self.name   = name
+		self.width  = width  # in database units
+		self.height = height # in database units
+
+	def debug_print_attrs(self):
+		print "	NAME:", self.name
+		print "		WIDTH: ", self.width
+		print "		HEIGHT:", self.height

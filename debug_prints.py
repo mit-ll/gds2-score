@@ -694,3 +694,24 @@ def debug_print_square_trace_step(device_layer_bitmap, current_point, orientatio
 
 	# Hit any key to continue
 	x = raw_input()
+
+def debug_print_lef_std_cells(lef_info):
+	print "Standard Cells:"
+	for std_cell_name in lef_info.standard_cells:
+		lef_info.standard_cells[std_cell_name].debug_print_attrs()
+		# print "	# Sites High: %f" % (lef_info.standard_cells[std_cell_name].height / lef_info.placement_sites.values()[0].dimension.y)
+		# print "	# Sites Wide: %f" % (lef_info.standard_cells[std_cell_name].width / lef_info.placement_sites.values()[0].dimension.x)
+	print
+
+def debug_print_lef_placement_sites(lef_info):
+	print "Placement Sites:"
+	for place_site_name in lef_info.placement_sites:
+		lef_info.placement_sites[place_site_name].debug_print_attrs()
+	print
+
+def debug_plot_placement_grid_bitmap(placement_grid):
+	adjusted_aspect_ratio = (float(placement_grid.shape[1]) / float(placement_grid.shape[0]))
+	plt.imshow(placement_grid)
+	plt.axes().set_aspect(adjusted_aspect_ratio)
+	plt.show()
+

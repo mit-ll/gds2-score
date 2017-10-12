@@ -593,72 +593,7 @@ class Polygon():
 		if translation_computed:
 			self.update_bbox()
 
-	# def ray_intersects_segment(self, x, y, point_1, point_2):
-	# 	# NOTE: Point 1 is MUST BE below Point 2 for this function to work
-	# 	if point_1.y > point_2.y:
-	# 		print "ERROR %s: point_1 must be below point_2." % (inspect.stack()[1][3])
-	# 		sys.exit(4)
-
-	# 	if y < point_1.y or y > point_2.y:
-	# 		return False
-	# 	elif x > max(point_1.x, point_2.x):
-	# 		return False
-	# 	else:
-	# 		if x < max(point_1.x, point_2.x):
-	# 			return True
-	# 		else:
-	# 			if point_1.x != point_2.x:
-	# 				slope_a = (point_2.y - point_1.y) / (point_2.x - point_1.x)
-	# 			else:
-	# 				slope_a = sys.float_info.max
-	# 			if point_1.x != x:
-	# 				slope_b = (y - point_1.y) / (x - point_1.x)
-	# 			else:
-	# 				slope_b = sys.float_info.max
-	# 			# Compare slopes (i.e. angles)
-	# 			if slope_b >= slope_a:
-	# 				return True
-	# 			else:
-	# 				return False
-
-	# def is_point_a_vertext(self, x, y):
-	# 	for coord in self.coords:
-	# 		if x == coord.x and y == coord.y:
-	# 			return True
-	# 	return False
-
-	# # Ray Casting Algorithm 
-	# # @TODO Clean-up checking if point on an edge
-	# def is_point_inside(self, x, y):
-	# 	# Check if the point lies on a vertex
-	# 	if self.is_point_a_vertext(x, y):
-	# 		return True
-
-	# 	# Check if the point lies on an edge
-	# 	for i in range(self.num_coords - 1):
-	# 		curr_line_seg = LineSegment(self.coords[i], self.coords[i + 1])
-	# 		if curr_line_seg.orientation_of_points(self.coords[i], Point(x, y), self.coords[i + 1]) == 0 and curr_line_seg.on_segment(Point (x, y)):
-	# 			return True
-
-	# 	# Check if point lies inside the polygon
-	# 	intersect_count = 0
-	# 	for i in range(self.num_coords - 1):
-	# 		if self.coords[i].y <= self.coords[i + 1].y:
-	# 			if self.ray_intersects_segment(x, y, self.coords[i], self.coords[i + 1]):
-	# 				intersect_count += 1
-	# 		else:
-	# 			if self.ray_intersects_segment(x, y, self.coords[i + 1], self.coords[i]):
-	# 				intersect_count += 1
-
-	# 	# If intersect_count is odd, return TRUE
-	# 	if intersect_count % 2 == 1:
-	# 		return True
-	# 	else:
-	# 		return False
-
 	# Ray Casting Algorithm 
-	# @TODO: Compare performance with above commented-out
-	# ray casting algorithm.
 	def is_point_inside(self, P):
 		inside = False
 		for edge in self.edges():
@@ -682,19 +617,3 @@ class Polygon():
 		if self.bbox.ur.y < bbox.ll.y or bbox.ur.y < self.bbox.ll.y:
 			return False
 		return True
-
-# def group_polys_by_overlapping(polys):
-# 	grouped_polys = {}
-# 	for poly_1 in polys:
-# 		grouped_polys[poly_1] = set()
-# 		for poly_2 in polys:
-# 			if poly_1.overlaps(poly_2) and poly_1 not in grouped_polys[poly_2]:
-# 				grouped_polys[poly_1].append(poly_2)
-# 	return grouped_polys
-
-
-
-
-
-
-

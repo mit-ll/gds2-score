@@ -17,24 +17,21 @@ from error   import *
 import copy
 import time
 import sys
+import inspect
 import pdb
 
 class Layout():
-	def __init__(self, top_name, lef_fname, def_fname, layer_map_fname, gdsii_fname, dot_fname, fill_cell_names, first_metal_layer):
+	def __init__(self, top_name, metal_stack_lef_fname, std_cell_lef_name, def_fname, layer_map_fname, gdsii_fname, dot_fname, fill_cell_names):
 		self.top_level_name      = top_name 
 		self.fill_cell_names     = fill_cell_names
-		self.first_metal_layer   = first_metal_layer
-		self.lef                 = LEF(lef_fname)
-		self.def_info            = DEF(def_fname, self.lef)
+		self.device_layer_nums   = {}
+		self.lef                 = LEF(metal_stack_lef_fname, std_cell_lef_name)
+		self.def_info            = DEF(def_fname, self.lef, fill_cell_names)
 		self.layer_map           = self.load_layer_map(layer_map_fname)
-		# self.gdsii_lib           = self.load_gdsii_library(gdsii_fname)
-		# self.gdsii_structures    = self.index_gdsii_structures_by_name()
-		# self.top_gdsii_structure = self.gdsii_structures[top_name]
-		# self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname))
-		self.gdsii_lib           = None
-		self.gdsii_structures    = None
-		self.top_gdsii_structure = None
-		self.critical_nets       = None
+		self.gdsii_lib           = self.load_gdsii_library(gdsii_fname)
+		self.gdsii_structures    = self.index_gdsii_structures_by_name()
+		self.top_gdsii_structure = self.gdsii_structures[top_name]
+		self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname))
 
 	def generate_polys_from_element(self, element, srefs_to_ignore={}):
 		polys = []
