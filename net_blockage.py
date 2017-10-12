@@ -8,7 +8,8 @@ from layout  import *
 import time
 import sys
 import inspect
-# import itertools
+import copy
+import numpy
 
 # Possible ERROR Codes:
 # 1 = Error loading input load_files
@@ -19,8 +20,36 @@ import inspect
 # ------------------------------------------------------------------
 # Critical Net Blockage Metric
 # ------------------------------------------------------------------
+# Bits inside the ploygon is set to 1
+def color_bitmap(bitmap, poly):
+	# Polygon coloring algorithm
+	color = False
+	
+	for row in range(poly.bbox.ur.y - poly.bbox.ll.y):
+		for col in range(poly.bbox.ur.x - poly.bbox.ll.x + 1):
+			for v_edge in poly.vertical_edges():
+				temp_point = Point(col, row + 0.5)
+				if v_edge.on_segment(temp_point):
+					color = not color
+			if color:
+				bitmap[row, col] = 1
+	
+	return bitmap
+
+# Calculates number of bits in a bitmap that are 1
+def bits_colored(bitmap):
+	num_bits_colored = 0
+	
+	for row in range(bitmap.shape[0]):
+		for col in range(bitmap.shape[1]):
+			if bitmap[row, col] == 1:
+				num_bits_colored += 1
+
+	return num_bits_colored
+
 def check_blockage(net_segment, layout, step_size, check_distance):
-	num_units_blocked = 0
+	same_layer_units_blocked = 0
+	diff_layer_units_blocked = 0
 
 	# Scan all 4 perimeter sides to check for blockages
 	for direction in ['N', 'E', 'S', 'W', 'T', 'B']:
@@ -44,6 +73,7 @@ def check_blockage(net_segment, layout, step_size, check_distance):
 			print "ERROR %s: unknown scan direction (%s)." % (inspect.stack()[0][3], direction)
 			sys.exit(4)
 		
+		# Analyze blockage along the perimeter of on the same layer
 		if direction != 'T' and direction != 'B':
 			num_points_to_scan = ((end_scan_coord - curr_scan_coord) / step_size) + 1
 			print "		Checking %d units along %s edge (%d/%f units/microns away)..." % (num_points_to_scan, direction, check_distance, check_distance / layout.lef.database_units)
@@ -52,35 +82,39 @@ def check_blockage(net_segment, layout, step_size, check_distance):
 				for poly in net_segment.nearby_sl_polygons:
 					if direction == 'N' or direction == 'S':
 						if poly.is_point_inside(Point(curr_scan_coord, curr_fixed_coord)):
-							num_units_blocked += 1
+							same_layer_units_blocked += 1
 					else:
 						if poly.is_point_inside(Point(curr_fixed_coord, curr_scan_coord)):
-							num_units_blocked += 1
+							same_layer_units_blocked += 1
 				curr_scan_coord += step_size
+		# Analyze blockage along the adjacent layers (top and bottom)
 		else:
 			print "		Checking (%d) nearby polygons along %s side ..." % (len(net_segment.nearby_al_polygons), direction)
-			# Calculate areas of intersection of nearby polygons
-			# Calculate all clipped polygons
-			overlapping_polys  = []
-			total_overlap_area = 0
-			for poly in net_segment.nearby_al_polygons:
+			# Create bitmap of net segment
+			net_segment_bitmap = numpy.zeros(shape=(net_segment.bbox.get_height(), net_segment.bbox.get_width()))
+			
+			# Choose nearby polygons to analyze
+			if direction == 'T':
+				nearby_polys = net_segment.nearby_al_polygons
+			else:
+				nearby_polys = net_segment.nearby_bl_polygons
+
+			# Color the bitmap
+			for poly in nearby_polys:
 				clipped_polys = Polygon.from_polygon_clip(poly, net_segment.polygon)
-				if clipped_polys:
-					overlapping_polys.extend(clipped_polys)
-					for clipped_poly in clipped_polys:
-						total_overlap_area += clipped_poly.get_area()
-			# Calculate Overlap Area to Subtract Out
-			# @TODO
-			# a = [1,2,3,4]
-			# for i in range(1, len(a) + 1):
-			# 	for value in itertools.combinations(a, i):
-			# 		print value
-				
-	return (num_units_blocked + total_overlap_area)
+				for clipped_poly in clipped_polys:
+					net_segment_bitmap = color_bitmap(net_segment_bitmap, clipped_poly)
+			
+			# Calculate colored area
+			diff_layer_units_blocked += bits_colored(net_segment_bitmap)
+
+	return same_layer_units_blocked, diff_layer_units_blocked
 	
 def analyze_critical_net_blockage(layout, verbose):
-	total_area      = 0
-	total_blockage  = 0 
+	total_perimeter_units     = 0
+	total_top_bottom_area     = 0
+	total_same_layer_blockage = 0 
+	total_diff_layer_blockage = 0 
 
 	# Extract all GDSII elements near security-critical nets
 	layout.extract_nearby_polygons()
@@ -90,7 +124,9 @@ def analyze_critical_net_blockage(layout, verbose):
 		print "Analying Net: ", net.fullname
 		path_segment_counter = 1
 		for net_segment in net.segments:
-			total_area += net_segment.bbox.get_perimeter() + (net_segment.polygon.get_area() * 2)
+			total_perimeter_units += net_segment.bbox.get_perimeter()
+			total_top_bottom_area += (net_segment.polygon.get_area() * 2)
+
 			# Report Path Segment Condition
 			if verbose:
 				print "	Analyzing Net Segment", path_segment_counter
@@ -114,12 +150,27 @@ def analyze_critical_net_blockage(layout, verbose):
 			check_distance = layout.lef.layers[net_segment.layer_name].pitch * layout.lef.database_units
 			
 			# Check N, E, S, W, T, B
-			start_time     = time.time()
-			units_blocked  = check_blockage(net_segment, layout, step_size, check_distance)
-			total_blockage += units_blocked
-			print "		Area Blocked:       ", units_blocked
+			start_time = time.time()
+			same_layer_blockage, diff_layer_blockage = check_blockage(net_segment, layout, step_size, check_distance)
+			total_same_layer_blockage += same_layer_blockage
+			total_diff_layer_blockage += diff_layer_blockage
+
+			print "		Perimeter Units Blocked:  %d / %d" % (same_layer_blockage, net_segment.bbox.get_perimeter())
+			print "		Top/Bottom Units Blocked: %d / %d" % (diff_layer_blockage, (net_segment.polygon.get_area() * 2))
 			print "		Done - Time Elapsed:", (time.time() - start_time), "seconds."
 			print "		----------------------------------------------"
+
 			path_segment_counter += 1
 
-	return ((float(total_blockage) / float(total_area)) * 100.0)
+	# Calculate raw and weighted blockage percentages.
+	# Weighted acounts for area vs. perimeter blockage
+	perimeter_blockage_percentage  = (float(total_same_layer_blockage) / float(total_perimeter_units)) * 100.0
+	top_bottom_blockage_percentage = (float(total_diff_layer_blockage) / float(total_top_bottom_area)) * 100.0
+	raw_blockage_percentage      = (float(total_same_layer_blockage + total_diff_layer_blockage) / float(total_perimeter_units + total_top_bottom_area)) * 100.0
+	weighted_blockage_percentage = (((float(total_same_layer_blockage) / float(total_perimeter_units)) * (float(4.0/6.0)) + (float(total_diff_layer_blockage) / float(total_top_bottom_area)) * float(2.0/6.0))) * 100.0
+
+	# Print calculations
+	print "Perimeter Blockage Percentage:  %4.2f%%" % (perimeter_blockage_percentage) 
+	print "Top/Bottom Blockage Percentage: %4.2f%%" % (top_bottom_blockage_percentage) 
+	print "Raw Blockage Percentage:        %4.2f%%" % (raw_blockage_percentage) 
+	print "Weighted Blockage Percentage:   %4.2f%%" % (weighted_blockage_percentage) 

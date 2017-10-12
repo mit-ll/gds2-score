@@ -40,9 +40,8 @@ def usage():
 def blockage_metric(layout):
 	start_time = time.time()
 	print "Starting Blockage Analysis:"
-	blockage_percentage = analyze_critical_net_blockage(layout, VERBOSE)
+	analyze_critical_net_blockage(layout, VERBOSE)
 	print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
-	print "Blockage Percentage: %4.2f%%" % (blockage_percentage) 
 	print "----------------------------------------------"
 	return
 
@@ -50,14 +49,8 @@ def blockage_metric(layout):
 def trigger_space_metric(layout):
 	start_time = time.time()
 	print "Starting Trigger Space Analysis:"
-	num_open_sites, tigger_space_histogram = analyze_open_space_for_triggers(layout)
+	analyze_open_space_for_triggers(layout)
 	print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
-	print "Open/Total Placement Sites: %d / %d" % (num_open_sites, (layout.def_info.num_placement_rows * layout.def_info.num_placement_cols))
-	print "Summary of Adjacent Placement Sites:"
-	print "size  : freq"
-	for space_size in sorted(tigger_space_histogram):
-		print "%6d:%3d |%s" % (space_size, tigger_space_histogram[space_size], unichr(0x2588)*tigger_space_histogram[space_size])
-	print "----------------------------------------------"
 	return
 
 # ------------------------------------------------------------------
@@ -78,8 +71,8 @@ def main(argv):
 	INPUT_LAYER_MAP_FILE_PATH = 'gds/tech_nominal_25c_3_20_20_00_00_02_LB.map'
 	INPUT_GDSII_FILE_PATH 	  = 'gds/MAL_TOP.merged.gds'
 	INPUT_DOT_FILE_PATH       = 'graphs/MAL_TOP_par.supv_2.dot'
-	# FILL_CELL_NAMES           = ["FILLDGCAP8_A12TR", "FILLDGCAP16_A12TR", "FILLDGCAP32_A12TR", "FILLDGCAP64_A12TR"]
-	FILL_CELL_NAMES           = []
+	FILL_CELL_NAMES           = ["FILLDGCAP8_A12TR", "FILLDGCAP16_A12TR", "FILLDGCAP32_A12TR", "FILLDGCAP64_A12TR"]
+	# FILL_CELL_NAMES           = []
 
 	# Load command line arguments
 	try:

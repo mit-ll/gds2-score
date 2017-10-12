@@ -1,6 +1,10 @@
 # ------------------------------------------------------------------
 # Trigger Space Metric - Legacy Code
 # ------------------------------------------------------------------
+# Import BitArray2D 
+# import BitArray2D
+# from BitArray2D import godel
+
 # Used to load device layer bitmap by only analyzing the GDSII layout info
 def load_device_layer_bitmap(layout):
 	device_layer_bitmap = numpy.zeros(shape=(layout.def_info.num_placement_rows, layout.def_info.num_placement_cols))
@@ -226,3 +230,24 @@ def is_point_inside(self, x, y):
 		return True
 	else:
 		return False
+
+				# # Apply the inclusion principle from set theory to calculate blockage
+				# for i in range(1, len(overlapping_bot_polys) + 1):
+				# 	for bot_poly_combo in itertools.combinations(overlapping_bot_polys, i):
+				# 		# Calculate area of overlap between polys in poly combo
+				# 		poly_combo_intersection_area = 0
+				# 		if len(bot_poly_combo) == 1:
+				# 			poly_combo_intersection_area = bot_poly_combo[0].get_area()
+				# 		else:
+
+						# for j in range(1, len(top_poly_combo)):
+						# 	if not intersection_polys:
+						# 		intersection_polys.extend(Polygon.from_polygon_clip(top_poly_combo[0], top_poly_combo[j])
+						# 	else:
+						# 		for intersection_poly in inintersection_polys:
+						# 			intersection_polys.extend(Polygon.from_polygon_clip(intersection_poly, top_poly_combo[j])
+							
+
+						# 	poly_combo_intersection_area += top_poly_combo[0].
+						# top_area_blocked += ((-1)**(len(poly_combo + 1))) * 
+				

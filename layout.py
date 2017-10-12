@@ -168,11 +168,19 @@ class Layout():
 			# Element on the same layer as net_segment
 			if poly.overlaps_bbox(net_segment.nearby_bbox):
 				net_segment.nearby_sl_polygons.append(copy.copy(poly))
-		elif self.lef.is_gdsii_layer_above_below(net_segment.gdsii_path, poly.gdsii_element, self.layer_map):
+		elif self.lef.is_gdsii_layer_above(net_segment.gdsii_path, poly.gdsii_element, self.layer_map):
 			
-			# Element is either one layer above or below the net_segment.
-			# Element is only considered "nearyby" if it insects with the
-			# bounding box of the path object projected one layer above/below.
+			# Element is one layer above the net_segment.
+			# Element is only considered "nearby" if it insects with the
+			# bounding box of the path object projected one layer above.
+			if poly.overlaps_bbox(net_segment.bbox):
+				net_segment.nearby_al_polygons.append(copy.copy(poly))
+
+		elif self.lef.is_gdsii_layer_below(net_segment.gdsii_path, poly.gdsii_element, self.layer_map):
+			
+			# Element is either one layer below the net_segment.
+			# Element is only considered "nearby" if it insects with the
+			# bounding box of the path object projected one layer below.
 			if poly.overlaps_bbox(net_segment.bbox):
 				net_segment.nearby_al_polygons.append(copy.copy(poly))
 

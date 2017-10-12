@@ -4,10 +4,6 @@ from polygon import *
 from net     import *
 from layout  import *
 
-# Import BitArray2D 
-# import BitArray2D
-# from BitArray2D import godel
-
 # Import matplotlib
 import matplotlib.pyplot as plt
 
@@ -101,6 +97,13 @@ def find_4_connected_regions(device_layer_bitmap):
 	return num_open_sites, tigger_space_histogram
 
 def analyze_open_space_for_triggers(layout):
+	# Find open placement sites in the placement grid
 	num_open_sites, tigger_space_histogram = find_4_connected_regions(layout.def_info.placement_grid)
-	return num_open_sites, tigger_space_histogram
-
+	
+	# Print calculations
+	print "Open/Total Placement Sites: %d / %d" % (num_open_sites, (layout.def_info.num_placement_rows * layout.def_info.num_placement_cols))
+	print "Summary of Adjacent Placement Sites:"
+	print "size  : freq"
+	for space_size in sorted(tigger_space_histogram):
+		print "%6d:%3d |%s" % (space_size, tigger_space_histogram[space_size], unichr(0x2588)*tigger_space_histogram[space_size])
+	print "----------------------------------------------"

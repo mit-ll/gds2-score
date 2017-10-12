@@ -28,10 +28,8 @@ class Net_Segment():
 		self.bbox               = BBox.from_polygon(self.polygon)
 		self.nearby_bbox        = BBox.from_bbox_and_extension(self.bbox, (2 * (self.gdsii_path.width + self.bbox.length)))
 		self.nearby_sl_polygons = [] # nearby polygons on the same layer
-		self.nearby_al_polygons = [] # nearby polygons on adjacent layers (top and bottom)
-
-	def get_width(self):
-		return self.gdsii_path.width
+		self.nearby_al_polygons = [] # nearby polygons on above layer
+		self.nearby_bl_polygons = [] # nearby polygons on below layer
 
 	# Returns the direction of the path object. Returns "V" for 
 	# a Vertical path and "H" for a horizontal path. Script exits

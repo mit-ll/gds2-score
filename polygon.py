@@ -214,8 +214,14 @@ class BBox():
 		ur = Point.from_point_and_offset(bbox.ur, extension, extension)
 		return cls(ll, ur)
 
+	def get_width(self):
+		return (self.ur.x - self.ll.x)
+
+	def get_height(self):
+		return (self.ur.y - self.ll.y)
+
 	def get_perimeter(self):
-		return (self.ll.x + self.ll.y + self.ur.x + self.ur.y)
+		return ((2 * self.get_width()) + (2 * self.get_height()))
 
 	def get_bbox_as_list(self):
 		return [(self.ll.x, self.ll.y), (self.ur.x, self.ur.y)]
