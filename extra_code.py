@@ -4,6 +4,9 @@
 # Import BitArray2D 
 # import BitArray2D
 # from BitArray2D import godel
+import numpy
+
+# numpy.set_printoptions(threshold=numpy.inf)
 
 # Used to load device layer bitmap by only analyzing the GDSII layout info
 def load_device_layer_bitmap(layout):

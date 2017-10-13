@@ -21,20 +21,11 @@ import numpy
 # Critical Net Blockage Metric
 # ------------------------------------------------------------------
 # Bits inside the ploygon is set to 1
-def color_bitmap(bitmap, poly):
-	# Polygon coloring algorithm
-	color = False
-	
-	for row in range(poly.bbox.ur.y - poly.bbox.ll.y):
-		for col in range(poly.bbox.ur.x - poly.bbox.ll.x + 1):
-			for v_edge in poly.vertical_edges():
-				temp_point = Point(col, row + 0.5)
-				if v_edge.on_segment(temp_point):
-					color = not color
-			if color:
+def color_bitmap(bitmap, offset, poly):	
+	for row in range(bitmap.shape[0]):
+		for col in range(bitmap.shape[1]):
+			if poly.is_point_inside(Point(col + offset.x + 0.5, row + offset.y + 0.5)):
 				bitmap[row, col] = 1
-	
-	return bitmap
 
 # Calculates number of bits in a bitmap that are 1
 def bits_colored(bitmap):
@@ -89,7 +80,7 @@ def check_blockage(net_segment, layout, step_size, check_distance):
 				curr_scan_coord += step_size
 		# Analyze blockage along the adjacent layers (top and bottom)
 		else:
-			print "		Checking (%d) nearby polygons along %s side ..." % (len(net_segment.nearby_al_polygons), direction)
+			print "		Checking (%d) nearby polygons along %s side (GDSII Layer:) ..." % (len(net_segment.nearby_al_polygons), direction)
 			# Create bitmap of net segment
 			net_segment_bitmap = numpy.zeros(shape=(net_segment.bbox.get_height(), net_segment.bbox.get_width()))
 			
@@ -103,8 +94,8 @@ def check_blockage(net_segment, layout, step_size, check_distance):
 			for poly in nearby_polys:
 				clipped_polys = Polygon.from_polygon_clip(poly, net_segment.polygon)
 				for clipped_poly in clipped_polys:
-					net_segment_bitmap = color_bitmap(net_segment_bitmap, clipped_poly)
-			
+					color_bitmap(net_segment_bitmap, net_segment.bbox.ll, clipped_poly)
+
 			# Calculate colored area
 			diff_layer_units_blocked += bits_colored(net_segment_bitmap)
 
@@ -114,7 +105,7 @@ def analyze_critical_net_blockage(layout, verbose):
 	total_perimeter_units     = 0
 	total_top_bottom_area     = 0
 	total_same_layer_blockage = 0 
-	total_diff_layer_blockage = 0 
+	total_diff_layer_blockage = 0
 
 	# Extract all GDSII elements near security-critical nets
 	layout.extract_nearby_polygons()
@@ -166,8 +157,8 @@ def analyze_critical_net_blockage(layout, verbose):
 	# Weighted acounts for area vs. perimeter blockage
 	perimeter_blockage_percentage  = (float(total_same_layer_blockage) / float(total_perimeter_units)) * 100.0
 	top_bottom_blockage_percentage = (float(total_diff_layer_blockage) / float(total_top_bottom_area)) * 100.0
-	raw_blockage_percentage      = (float(total_same_layer_blockage + total_diff_layer_blockage) / float(total_perimeter_units + total_top_bottom_area)) * 100.0
-	weighted_blockage_percentage = (((float(total_same_layer_blockage) / float(total_perimeter_units)) * (float(4.0/6.0)) + (float(total_diff_layer_blockage) / float(total_top_bottom_area)) * float(2.0/6.0))) * 100.0
+	raw_blockage_percentage        = (float(total_same_layer_blockage + total_diff_layer_blockage) / float(total_perimeter_units + total_top_bottom_area)) * 100.0
+	weighted_blockage_percentage   = (((float(total_same_layer_blockage) / float(total_perimeter_units)) * (float(4.0/6.0)) + (float(total_diff_layer_blockage) / float(total_top_bottom_area)) * float(2.0/6.0))) * 100.0
 
 	# Print calculations
 	print "Perimeter Blockage Percentage:  %4.2f%%" % (perimeter_blockage_percentage) 

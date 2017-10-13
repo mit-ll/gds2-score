@@ -599,19 +599,23 @@ class Polygon():
 		if translation_computed:
 			self.update_bbox()
 
-	# Ray Casting Algorithm 
 	def is_point_inside(self, P):
-		inside = False
-		for edge in self.edges():
-			if edge.on_segment(P):
-				return True
-			elif P.y > min(edge.p1.y, edge.p2.y) and P.y <= max(edge.p1.y, edge.p2.y):
-				if P.x <= max(edge.p1.x, edge.p2.x):
-					if edge.p1.y != edge.p2.y:
-						x_intersection = ((P.y - edge.p1.y) * ((edge.p2.x - edge.p1.x) / (edge.p2.y - edge.p1.y))) + edge.p1.x
-					if edge.p1.x == edge.p2.x or P.x <= x_intersection:
-							inside = not inside
-		return inside
+		# First check if polygon is a rectangle
+		if self.num_coords == 5:
+			return self.bbox.is_point_inside_bbox(P)
+		else:
+			# Ray Casting Algorithm 
+			inside = False
+			for edge in self.edges():
+				if edge.on_segment(P):
+					return True
+				elif P.y > min(edge.p1.y, edge.p2.y) and P.y <= max(edge.p1.y, edge.p2.y):
+					if P.x <= max(edge.p1.x, edge.p2.x):
+						if edge.p1.y != edge.p2.y:
+							x_intersection = ((P.y - edge.p1.y) * ((edge.p2.x - edge.p1.x) / (edge.p2.y - edge.p1.y))) + edge.p1.x
+						if edge.p1.x == edge.p2.x or P.x <= x_intersection:
+								inside = not inside
+			return inside
 
 	# Returns True if the provided bounding box overlaps the bounding
 	# box of the polygon. Otherwise, returns False.

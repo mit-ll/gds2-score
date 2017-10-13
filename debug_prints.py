@@ -709,9 +709,15 @@ def debug_print_lef_placement_sites(lef_info):
 		lef_info.placement_sites[place_site_name].debug_print_attrs()
 	print
 
-def debug_plot_placement_grid_bitmap(placement_grid):
+def debug_plot_bitmap(placement_grid):
+	plt.imshow(placement_grid)
+	plt.grid()
+	plt.show()
+
+def debug_plot_bitmap_scaled(placement_grid):
 	adjusted_aspect_ratio = (float(placement_grid.shape[1]) / float(placement_grid.shape[0]))
 	plt.imshow(placement_grid)
 	plt.axes().set_aspect(adjusted_aspect_ratio)
+	plt.grid()
 	plt.show()
 

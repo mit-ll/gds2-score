@@ -182,7 +182,7 @@ class Layout():
 			# Element is only considered "nearby" if it insects with the
 			# bounding box of the path object projected one layer below.
 			if poly.overlaps_bbox(net_segment.bbox):
-				net_segment.nearby_al_polygons.append(copy.copy(poly))
+				net_segment.nearby_bl_polygons.append(copy.copy(poly))
 
 	# Extracts a list of GDSII elements (converted to polygon objects) that are in close
 	# proimity to a given security-critical net segement. This is doen by finding all 
