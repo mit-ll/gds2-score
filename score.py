@@ -22,6 +22,11 @@ VERBOSE       = False
 NET_BLOCKAGE  = False
 TRIGGER_SPACE = False
 
+def calculate_and_print_time(start_time, end_time):
+	hours, rem       = divmod(end_time - start_time, 3600)
+	minutes, seconds = divmod(rem, 60)
+	print "Execution Time:", "{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds)
+
 # ------------------------------------------------------------------
 # Usage statement and entry points to metric functions
 # ------------------------------------------------------------------
@@ -39,9 +44,11 @@ def usage():
 # Analyze blockage of security critical nets in GDSII
 def blockage_metric(layout):
 	start_time = time.time()
-	print "Starting Blockage Analysis:"
+	print "Starting Net Blockage Analysis:"
 	analyze_critical_net_blockage(layout, VERBOSE)
-	print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
+	end_time = time.time()
+	print "Done - Net Blockage Analysis."
+	calculate_and_print_time(start_time, end_time)
 	print "----------------------------------------------"
 	return
 
@@ -50,7 +57,10 @@ def trigger_space_metric(layout):
 	start_time = time.time()
 	print "Starting Trigger Space Analysis:"
 	analyze_open_space_for_triggers(layout)
-	print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
+	end_time = time.time()
+	print "Done - Trigger Space Analysis."
+	calculate_and_print_time(start_time, end_time)
+	print "----------------------------------------------"
 	return
 
 # ------------------------------------------------------------------
@@ -143,9 +153,8 @@ def main(argv):
 
 	# Calculate and print total execution time
 	overall_end_time = time.time()
-	hours, rem       = divmod(overall_end_time - overall_start_time, 3600)
-	minutes, seconds = divmod(rem, 60)
-	print "Total Execution Time: ", "{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds)
+	print "ICAD Analyses Complete."
+	calculate_and_print_time(overall_start_time, overall_end_time)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
