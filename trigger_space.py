@@ -13,6 +13,7 @@ import pprint
 import time
 import copy
 import sys
+import os
 import inspect
 
 # Possible ERROR Codes:
@@ -100,10 +101,20 @@ def analyze_open_space_for_triggers(layout):
 	# Find open placement sites in the placement grid
 	num_open_sites, tigger_space_histogram = find_4_connected_regions(layout.def_info.placement_grid)
 	
+	# Get width of terminal for printing of the histogram
+	terminal_rows, terminal_columns = map(int, os.popen('stty size', 'r').read().split())
+
 	# Print calculations
 	print "Open/Total Placement Sites: %d / %d" % (num_open_sites, (layout.def_info.num_placement_rows * layout.def_info.num_placement_cols))
 	print "Summary of Adjacent Placement Sites:"
 	print "size  : freq"
 	for space_size in sorted(tigger_space_histogram):
-		print "%6d:%3d |%s" % (space_size, tigger_space_histogram[space_size], unichr(0x2588)*tigger_space_histogram[space_size])
+		# Create histogram bar from ASCII characters
+		if tigger_space_histogram[space_size] > (terminal_columns - 1):
+			histogram_bar = '%s%s'.format(unichr(0x2588) * (terminal_columns - 1), '*')
+		else:
+			histogram_bar = '%s'.format(unichr(0x2588) * tigger_space_histogram[space_size])
+
+		# Print histogram row
+		print "%6d:%3d |%s" % (space_size, tigger_space_histogram[space_size], histogram_bar)
 	print "----------------------------------------------"
