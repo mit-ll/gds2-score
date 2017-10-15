@@ -100,7 +100,7 @@ def find_4_connected_regions(device_layer_bitmap):
 def analyze_open_space_for_triggers(layout):
 	# Find open placement sites in the placement grid
 	num_open_sites, tigger_space_histogram = find_4_connected_regions(layout.def_info.placement_grid)
-	
+
 	# Get width of terminal for printing of the histogram
 	terminal_rows, terminal_columns = map(int, os.popen('stty size', 'r').read().split())
 
@@ -110,11 +110,11 @@ def analyze_open_space_for_triggers(layout):
 	print "size  : freq"
 	for space_size in sorted(tigger_space_histogram):
 		# Create histogram bar from ASCII characters
-		if tigger_space_histogram[space_size] > (terminal_columns - 1):
-			histogram_bar = '%s%s'.format(unichr(0x2588) * (terminal_columns - 1), '*')
+		if tigger_space_histogram[space_size] > (terminal_columns - 16):
+			histogram_bar = (unichr(0x2588) * (terminal_columns - 16)) + '*'
 		else:
-			histogram_bar = '%s'.format(unichr(0x2588) * tigger_space_histogram[space_size])
+			histogram_bar = (unichr(0x2588) * tigger_space_histogram[space_size])
 
 		# Print histogram row
-		print "%6d:%3d |%s" % (space_size, tigger_space_histogram[space_size], histogram_bar)
+		print "%6d:%5d |%s" % (space_size, tigger_space_histogram[space_size], histogram_bar)
 	print "----------------------------------------------"
