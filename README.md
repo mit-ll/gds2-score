@@ -12,7 +12,7 @@ GDS2-Score takes as input the following files:
 The GDS2-Score tool is designed to be extensible. This means that GDS2-Score simply provides an environment that allows one to analyze specific nets in a GDS2 file and calculate various metrics. An example "blockage" metric is provided in the release of this tool. The "blockage" metric for input nets is calculated by invoking the "analyze_critical_net_blockage" function in the "main" function of the Python script "score.py". This metric simply calculates the percentage of the total surface area of the nets, described in the .dot file, that is blocked by other nets or components described in the GDS2 file.
 
 ## Cloning the Git Repository
-git clone <GDS2-Score Repository URL>
+git clone https://github.com/mit-ll/gds2-score
 
 ## Running GDS2-Score
 
