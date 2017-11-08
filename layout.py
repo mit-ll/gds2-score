@@ -1,6 +1,3 @@
-# Import Graphviz Library
-import pygraphviz as pgv
-
 # Import GDSII Library
 from gdsii.library import Library
 from gdsii.elements import *
@@ -19,6 +16,120 @@ import time
 import sys
 import inspect
 import pdb
+import os
+from multiprocessing import Pool, Queue, Manager
+
+def generate_polys_from_element_paralell(element, gdsii_structures, srefs_to_ignore={}):
+	polys = []
+	if isinstance(element, SRef):
+		# Check if SRef is to be ignored (i.e. fill cells)
+		if element.struct_name not in srefs_to_ignore:
+			# Check if SRef properties are supported by this tool
+			# and that the structure pointed to exists.
+			if element.struct_name in gdsii_structures:
+				is_sref_type_supported(element, gdsii_structures[element.struct_name])
+			else:
+				print "ERROR %s: SRef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
+				sys.exit(1)
+
+			# Iterate over elements of referenced structure
+			for sub_element in gdsii_structures[element.struct_name]:
+				sub_polys = generate_polys_from_element_paralell(sub_element, gdsii_structures)
+				# Compute translations of sub elements
+				for poly in sub_polys:
+					poly.compute_translations(element.xy[0][0], element.xy[0][1], element.strans, element.angle)
+					polys.append(copy.copy(poly))
+	elif isinstance(element, ARef):
+		# Check if ARef properties are supported by this tool
+		# and that the structure pointed to exists.
+		if element.struct_name in gdsii_structures:
+			is_aref_type_supported(element, gdsii_structures[element.struct_name])
+		else:
+			print "ERROR %s: ARef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
+			sys.exit(1)
+
+		# Retrieve row and column spacing
+		row_spacing_vector_length = Point.from_tuple(element.xy[0]).distance_from(Point.from_tuple(element.xy[2]))
+		col_spacing_vector_length = Point.from_tuple(element.xy[0]).distance_from(Point.from_tuple(element.xy[1]))
+		curr_x_offset = 0.0
+		col_spacing   = col_spacing_vector_length / element.cols
+		curr_y_offset = 0.0
+		row_spacing   = row_spacing_vector_length / element.rows
+
+		# Iterate over elements of referenced structures
+		for row_index in range(element.rows):
+			for col_index in range(element.cols):
+				for sub_element in gdsii_structures[element.struct_name]:
+					# Generate polygons from all sub elements
+					sub_polys = generate_polys_from_element_paralell(sub_element, gdsii_structures)
+
+					# Compute translations of newly generated polygons
+					for poly in sub_polys:
+						poly.compute_translations(curr_x_offset, curr_y_offset, None, None)
+						polys.append(copy.copy(poly))
+				curr_x_offset += col_spacing
+			curr_x_offset = 0.0
+			curr_y_offset += row_spacing
+		# Compute overall translation of ARef element polygons
+		for poly in polys:				
+			poly.compute_translations(element.xy[0][0], element.xy[0][1], element.strans, element.angle)
+	elif isinstance(element, Path) or isinstance(element, Boundary):
+		# BASE CASE
+		# Compute polygon from element
+		if isinstance(element, Path):
+			# Element is a Path object
+			polys.append(Polygon.from_gdsii_path(element))
+		else:
+			# Element is a Boundary object
+			polys.append(Polygon.from_gdsii_boundary(element))
+	# Ignore GDSII Text elements
+	# elif isinstance(element, Text):
+	elif isinstance(element, Box):
+		print "UNSUPPORTED %s: GDSII Box elements are not supported." % (inspect.stack()[1][3])
+		sys.exit(3)
+	elif isinstance(element, Node):
+		print "UNSUPPORTED %s: GDSII Node elements are not supported." % (inspect.stack()[1][3])
+		sys.exit(3)
+	return polys
+
+def add_polys_to_queue(element, gdsii_structures, polys_q):
+	polys = generate_polys_from_element_paralell(element, gdsii_structures)
+	for poly in polys:
+		polys_q.put(copy.copy(poly))
+
+def process_nearby_polys(polys_q, done_q, nets, lef, layer_map, modified_nets_q):
+	print "About to process polys..."
+	while True:
+		if not polys.empty():
+			poly = polys_q.get()
+			print "Processing a polygon..."
+			for net in nets:
+				for net_segment in net:	
+					if net_segment.gdsii_path.layer == poly.gdsii_element.layer:
+						
+						# Element on the same layer as net_segment
+						if poly.overlaps_bbox(net_segment.nearby_bbox):
+							net_segment.nearby_sl_polygons.append(copy.copy(poly))
+					elif lef.is_gdsii_layer_above(net_segment.gdsii_path, poly.gdsii_element, layer_map):
+						
+						# Element is one layer above the net_segment.
+						# Element is only considered "nearby" if it insects with the
+						# bounding box of the path object projected one layer above.
+						if poly.overlaps_bbox(net_segment.bbox):
+							net_segment.nearby_al_polygons.append(copy.copy(poly))
+
+					elif lef.is_gdsii_layer_below(net_segment.gdsii_path, poly.gdsii_element, layer_map):
+						
+						# Element is either one layer below the net_segment.
+						# Element is only considered "nearby" if it insects with the
+						# bounding box of the path object projected one layer below.
+						if poly.overlaps_bbox(net_segment.bbox):
+							net_segment.nearby_bl_polygons.append(copy.copy(poly))
+		elif not done_q.empty():
+			# Update queue of modified net objects and return
+			for net in nets:
+				modified_nets_q.put(copy.deepcopy(net))
+			return
 
 class Layout():
 	def __init__(self, top_name, metal_stack_lef_fname, std_cell_lef_name, def_fname, layer_map_fname, gdsii_fname, dot_fname, fill_cell_names):
@@ -167,14 +278,14 @@ class Layout():
 			
 			# Element on the same layer as net_segment
 			if poly.overlaps_bbox(net_segment.nearby_bbox):
-				net_segment.nearby_sl_polygons.append(copy.copy(poly))
+				net_segment.nearby_sl_polygons.append(poly)
 		elif self.lef.is_gdsii_layer_above(net_segment.gdsii_path, poly.gdsii_element, self.layer_map):
 			
 			# Element is one layer above the net_segment.
 			# Element is only considered "nearby" if it insects with the
 			# bounding box of the path object projected one layer above.
 			if poly.overlaps_bbox(net_segment.bbox):
-				net_segment.nearby_al_polygons.append(copy.copy(poly))
+				net_segment.nearby_al_polygons.append(poly)
 
 		elif self.lef.is_gdsii_layer_below(net_segment.gdsii_path, poly.gdsii_element, self.layer_map):
 			
@@ -182,7 +293,7 @@ class Layout():
 			# Element is only considered "nearby" if it insects with the
 			# bounding box of the path object projected one layer below.
 			if poly.overlaps_bbox(net_segment.bbox):
-				net_segment.nearby_bl_polygons.append(copy.copy(poly))
+				net_segment.nearby_bl_polygons.append(poly)
 
 	# Extracts a list of GDSII elements (converted to polygon objects) that are in close
 	# proimity to a given security-critical net segement. This is doen by finding all 
@@ -204,21 +315,54 @@ class Layout():
 
 	# @TODO: This function does not work yet....
 	def extract_nearby_polygons_parallel(self):
-		from multiprocessing import Pool 
-
 		start_time = time.time()
-		print "Extracting polygons near critical nets ..."
-		
-		num_processes = 4
-		pool = Pool(processes=num_processes)
+		print "Extracting polygons near critical nets (spawning sub-processes)..."
+		print
 
+		manager             = Manager() 
+		updated_nets_q      = manager.Queue()
+		done_q 				= manager.Queue()
+		polys_q             = manager.Queue()
+		process_polys_pool  = Pool(processes=1)
+		generate_polys_pool = Pool(processes=2)
+
+		print "Number of Top-Level GDSII Elements: %d" % (len(self.top_gdsii_structure))
+		print 
+
+		# Launch polygon generating sub-processes
+		print "Launching all poly-gen sub-processes..."
+		launch_start_time = time.time()
 		for element in self.top_gdsii_structure:
-			for net in self.critical_nets:
-				for net_segment in net.segments:
-					pool.apply(self.is_element_nearby, (element, net_segment, 0, 0, 0, 0))
+			generate_polys_pool.apply_async(add_polys_to_queue, (element, self.gdsii_structures, polys_q))
+		print "Launched all sub-processes - Time Elapsed:", (time.time() - launch_start_time), "seconds."
+		print 
+
+		# Launch polygon processing sub-processes
+		print "Launching all poly-proc sub-processes..."
+		launch_start_time = time.time()
+		process_polys_pool.apply_async(process_nearby_polys, (polys_q, done_q, self.critical_nets, self.lef, self.layer_map, updated_nets_q))
+		print "Launched all sub-processes - Time Elapsed:", (time.time() - launch_start_time), "seconds."
+		print 
+
+		# Close and join all poly-gen sub-processes
+		generate_polys_pool.close()
+		generate_polys_pool.join()
+		done_q.put('done')
+		print "Closed all poly-gen sub-processes."
 		
-		pool.close()
-		pool.join()
+		# Close and join all poly-proc sub-processes
+		process_polys_pool.close()
+		process_polys_pool.join()
+		print "Closed all poly-proc sub-processes."
+		print
+
+		# Update net-objects
+		print "Number of critical nets before:", len(self.critical_nets)
+		self.critical_nets = []
+		while not updated_nets_q.empty():
+			self.critical_nets.append(updated_nets_q.get())
+		print "Number of critical nets after:", len(self.critical_nets)
+		print
 
 		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
 		print "----------------------------------------------"
@@ -282,10 +426,13 @@ class Layout():
 		print "----------------------------------------------"
 		return critical_nets
 
-	# Loads nets from a Graphviz dot file.
+	# Loads nets from a Graphviz dot file using pygraphviz module.
 	# Returns a dictionary of net names in the format:
 	# Key<net fullname> --> Value<net basename>
-	def load_dot_file(self, dot_fname):
+	def load_dot_file_with_pgv(self, dot_fname):
+		# Import Graphviz Library
+		import pygraphviz as pgv
+
 		print "Loading nets from .dot file ..."
 		start_time = time.time()
 
@@ -299,7 +446,9 @@ class Layout():
 
 		# Extract base names of graph nodes
 		for full_name in net_full_names:
+			print full_name
 			full_name       = full_name.encode('ascii', 'replace')
+			# print full_name
 			full_name_list  = full_name.split('.')
 			base_name 	    = full_name_list[-1]
 			nets[full_name] = base_name
@@ -308,7 +457,47 @@ class Layout():
 		print
 		print "Security critical nets extracted from DOT:"
 		for net_full_name in nets.keys():
-			print "%s" % (net_full_name)
+			print "%s --> %s" % (net_full_name, nets[net_full_name])
+		print
+
+		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
+		print "----------------------------------------------"
+		return nets
+
+	# Loads nets from a Graphviz dot file with basic parsing.
+	# Note this is more flexible than method above as it 
+	# does not require an installation of Graphiv and the PGV module.
+	# Returns a dictionary of net names in the format:
+	# Key<net fullname> --> Value<net basename>
+	def load_dot_file(self, dot_fname):
+		print "Loading nets from .dot file ..."
+		start_time = time.time()
+
+		nets           = {}
+		net_full_names = []
+
+		# Open LEF File
+		with open(dot_fname, 'rb') as stream:
+			for line in stream:
+				line = line.rstrip(' \n').lstrip('	\"')
+				if "->" in line or "{" in line or "}" in line:
+					continue
+				else:
+					line_list = line.split('\"')
+					net_full_names.append(copy.deepcopy(line_list[0]))
+		stream.close()
+
+		# Extract base names of graph nodes
+		for full_name in net_full_names:
+			full_name_list  = full_name.split('.')
+			base_name 	    = full_name_list[-1]
+			nets[full_name] = base_name
+
+		# Print out security critical nets extracted from GDSII
+		print
+		print "Security critical nets extracted from DOT:"
+		for net_full_name in nets.keys():
+			print "%s --> %s" % (net_full_name, nets[net_full_name])
 		print
 
 		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."

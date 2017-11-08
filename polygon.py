@@ -6,7 +6,7 @@ import debug_prints as dbg
 from error import *
 
 # Import matplotlib
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 # Other Imports
 import math
@@ -547,6 +547,15 @@ class Polygon():
 
 	def plot(self):
 		plt.plot(self.get_x_coords(), self.get_y_coords())
+
+	def print_vertices(self):
+		print "Polygon:"
+		print "	Num. Vertices:", self.num_coords
+		for coord in self.coords:
+			print "	", 
+			coord.print_coords()
+			print
+		print
 
 	def rotate(self, degrees):
 		if degrees == 90:

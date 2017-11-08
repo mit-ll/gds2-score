@@ -3,7 +3,7 @@ from gdsii.library import Library
 from gdsii.elements import *
 
 # Import matplotlib
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 # Import custom modules
 from polygon import *

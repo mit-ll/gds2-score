@@ -5,7 +5,7 @@ from net     import *
 from layout  import *
 
 # Import matplotlib
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 # Other Imports
 import numpy
@@ -111,9 +111,9 @@ def analyze_open_space_for_triggers(layout):
 	for space_size in sorted(tigger_space_histogram):
 		# Create histogram bar from ASCII characters
 		if tigger_space_histogram[space_size] > (terminal_columns - 16):
-			histogram_bar = (unichr(0x2588) * (terminal_columns - 16)) + '*'
+			histogram_bar = ((unichr(0x2588) * (terminal_columns - 16)) + '*').encode('utf-8')
 		else:
-			histogram_bar = (unichr(0x2588) * tigger_space_histogram[space_size])
+			histogram_bar = (unichr(0x2588) * tigger_space_histogram[space_size]).encode('utf-8')
 
 		# Print histogram row
 		print "%6d:%5d |%s" % (space_size, tigger_space_histogram[space_size], histogram_bar)

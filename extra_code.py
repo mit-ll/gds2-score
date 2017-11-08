@@ -253,4 +253,22 @@ def is_point_inside(self, x, y):
 
 						# 	poly_combo_intersection_area += top_poly_combo[0].
 						# top_area_blocked += ((-1)**(len(poly_combo + 1))) * 
+
+# ------------------------------------------------------------------
+# Pickling/Unpickling an Object
+# ------------------------------------------------------------------
+import pickle
+
+layout_file = open("layout.bin", "wb")
+pickle.dump(layout, layout_file, -1)
+layout_file.close()
+return
+
+print "Loading pickled layout object ..."
+load_layout_start_time = time.time()
+layout_file = open("layout.bin", "rb")
+layout = pickle.load(layout_file)
+layout_file.close()
+print "Done - Time Elapsed:", (time.time() - load_layout_start_time), "seconds."
+print "----------------------------------------------"
 				

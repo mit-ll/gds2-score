@@ -9,6 +9,7 @@ from trigger_space import *
 import time
 import sys
 import getopt
+import copy
 
 # Possible ERROR Codes:
 # 1 = Error loading input load_files
@@ -40,6 +41,13 @@ def usage():
 	print "	-a, --all	Calculate all metrics."
 	print "	-d, --debug	Debug prints."
 	print "	-v, --verbose Verbose prints."
+	print "	-g, --gds	GDSII input file."
+	print "	-m, --top_level_module	Top level module name."
+	print "	-r, --route_lef	Routing LEF input file."
+	print "	-p, --place_lef	Placement LEF input file."
+	print "	-l, --layer_map	Layer map input file."
+	print "	-d, --def	DEF input file."
+	print "	-n, --nemo_dot	Nemo .dot file."
 
 # Analyze blockage of security critical nets in GDSII
 def blockage_metric(layout):
@@ -81,25 +89,38 @@ def main(argv):
 	INPUT_LAYER_MAP_FILE_PATH = 'gds/tech_nominal_25c_3_20_20_00_00_02_LB.map'
 	INPUT_GDSII_FILE_PATH 	  = 'gds/MAL_TOP.merged.gds'
 	INPUT_DOT_FILE_PATH       = 'graphs/MAL_TOP_par.supv_2.dot'
-	FILL_CELL_NAMES           = ["FILLDGCAP8_A12TR", "FILLDGCAP16_A12TR", "FILLDGCAP32_A12TR", "FILLDGCAP64_A12TR"]
 	# FILL_CELL_NAMES           = []
+	FILL_CELL_NAMES           = ["FILLDGCAP8_A12TR", "FILLDGCAP16_A12TR", "FILLDGCAP32_A12TR", "FILLDGCAP64_A12TR"]
 
 	# Load command line arguments
 	try:
-		opts, args = getopt.getopt(argv, "abthdv", ["all", "blockage", "trigger", "help", "debug", "verbose"])
+		opts, args = getopt.getopt(argv, "abthvg:m:r:p:l:d:n:", ["all", "blockage", "trigger", "help", "verbose", "gds", "top_level_module", "route_lef", "place_lef", "layer_map", "def", "nemo_dot"])
 	except getopt.GetoptError:
 		usage()
-
-	# Enforce correct usage of program
-	opt_flags = zip(*opts)[0]
-	if "-b" not in opt_flags and \
-		"-t" not in opt_flags and \
-		"-a" not in opt_flags and \
-		"--blockage" not in opt_flags and \
-		"--trigger" not in opt_flags and \
-		"--all" not in opt_flags:
-		usage()
 		sys.exit(4)
+
+	# # Enforce correct usage of program
+	# opt_flags = zip(*opts)[0]
+	# if "-b" not in opt_flags and \
+	# 	"-t" not in opt_flags and \
+	# 	"-a" not in opt_flags and \
+	# 	"-g" not in opt_flags and \
+	# 	"-m" not in opt_flags and \
+	# 	"-s" not in opt_flags and \
+	# 	"-l" not in opt_flags and \
+	# 	"-d" not in opt_flags and \
+	# 	"-n" not in opt_flags and \
+	# 	"--blockage" not in opt_flags and \
+	# 	"--trigger" not in opt_flags and \
+	# 	"--all" not in opt_flags and \
+	# 	"--gds" not in opt_flags and \
+	# 	"--ms_lef" not in opt_flags and \
+	# 	"--sc_lef" not in opt_flags and \
+	# 	"--layer_map" not in opt_flags and \
+	# 	"--def" not in opt_flags and \
+	# 	"--nemo_dot" not in opt_flags:
+	# 	usage()
+	# 	sys.exit(4)
 	
 	# Parse command line arguments
 	for opt, arg in opts:
@@ -113,10 +134,22 @@ def main(argv):
 		elif opt in ("-a", "--all"):
 			NET_BLOCKAGE = True
 			TRIGGER_SPACE = True
-		elif opt in ("-d", "--debug"):
-			DEBUG_PRINTS = True
 		elif opt in ("-v", "--verbose"):
 			VERBOSE = True
+		elif opt in ("-g", "--gds"):
+			INPUT_GDSII_FILE_PATH = copy.copy(arg)
+		elif opt in ("-m", "--top_level_module"):
+			TOP_LEVEL_MODULE = copy.copy(arg)
+		elif opt in ("-r", "--route_lef"):
+			INPUT_MS_LEF_FILE_PATH = copy.copy(arg)
+		elif opt in ("-p", "--place_lef"):
+			INPUT_SC_LEF_FILE_PATH = copy.copy(arg)
+		elif opt in ("-l", "--layer_map"):
+			INPUT_LAYER_MAP_FILE_PATH = copy.copy(arg)
+		elif opt in ("-d", "--def"):
+			INPUT_DEF_FILE_PATH = copy.copy(arg)
+		elif opt in ("-n", "--nemo_dot"):
+			INPUT_DOT_FILE_PATH = copy.copy(arg)
 		else:
 			usage()
 			sys.exit(4) 
@@ -143,13 +176,17 @@ def main(argv):
 		dbg.debug_print_gdsii_hierarchy(layout.gdsii_lib)
 		print "----------------------------------------------"
 
-	# Blockage Metric
-	if NET_BLOCKAGE:
-		blockage_metric(layout)
-	
-	# Trigger Space Metric
-	if TRIGGER_SPACE:
-		trigger_space_metric(layout)
+	# Check if any critical signals found in GDSII
+	if not (layout.critical_nets):
+		print "WARNING: Could not locate any critical nets in GDSII."
+	else:
+		# Blockage Metric
+		if NET_BLOCKAGE:
+			blockage_metric(layout)
+		
+		# Trigger Space Metric
+		if TRIGGER_SPACE:
+			trigger_space_metric(layout)
 
 	# Calculate and print total execution time
 	overall_end_time = time.time()

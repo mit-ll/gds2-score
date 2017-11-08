@@ -7,6 +7,7 @@ from polygon import *
 # Other Imports
 import inspect
 import sys
+# from multiprocessing import Lock
 
 class Net():
 	def __init__(self, fullname, gdsii_paths, lef, layer_map):

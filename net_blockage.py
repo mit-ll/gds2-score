@@ -10,6 +10,7 @@ import sys
 import inspect
 import copy
 import numpy
+import gc
 
 # Possible ERROR Codes:
 # 1 = Error loading input load_files
@@ -99,6 +100,9 @@ def check_blockage(net_segment, layout, step_size, check_distance):
 			# Calculate colored area
 			diff_layer_units_blocked += bits_colored(net_segment_bitmap)
 
+			# Free bitmap memory
+			del net_segment_bitmap
+
 	return same_layer_units_blocked, diff_layer_units_blocked
 	
 def analyze_critical_net_blockage(layout, verbose):
@@ -106,6 +110,7 @@ def analyze_critical_net_blockage(layout, verbose):
 	total_top_bottom_area     = 0
 	total_same_layer_blockage = 0 
 	total_diff_layer_blockage = 0
+	step_size                 = 100
 
 	# Extract all GDSII elements near security-critical nets
 	layout.extract_nearby_polygons()
@@ -137,7 +142,6 @@ def analyze_critical_net_blockage(layout, verbose):
 				print "			shape.path.bbox.bottom==%d"   % (net_segment.bbox.ll.y)
 
 			# check_path_blockage() Parameters
-			step_size      = 1
 			check_distance = layout.lef.layers[net_segment.layer_name].pitch * layout.lef.database_units
 			
 			# Check N, E, S, W, T, B
@@ -153,12 +157,14 @@ def analyze_critical_net_blockage(layout, verbose):
 
 			path_segment_counter += 1
 
+			gc.collect()
+
 	# Calculate raw and weighted blockage percentages.
 	# Weighted acounts for area vs. perimeter blockage
-	perimeter_blockage_percentage  = (float(total_same_layer_blockage) / float(total_perimeter_units)) * 100.0
+	perimeter_blockage_percentage  = (float(total_same_layer_blockage) / (float(total_perimeter_units) / float(step_size))) * 100.0
 	top_bottom_blockage_percentage = (float(total_diff_layer_blockage) / float(total_top_bottom_area)) * 100.0
-	raw_blockage_percentage        = (float(total_same_layer_blockage + total_diff_layer_blockage) / float(total_perimeter_units + total_top_bottom_area)) * 100.0
-	weighted_blockage_percentage   = (((float(total_same_layer_blockage) / float(total_perimeter_units)) * (float(4.0/6.0)) + (float(total_diff_layer_blockage) / float(total_top_bottom_area)) * float(2.0/6.0))) * 100.0
+	raw_blockage_percentage        = (float(total_same_layer_blockage + total_diff_layer_blockage) / float((float(total_perimeter_units) / float(step_size)) + total_top_bottom_area)) * 100.0
+	weighted_blockage_percentage   = (((float(total_same_layer_blockage) / (float(total_perimeter_units) / float(step_size))) * (float(4.0/6.0)) + (float(total_diff_layer_blockage) / float(total_top_bottom_area)) * float(2.0/6.0))) * 100.0
 
 	# Print calculations
 	print "Perimeter Blockage Percentage:  %4.2f%%" % (perimeter_blockage_percentage) 
