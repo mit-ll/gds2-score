@@ -677,6 +677,33 @@ def debug_weiler_atherton_algorithm_1():
 	plt.grid()
 	plt.show()
 
+	# Polygons clip are same length and overlap
+	# Create polygon 15
+	s1 = Point(535150.00, 539070.00)
+	s2 = Point(535290.00, 539070.00)
+	s3 = Point(535290.00, 545090.00)
+	s4 = Point(535150.00, 545090.00)
+	poly_18 = Polygon([s1, s2, s3, s4, copy.deepcopy(s1)])
+	poly_18.compute_translations(0, 0, None, 90)
+
+	# Create polygon 16
+	t1 = Point(535150.00, 544950.00)
+	t2 = Point(535290.00, 544950.00)
+	t3 = Point(535290.00, 545370.00)
+	t4 = Point(535150.00, 545370.00)
+	poly_19 = Polygon([t1, t2, t3, t4, copy.deepcopy(t1)])
+	poly_19.compute_translations(0, 0, None, 90)
+
+	# Try to create a polygon from clipping 15 with 16
+	poly_20 = Polygon.from_polygon_clip(poly_18, poly_19)[0]
+
+	# Plot both polygons
+	plt.figure(9)
+	plt.plot(poly_18.get_x_coords(), poly_18.get_y_coords())
+	plt.plot(poly_19.get_x_coords(), poly_19.get_y_coords())
+	plt.plot(poly_20.get_x_coords(), poly_20.get_y_coords())
+	plt.grid()
+	plt.show()
 
 def debug_weiler_atherton_algorithm_2():
 	# Create polygon 18
