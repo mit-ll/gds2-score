@@ -8,7 +8,7 @@ import numpy
 import sys
 
 class DEF:
-	def __init__(self, def_fname, lef_info, fill_cell_names):
+	def __init__(self, def_fname, lef_info, fill_cell_names, pg_filename):
 		self.database_units           = 0
 		self.die_bbox                 = None
 		self.placement_rows           = []
@@ -19,6 +19,10 @@ class DEF:
 
 		# Load DEF files
 		self.load_def_file(def_fname, lef_info, fill_cell_names)
+
+		# Save Placement Grid to File
+		if pg_filename != None:
+			self.save_placement_grid(pg_filename)
 
 	def load_def_file(self, def_fname, lef_info, fill_cell_names):
 		print "Loading DEF file ..."
@@ -131,6 +135,9 @@ class DEF:
 		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
 		print "----------------------------------------------"
 		return
+
+	def save_placement_grid(self, pg_filename):
+		numpy.save(pg_filename, self.placement_grid)
 
 # Placement row as defined in the DEF file. The placement row has 
 # dimensions that are in units of # of sites.

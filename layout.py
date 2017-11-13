@@ -128,16 +128,16 @@ def process_nearby_polys(polys_q, done_q, nets, lef, layer_map, modified_nets_q)
 		elif not done_q.empty():
 			# Update queue of modified net objects and return
 			for net in nets:
-				modified_nets_q.put(copy.deepcopy(net))
+				modified_nets_q.put(copy.copy(net))
 			return
 
 class Layout():
-	def __init__(self, top_name, metal_stack_lef_fname, std_cell_lef_name, def_fname, layer_map_fname, gdsii_fname, dot_fname, fill_cell_names):
+	def __init__(self, top_name, metal_stack_lef_fname, std_cell_lef_name, def_fname, layer_map_fname, gdsii_fname, dot_fname, fill_cell_names, pg_filename):
 		self.top_level_name      = top_name 
 		self.fill_cell_names     = fill_cell_names
 		self.device_layer_nums   = {}
 		self.lef                 = LEF(metal_stack_lef_fname, std_cell_lef_name)
-		self.def_info            = DEF(def_fname, self.lef, fill_cell_names)
+		self.def_info            = DEF(def_fname, self.lef, fill_cell_names, pg_filename)
 		self.layer_map           = self.load_layer_map(layer_map_fname)
 		self.gdsii_lib           = self.load_gdsii_library(gdsii_fname)
 		self.gdsii_structures    = self.index_gdsii_structures_by_name()
@@ -484,7 +484,7 @@ class Layout():
 					continue
 				else:
 					line_list = line.split('\"')
-					net_full_names.append(copy.deepcopy(line_list[0]))
+					net_full_names.append(copy.copy(line_list[0]))
 		stream.close()
 
 		# Extract base names of graph nodes

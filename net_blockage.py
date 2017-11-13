@@ -12,6 +12,9 @@ import copy
 import numpy
 import gc
 
+# # Import Memory Leak Tool
+# from pympler import muppy, summary
+
 # Possible ERROR Codes:
 # 1 = Error loading input load_files
 # 2 = Unknown GDSII object attributes/attribute types
@@ -39,7 +42,7 @@ def bits_colored(bitmap):
 
 	return num_bits_colored
 
-def check_blockage(net_segment, layout, step_size, check_distance):
+def check_blockage(net_segment, layout, step_size, check_distance, path_segment_counter):
 	same_layer_units_blocked = 0
 	diff_layer_units_blocked = 0
 
@@ -90,10 +93,14 @@ def check_blockage(net_segment, layout, step_size, check_distance):
 				nearby_polys = net_segment.nearby_al_polygons
 			else:
 				nearby_polys = net_segment.nearby_bl_polygons
+			print "		Number of Nearby Polygons:", len(nearby_polys)
 
 			# Color the bitmap
 			for poly in nearby_polys:
-				clipped_polys = Polygon.from_polygon_clip(poly, net_segment.polygon)
+				if path_segment_counter == 58:
+					clipped_polys = Polygon.from_polygon_clip(poly, net_segment.polygon)
+				else:
+					clipped_polys = Polygon.from_polygon_clip(poly, net_segment.polygon)
 				for clipped_poly in clipped_polys:
 					color_bitmap(net_segment_bitmap, net_segment.bbox.ll, clipped_poly)
 
@@ -116,10 +123,10 @@ def analyze_critical_net_blockage(layout, verbose):
 	layout.extract_nearby_polygons()
 	# layout.extract_nearby_polygons_parallel()
 
-	for net in layout.critical_nets:
+	for net in [layout.critical_nets[-1]]:
 		print "Analying Net: ", net.fullname
 		path_segment_counter = 1
-		for net_segment in net.segments:
+		for net_segment in [net.segments[57]]:
 			total_perimeter_units += net_segment.bbox.get_perimeter()
 			total_top_bottom_area += (net_segment.polygon.get_area() * 2)
 
@@ -146,7 +153,7 @@ def analyze_critical_net_blockage(layout, verbose):
 			
 			# Check N, E, S, W, T, B
 			start_time = time.time()
-			same_layer_blockage, diff_layer_blockage = check_blockage(net_segment, layout, step_size, check_distance)
+			same_layer_blockage, diff_layer_blockage = check_blockage(net_segment, layout, step_size, check_distance, path_segment_counter)
 			total_same_layer_blockage += same_layer_blockage
 			total_diff_layer_blockage += diff_layer_blockage
 
@@ -157,7 +164,11 @@ def analyze_critical_net_blockage(layout, verbose):
 
 			path_segment_counter += 1
 
-			gc.collect()
+		# gc.collect()
+
+		# # Print memory usage summary
+		# summary.print_(summary.summarize(muppy.get_objects()))
+		# raw_input("Press key to continue...")
 
 	# Calculate raw and weighted blockage percentages.
 	# Weighted acounts for area vs. perimeter blockage

@@ -18,8 +18,6 @@ import pprint
 # Debug Print Flags
 DEBUG_INTERSECTION_CALCS     = False
 DEBUG_WA_ALGORITHM_VERBOSE   = False
-DEBUG_WA_ALGORITHM_POST_POLY = False
-DEBUG_WA_ALGORITHM_POST_CLIP = False
 
 class Point():
 	def __init__(self, x, y):
@@ -38,7 +36,7 @@ class Point():
 
 	def __eq__(self, other_point):
 		if other_point != None:
-			return (self.x == other_point.x and self.y == other_point.y)
+			return ((self.x == other_point.x) and (self.y == other_point.y))
 		else:
 			return False
 
@@ -156,13 +154,13 @@ class LineSegment():
 				print "		Determinants:", determinant, determinant_x, determinant_y
 				print
 			if determinant != 0:
-				x = int(determinant_x / determinant)
-				y = int(determinant_y / determinant)
+				x = float(determinant_x / determinant)
+				y = float(determinant_y / determinant)
 				return Point(x, y)
 		return None
 
 	def is_endpoint(self, P):
-		if self.p1 == P or self.p2 == P:
+		if (self.p1 == P) or (self.p2 == P):
 			return True
 		return False
 
@@ -318,144 +316,24 @@ class Polygon():
 		return cls(coords, boundary)
 
 	# Weiler-Atherton Algorithm
-	# Returns list of polygon objects as a result of a clipping operation
+	@classmethod
+	def intersection_is_vertex(cls, poly_edge, clip_edge, intersection):
+		if poly_edge.is_endpoint(intersection) or clip_edge.is_endpoint(intersection):
+			return True
+		return False
+
 	@classmethod
 	def from_polygon_clip(cls, poly, clip_poly):
-		# Construct graph with three groups of vertices:
-		# 1. polygon vertices
-		# 2. clipping region
-		# 3. intersection vertices
-		
-		wa_graph          = {}
-		outgoing_vertices = set()
-		incoming_vertices = set()
-
-		# Add all poly and clip_poly nodes to graph
-		for vertex in poly.coords:
-			if vertex not in wa_graph:
-				wa_graph[vertex] = [[], []]
-		for vertex in clip_poly.coords:
-			if vertex not in wa_graph:
-				wa_graph[vertex] = [[], []]
-
-		if DEBUG_WA_ALGORITHM_VERBOSE:
-			print "Initiated wa_graph."
-			dbg.debug_print_wa_graph(wa_graph)
-
-		# Add edges between poly vertices and intersection points, 
-		# keeping track of direction entering(False)/exiting(True) 
-		# of intersection points with curr_location.
-		inside_clip_region = clip_poly.is_point_inside(poly.coords[0])
-		for poly_edge in poly.edges():
-			intersection_points = set()
-			current_point       = poly_edge.p1
-			if DEBUG_WA_ALGORITHM_VERBOSE:
-				print "Poly Edge: ", 
-				poly_edge.print_segment()
-			# Find intections between polygon edges and clip polygon edges
-			for clip_edge in clip_poly.edges():
-				if DEBUG_WA_ALGORITHM_VERBOSE:
-					print "	Clip Edge: ", 
-					clip_edge.print_segment()
-				intersection = poly_edge.intersection(clip_edge)
-				if intersection:
-					if not poly_edge.is_endpoint(intersection):
-						# Intersection does NOT lie on an endpoint of the polygon segment
-						if DEBUG_WA_ALGORITHM_VERBOSE:
-							print "		FOUND INTS: ",
-							intersection.print_coords()
-							print
-						intersection_points.add(copy.deepcopy(intersection))
-					elif poly_edge.is_endpoint(intersection):
-						# Add intersection point to incoming/outgoing set(s)
-						if inside_clip_region:
-							outgoing_vertices.add(intersection)
-						else: 
-							incoming_vertices.add(intersection)
-						inside_clip_region = not inside_clip_region
-					elif clip_edge.is_endpoint(intersection):
-						# Add intersection point to incoming/outgoing set(s)
-						outgoing_vertices.add(intersection)
-						incoming_vertices.add(intersection)
-			# Sort intersection points by distance from polgon segment start point.
-			# Add the intersection point connections to the graph.
-			intersection_points = sorted(intersection_points, key=lambda x:x.distance_from(poly_edge.p1))
-			while intersection_points:
-				intersection = intersection_points.pop(0)
-				# Add intersection point to graph
-				if intersection not in wa_graph:
-					if DEBUG_WA_ALGORITHM_VERBOSE:
-						print "	INT NOT FOUND IN WA_GRAPH: ",
-						intersection.print_coords()
-						print
-					wa_graph[intersection] = [[], []]
-					# Add intersection point to incoming/outgoing set(s)
-					if inside_clip_region:
-						outgoing_vertices.add(intersection)
-					else: 
-					 	incoming_vertices.add(intersection)
-					inside_clip_region = not inside_clip_region	
-				if DEBUG_WA_ALGORITHM_VERBOSE:
-					print "	ADD INTS: ",
-					current_point.print_coords()
-					print "-->",
-					intersection.print_coords()
-					print
-				# Add edges to/from intersection point
-				wa_graph[current_point][0].append(intersection)
-				current_point = intersection
-			# Add edge connecting last intersection point to 
-			# poly edge end-point to wa_graph.
-			if DEBUG_WA_ALGORITHM_VERBOSE:
-				print "	ADD ENDPOINT: ",
-				current_point.print_coords() 
-				print "-->",
-				poly_edge.p2.print_coords()
-				print
-			wa_graph[current_point][0].append(poly_edge.p2)
-
-		if DEBUG_WA_ALGORITHM_POST_POLY:
-			print "Post Poly Edge Iteration:"
-			dbg.debug_print_wa_graph(wa_graph)
-			dbg.debug_print_wa_outgoing_points(outgoing_vertices)
-			dbg.debug_print_wa_incoming_points(incoming_vertices)
-
-		# Add all clip_poly vertices to graph.
-		# Add edges between clip_poly vertices and intersection points
-		for clip_edge in clip_poly.edges():
-			intersection_points = set()
-			current_point       = clip_edge.p1
-			# Find all intersection point between current clipping polygon
-			# and the subject polygon.
-			for poly_edge in poly.edges():
-				intersection = clip_edge.intersection(poly_edge)
-				if intersection:
-					if not clip_edge.is_endpoint(intersection):
-						intersection_points.add(copy.deepcopy(intersection))
-			# Sort intersection points by distance from current node
-			# Add the intersection point connections to the graph
-			intersection_points = sorted(intersection_points, key=lambda x:x.distance_from(clip_edge.p1))
-			while intersection_points:
-				intersection = intersection_points.pop(0)
-				wa_graph[current_point][1].append(intersection)
-				current_point = intersection
-			wa_graph[current_point][1].append(clip_edge.p2)
-
-		if DEBUG_WA_ALGORITHM_POST_CLIP:
-			print "Post Clip Edge Iteration:"
-			dbg.debug_print_wa_graph(wa_graph)
-			dbg.debug_print_wa_outgoing_points(outgoing_vertices)
-			dbg.debug_print_wa_incoming_points(incoming_vertices)
-
-		# Remove intersection of ingoing/outgoing vertice sets
-		outgoing = outgoing_vertices - incoming_vertices
-		incoming = incoming_vertices - outgoing_vertices
+		poly_vertices, clip_vertices, incoming, intersections = cls.build_wa_graph(poly, clip_poly)
 
 		new_polys = []
 		
+		# Set maximum number of algorithm iterations before killing the program
+		max_iterations = (len(poly_vertices) + len(clip_vertices)) * 2
+
 		# If no outgoing points --> check if subject polygon
 		# is completely contained inside the clip polygon
-		if not outgoing:
+		if not incoming:
 			contained_inside = True
 			for vertex in poly.coords:
 				if not clip_poly.is_point_inside(vertex):
@@ -464,33 +342,302 @@ class Polygon():
 				new_polys.append(poly)
 
 		# Start at exit intersection, walk graph to create clipped polygon(s)
-		while outgoing:
+		while incoming:
 			walk_edge_index = 1
-			start_vertex    = outgoing.pop()
+			start_vertex    = incoming.pop()
 			new_poly_coords = [start_vertex]
 
 			# Construct polygon coords
-			curr_vertex = wa_graph[start_vertex][walk_edge_index][0]
+			curr_vertex = poly_vertices[(poly_vertices.index(start_vertex) + 1) % len(poly_vertices)]
+			iter_num = 1
+			if DEBUG_WA_ALGORITHM_VERBOSE:
+				print "Interation", iter_num
+				print "curr_vertex: ",
+				curr_vertex.print_coords()
+				print
+				print "start_vertex: ",
+				start_vertex.print_coords()
+				print
+				print
 			while curr_vertex != start_vertex:
 				# Add vertex to current polygon coords
 				new_poly_coords.append(curr_vertex)
 
+				if iter_num > max_iterations:
+					print "ERROR %s: exceeded maximum iterations of Weiler-Atherton algorithm." % (inspect.stack()[0][3])
+					sys.exit(3)
+
 				# Change border being walked if needed
-				if curr_vertex in incoming or curr_vertex in outgoing:
+				if curr_vertex in intersections:
 					walk_edge_index = (walk_edge_index + 1) % 2
-					
-					# Remove from list of outgoing_vertices if needed
-					if curr_vertex in outgoing:
-						outgoing.remove(curr_vertex)
+					if curr_vertex in incoming:
+						incoming.remove(curr_vertex)
 
 				# Update current vertex
-				curr_vertex = wa_graph[curr_vertex][walk_edge_index][0]
+				if walk_edge_index:
+					curr_vertex = poly_vertices[(poly_vertices.index(curr_vertex) + 1) % len(poly_vertices)]
+				else:
+					curr_vertex = clip_vertices[(clip_vertices.index(curr_vertex) + 1) % len(clip_vertices)]
+
+				iter_num += 1
+				if DEBUG_WA_ALGORITHM_VERBOSE:
+					print "Interation", iter_num
+					print "curr_vertex: ",
+					curr_vertex.print_coords()
+					print
+					print "start_vertex: ",
+					start_vertex.print_coords()
+					print
+					print
 			new_poly_coords.append(start_vertex)
 
 			# Construct new polygon object
 			new_polys.append(Polygon(new_poly_coords))
 
 		return new_polys
+
+	@classmethod
+	def build_wa_graph(cls, poly, clip_poly):
+		# Construct graph with three groups of vertices:
+		# 1. polygon vertices
+		# 2. clipping region
+		# 3. intersection vertices
+
+		incoming      = set()
+		intersections = set()
+		poly_vertices = []
+		clip_vertices = []
+
+		# Add all poly and clip_poly nodes to graph
+		for vertex in poly.coords:
+			poly_vertices.append(copy.copy(vertex))
+		for vertex in clip_poly.coords:
+			clip_vertices.append(copy.copy(vertex))
+
+		# Add intersection points to poly_coords, keeping 
+		# track of entering of intersection points.
+		inside_clip_region = False
+		prev_intersection  = None 
+		poly_ind = 0
+		for poly_edge in poly.edges():
+			if DEBUG_WA_ALGORITHM_VERBOSE:
+				print "Current poly_edge:",
+				poly_edge.print_segment()
+			temp_intersections = set()
+			for clip_edge in clip_poly.edges():
+				possible_intersection = poly_edge.intersection(clip_edge)
+				if possible_intersection:
+					temp_intersections.add((possible_intersection, clip_vertices[1:].index(clip_edge.p2) + 1, clip_edge))
+			sorted_intersection_points = sorted(temp_intersections, key=lambda x:x[0].distance_from(poly_edge.p1))
+			for i in range(len(sorted_intersection_points)):
+				intersection = sorted_intersection_points[i][0]
+				# clip_ind     = sorted_intersection_points[i][1]
+				clip_edge    = sorted_intersection_points[i][2]
+				clip_ind     = clip_vertices[1:].index(clip_edge.p2) + 1
+				poly_ind     = poly_vertices[1:].index(poly_edge.p2) + 1
+				if DEBUG_WA_ALGORITHM_VERBOSE:
+					print "	Potential intersection:", 
+					intersection.print_coords()
+					print
+					print "	Current clip_edge:",
+					clip_edge.print_segment()
+				if not cls.intersection_is_vertex(poly_edge, clip_edge, intersection):
+					# Add to intersections set
+					intersections.add(intersection)
+
+					# Add intersection poly list
+					poly_vertices.insert(poly_ind, intersection)
+					if DEBUG_WA_ALGORITHM_VERBOSE:
+						print "		Inserting into poly_vertices:", 
+						intersection.print_coords()
+						print poly_ind
+						dbg.debug_print_wa_vertices(poly_vertices, intersections)
+
+					# Add intersection to clip_poly list
+					clip_vertices.insert(clip_ind, intersection)
+					if DEBUG_WA_ALGORITHM_VERBOSE:
+						print "		Inserting into clip_vertices:", 
+						intersection.print_coords()
+						print clip_ind
+						dbg.debug_print_wa_vertices(clip_vertices, intersections)
+					
+					# Add intersection to incoming vertices
+					if not inside_clip_region:
+						if DEBUG_WA_ALGORITHM_VERBOSE:
+							print "		Adding to incoming..."
+						incoming.add(intersection)
+					if DEBUG_WA_ALGORITHM_VERBOSE:
+						print "Incoming:"
+						dbg.debug_print_points(incoming)
+					inside_clip_region = not inside_clip_region
+					prev_intersection  = intersection
+					if DEBUG_WA_ALGORITHM_VERBOSE:
+						print
+				else:
+					if poly_edge.is_endpoint(intersection) or clip_edge.is_endpoint(intersection):
+						if DEBUG_WA_ALGORITHM_VERBOSE:
+							print "		Intersection is a vertex..."
+						insert_in_clip_vertices = False
+						insert_in_poly_vertices = False
+						if poly_edge.is_endpoint(intersection):
+							if intersection == poly_edge.p2:
+								# Intersection at poly p2
+								poly_ind_before = poly_vertices[1:].index(poly_edge.p2)
+								poly_ind_after  = poly_ind_before + 2
+								if not clip_edge.is_endpoint(intersection):
+									# Intersection not on clip vertex
+									insert_in_clip_vertices = True
+							else:
+								# Intersection at poly p1
+								poly_ind_before = (poly_vertices[:-1].index(poly_edge.p1) - 1) % (len(poly_vertices) - 1)
+								poly_ind_after  = (poly_ind_before + 2) % (len(poly_vertices) - 1)
+								if not clip_edge.is_endpoint(intersection):
+									# Intersection not on clip vertex
+									insert_in_clip_vertices = True
+									
+						elif clip_edge.is_endpoint(intersection):
+							poly_ind_before = poly_vertices.index(poly_edge.p1)
+							poly_ind_after  = poly_ind_before + 1
+							# Intersection not on clip vertex
+							insert_in_poly_vertices = True
+
+						if DEBUG_WA_ALGORITHM_VERBOSE:
+							print "		Poly Ind Before Int:", poly_ind_before
+							print "		Poly Ind After Int: ", poly_ind_after
+
+						# Intersection is vertex of clip and poly
+						if poly_vertices[poly_ind_before] == prev_intersection:
+							if (i + 1) < len(sorted_intersection_points):
+								if not inside_clip_region:
+									# Out-In
+									incoming.add(intersection)
+									inside_clip_region = not inside_clip_region
+									prev_intersection  = intersection
+									# Add to intersections set
+									intersections.add(intersection)
+									if insert_in_clip_vertices:
+										clip_vertices.insert(clip_ind, intersection)
+									if insert_in_poly_vertices:
+										poly_vertices.insert(poly_ind, intersection)
+									if DEBUG_WA_ALGORITHM_VERBOSE: print "		Adding to intersections... (Out-In) - based on next int"
+								else:
+									# In-In
+									if DEBUG_WA_ALGORITHM_VERBOSE: print "		Updating prev_intersection... (In-In) - based on next int"
+									prev_intersection = intersection
+							else:
+								if not inside_clip_region and clip_poly.is_point_inside(poly_vertices[poly_ind_after]):
+									# Out-In
+									incoming.add(intersection)
+									inside_clip_region = not inside_clip_region
+									prev_intersection  = intersection
+									# Add to intersections set
+									intersections.add(intersection)
+									if insert_in_clip_vertices:
+										clip_vertices.insert(clip_ind, intersection)
+									if insert_in_poly_vertices:
+										poly_vertices.insert(poly_ind, intersection)
+									if DEBUG_WA_ALGORITHM_VERBOSE: print "		Adding to intersections... (Out-In) - based on prev int"
+								elif inside_clip_region and not clip_poly.is_point_inside(poly_vertices[poly_ind_after]):
+									# In-Out
+									# Add to intersections set
+									intersections.add(intersection)
+									inside_clip_region = not inside_clip_region
+									prev_intersection  = intersection
+									if insert_in_clip_vertices:
+										clip_vertices.insert(clip_ind, intersection)
+									if insert_in_poly_vertices:
+										poly_vertices.insert(poly_ind, intersection)
+									if DEBUG_WA_ALGORITHM_VERBOSE: print "		Adding to intersections... (In-Out) - based on prev int"
+								elif not inside_clip_region and not clip_poly.is_point_inside(poly_vertices[poly_ind_after]):
+									if DEBUG_WA_ALGORITHM_VERBOSE: print "		Updating prev_intersection... (Out-Out) - based on prev int"
+									prev_intersection = intersection
+						else:
+							if not clip_poly.is_point_inside(poly_vertices[poly_ind_before]) and clip_poly.is_point_inside(poly_vertices[poly_ind_after]):
+								# Out-In
+								incoming.add(intersection)
+								inside_clip_region = not inside_clip_region
+								prev_intersection  = intersection
+								# Add to intersections set
+								intersections.add(intersection)
+								if insert_in_clip_vertices:
+									clip_vertices.insert(clip_ind, intersection)
+								if insert_in_poly_vertices:
+									poly_vertices.insert(poly_ind, intersection)
+								if DEBUG_WA_ALGORITHM_VERBOSE: print "		Adding to intersections... (Out-In)"
+							elif clip_poly.is_point_inside(poly_vertices[poly_ind_before]) and not clip_poly.is_point_inside(poly_vertices[poly_ind_after]):
+								# In-Out
+								# Add to intersections set
+								intersections.add(intersection)
+								inside_clip_region = not inside_clip_region
+								prev_intersection  = intersection
+								if insert_in_clip_vertices:
+									clip_vertices.insert(clip_ind, intersection)
+								if insert_in_poly_vertices:
+									poly_vertices.insert(poly_ind, intersection)
+								if DEBUG_WA_ALGORITHM_VERBOSE: print "		Adding to intersections... (In-Out)"
+							elif not clip_poly.is_point_inside(poly_vertices[poly_ind_before]) and not clip_poly.is_point_inside(poly_vertices[poly_ind_after]):
+								if DEBUG_WA_ALGORITHM_VERBOSE: print "		Updating prev_intersection... (Out-Out)"
+								prev_intersection = intersection
+
+						if DEBUG_WA_ALGORITHM_VERBOSE:
+							dbg.debug_print_wa_vertices(poly_vertices, intersections)
+							dbg.debug_print_wa_vertices(clip_vertices, intersections)
+							print "Incoming:"
+							dbg.debug_print_points(incoming)
+							print
+
+		# Fix order of poly vertices
+		ordered_poly_vertices = []
+		ordered_poly_vertices.append(copy.copy(poly.coords[0]))
+		for poly_edge in poly.edges():
+			start = False
+			for i in range(len(poly_vertices)):
+				curr_vertex = poly_vertices[i]
+				if not start:
+					if curr_vertex == poly_edge.p1:
+						start = True
+						temp_vertices = []
+				else:
+					if curr_vertex == poly_edge.p2:
+						start = False
+						temp_vertices = sorted(temp_vertices, key=lambda x:x.distance_from(poly_edge.p1))
+						ordered_poly_vertices.extend(copy.deepcopy(temp_vertices))
+						ordered_poly_vertices.append(copy.copy(poly_edge.p2))
+					else:
+						temp_vertices.append(curr_vertex)
+
+		# Fix order of clip vertices
+		ordered_clip_vertices = []
+		ordered_clip_vertices.append(clip_poly.coords[0])
+		for clip_edge in clip_poly.edges():
+			start = False
+			for i in range(len(clip_vertices)):
+				curr_vertex = clip_vertices[i]
+				if not start:
+					if curr_vertex == clip_edge.p1:
+						start = True
+						temp_vertices = []
+				else:
+					if curr_vertex == clip_edge.p2:
+						start = False
+						temp_vertices = sorted(temp_vertices, key=lambda x:x.distance_from(clip_edge.p1))
+						ordered_clip_vertices.extend(copy.deepcopy(temp_vertices))
+						ordered_clip_vertices.append(clip_edge.p2)
+					else:
+						temp_vertices.append(curr_vertex)
+
+		if DEBUG_WA_ALGORITHM_VERBOSE:
+			print "Ordered Poly Vertices:" 
+			dbg.debug_print_wa_vertices(ordered_poly_vertices, intersections)
+			print
+			print "Ordered Clip Vertices:"
+			dbg.debug_print_wa_vertices(ordered_clip_vertices, intersections)
+			print
+			print "Incoming Vertices:"
+			dbg.debug_print_points(incoming)
+			print
+
+		return ordered_poly_vertices, ordered_clip_vertices, incoming, intersections
 
 	def __eq__(self, other_poly):
 		sorted
@@ -549,7 +696,6 @@ class Polygon():
 		plt.plot(self.get_x_coords(), self.get_y_coords())
 
 	def print_vertices(self):
-		print "Polygon:"
 		print "	Num. Vertices:", self.num_coords
 		for coord in self.coords:
 			print "	", 
