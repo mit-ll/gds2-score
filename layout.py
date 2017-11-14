@@ -19,118 +19,6 @@ import pdb
 import os
 from multiprocessing import Pool, Queue, Manager
 
-def generate_polys_from_element_paralell(element, gdsii_structures, srefs_to_ignore={}):
-	polys = []
-	if isinstance(element, SRef):
-		# Check if SRef is to be ignored (i.e. fill cells)
-		if element.struct_name not in srefs_to_ignore:
-			# Check if SRef properties are supported by this tool
-			# and that the structure pointed to exists.
-			if element.struct_name in gdsii_structures:
-				is_sref_type_supported(element, gdsii_structures[element.struct_name])
-			else:
-				print "ERROR %s: SRef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
-				sys.exit(1)
-
-			# Iterate over elements of referenced structure
-			for sub_element in gdsii_structures[element.struct_name]:
-				sub_polys = generate_polys_from_element_paralell(sub_element, gdsii_structures)
-				# Compute translations of sub elements
-				for poly in sub_polys:
-					poly.compute_translations(element.xy[0][0], element.xy[0][1], element.strans, element.angle)
-					polys.append(copy.copy(poly))
-	elif isinstance(element, ARef):
-		# Check if ARef properties are supported by this tool
-		# and that the structure pointed to exists.
-		if element.struct_name in gdsii_structures:
-			is_aref_type_supported(element, gdsii_structures[element.struct_name])
-		else:
-			print "ERROR %s: ARef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
-			sys.exit(1)
-
-		# Retrieve row and column spacing
-		row_spacing_vector_length = Point.from_tuple(element.xy[0]).distance_from(Point.from_tuple(element.xy[2]))
-		col_spacing_vector_length = Point.from_tuple(element.xy[0]).distance_from(Point.from_tuple(element.xy[1]))
-		curr_x_offset = 0.0
-		col_spacing   = col_spacing_vector_length / element.cols
-		curr_y_offset = 0.0
-		row_spacing   = row_spacing_vector_length / element.rows
-
-		# Iterate over elements of referenced structures
-		for row_index in range(element.rows):
-			for col_index in range(element.cols):
-				for sub_element in gdsii_structures[element.struct_name]:
-					# Generate polygons from all sub elements
-					sub_polys = generate_polys_from_element_paralell(sub_element, gdsii_structures)
-
-					# Compute translations of newly generated polygons
-					for poly in sub_polys:
-						poly.compute_translations(curr_x_offset, curr_y_offset, None, None)
-						polys.append(copy.copy(poly))
-				curr_x_offset += col_spacing
-			curr_x_offset = 0.0
-			curr_y_offset += row_spacing
-		# Compute overall translation of ARef element polygons
-		for poly in polys:				
-			poly.compute_translations(element.xy[0][0], element.xy[0][1], element.strans, element.angle)
-	elif isinstance(element, Path) or isinstance(element, Boundary):
-		# BASE CASE
-		# Compute polygon from element
-		if isinstance(element, Path):
-			# Element is a Path object
-			polys.append(Polygon.from_gdsii_path(element))
-		else:
-			# Element is a Boundary object
-			polys.append(Polygon.from_gdsii_boundary(element))
-	# Ignore GDSII Text elements
-	# elif isinstance(element, Text):
-	elif isinstance(element, Box):
-		print "UNSUPPORTED %s: GDSII Box elements are not supported." % (inspect.stack()[1][3])
-		sys.exit(3)
-	elif isinstance(element, Node):
-		print "UNSUPPORTED %s: GDSII Node elements are not supported." % (inspect.stack()[1][3])
-		sys.exit(3)
-	return polys
-
-def add_polys_to_queue(element, gdsii_structures, polys_q):
-	polys = generate_polys_from_element_paralell(element, gdsii_structures)
-	for poly in polys:
-		polys_q.put(copy.copy(poly))
-
-def process_nearby_polys(polys_q, done_q, nets, lef, layer_map, modified_nets_q):
-	print "About to process polys..."
-	while True:
-		if not polys.empty():
-			poly = polys_q.get()
-			print "Processing a polygon..."
-			for net in nets:
-				for net_segment in net:	
-					if net_segment.gdsii_path.layer == poly.gdsii_element.layer:
-						
-						# Element on the same layer as net_segment
-						if poly.overlaps_bbox(net_segment.nearby_bbox):
-							net_segment.nearby_sl_polygons.append(copy.copy(poly))
-					elif lef.is_gdsii_layer_above(net_segment.gdsii_path, poly.gdsii_element, layer_map):
-						
-						# Element is one layer above the net_segment.
-						# Element is only considered "nearby" if it insects with the
-						# bounding box of the path object projected one layer above.
-						if poly.overlaps_bbox(net_segment.bbox):
-							net_segment.nearby_al_polygons.append(copy.copy(poly))
-
-					elif lef.is_gdsii_layer_below(net_segment.gdsii_path, poly.gdsii_element, layer_map):
-						
-						# Element is either one layer below the net_segment.
-						# Element is only considered "nearby" if it insects with the
-						# bounding box of the path object projected one layer below.
-						if poly.overlaps_bbox(net_segment.bbox):
-							net_segment.nearby_bl_polygons.append(copy.copy(poly))
-		elif not done_q.empty():
-			# Update queue of modified net objects and return
-			for net in nets:
-				modified_nets_q.put(copy.copy(net))
-			return
-
 class Layout():
 	def __init__(self, top_name, metal_stack_lef_fname, std_cell_lef_name, def_fname, layer_map_fname, gdsii_fname, dot_fname, fill_cell_names, pg_filename):
 		self.top_level_name      = top_name 
@@ -143,6 +31,9 @@ class Layout():
 		self.gdsii_structures    = self.index_gdsii_structures_by_name()
 		self.top_gdsii_structure = self.gdsii_structures[top_name]
 		self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname))
+		self.net_blockage_done   = False
+		self.trigger_space_done  = False
+		self.trigger_spaces      = None
 
 	def generate_polys_from_element(self, element, srefs_to_ignore={}):
 		polys = []
@@ -558,3 +449,132 @@ class Layout():
 		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
 		print "----------------------------------------------"
 		return layer_map
+
+class TriggerSpace():
+	def __init__(self, size):
+		self.size    = size # Number of 4-connected placement sites
+		self.freq    = 0    # Frequency of same size trigger spaces
+		self.spaces  = []   # List of sets of Point objects comprising a single trigger space
+		self.net_segment_2_sites = {} # maps net segments to closest trigger space sites
+
+class TriggerSite():
+	def __init__(self, i, coords, md):
+		self.sites_index        = i      # Index into parent object TriggerSpace.sites list 
+		self.centers            = coords # Coords of center of placement site (manufacturing units)
+		self.edit_distances     = []
+		self.manhattan_distance = md
+
+# ------------------------------------------------------------------
+# Multiprocessing Support Functions
+# ------------------------------------------------------------------
+def generate_polys_from_element_paralell(element, gdsii_structures, srefs_to_ignore={}):
+	polys = []
+	if isinstance(element, SRef):
+		# Check if SRef is to be ignored (i.e. fill cells)
+		if element.struct_name not in srefs_to_ignore:
+			# Check if SRef properties are supported by this tool
+			# and that the structure pointed to exists.
+			if element.struct_name in gdsii_structures:
+				is_sref_type_supported(element, gdsii_structures[element.struct_name])
+			else:
+				print "ERROR %s: SRef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
+				sys.exit(1)
+
+			# Iterate over elements of referenced structure
+			for sub_element in gdsii_structures[element.struct_name]:
+				sub_polys = generate_polys_from_element_paralell(sub_element, gdsii_structures)
+				# Compute translations of sub elements
+				for poly in sub_polys:
+					poly.compute_translations(element.xy[0][0], element.xy[0][1], element.strans, element.angle)
+					polys.append(copy.copy(poly))
+	elif isinstance(element, ARef):
+		# Check if ARef properties are supported by this tool
+		# and that the structure pointed to exists.
+		if element.struct_name in gdsii_structures:
+			is_aref_type_supported(element, gdsii_structures[element.struct_name])
+		else:
+			print "ERROR %s: ARef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
+			sys.exit(1)
+
+		# Retrieve row and column spacing
+		row_spacing_vector_length = Point.from_tuple(element.xy[0]).distance_from(Point.from_tuple(element.xy[2]))
+		col_spacing_vector_length = Point.from_tuple(element.xy[0]).distance_from(Point.from_tuple(element.xy[1]))
+		curr_x_offset = 0.0
+		col_spacing   = col_spacing_vector_length / element.cols
+		curr_y_offset = 0.0
+		row_spacing   = row_spacing_vector_length / element.rows
+
+		# Iterate over elements of referenced structures
+		for row_index in range(element.rows):
+			for col_index in range(element.cols):
+				for sub_element in gdsii_structures[element.struct_name]:
+					# Generate polygons from all sub elements
+					sub_polys = generate_polys_from_element_paralell(sub_element, gdsii_structures)
+
+					# Compute translations of newly generated polygons
+					for poly in sub_polys:
+						poly.compute_translations(curr_x_offset, curr_y_offset, None, None)
+						polys.append(copy.copy(poly))
+				curr_x_offset += col_spacing
+			curr_x_offset = 0.0
+			curr_y_offset += row_spacing
+		# Compute overall translation of ARef element polygons
+		for poly in polys:				
+			poly.compute_translations(element.xy[0][0], element.xy[0][1], element.strans, element.angle)
+	elif isinstance(element, Path) or isinstance(element, Boundary):
+		# BASE CASE
+		# Compute polygon from element
+		if isinstance(element, Path):
+			# Element is a Path object
+			polys.append(Polygon.from_gdsii_path(element))
+		else:
+			# Element is a Boundary object
+			polys.append(Polygon.from_gdsii_boundary(element))
+	# Ignore GDSII Text elements
+	# elif isinstance(element, Text):
+	elif isinstance(element, Box):
+		print "UNSUPPORTED %s: GDSII Box elements are not supported." % (inspect.stack()[1][3])
+		sys.exit(3)
+	elif isinstance(element, Node):
+		print "UNSUPPORTED %s: GDSII Node elements are not supported." % (inspect.stack()[1][3])
+		sys.exit(3)
+	return polys
+
+def add_polys_to_queue(element, gdsii_structures, polys_q):
+	polys = generate_polys_from_element_paralell(element, gdsii_structures)
+	for poly in polys:
+		polys_q.put(copy.copy(poly))
+
+def process_nearby_polys(polys_q, done_q, nets, lef, layer_map, modified_nets_q):
+	print "About to process polys..."
+	while True:
+		if not polys.empty():
+			poly = polys_q.get()
+			print "Processing a polygon..."
+			for net in nets:
+				for net_segment in net:	
+					if net_segment.gdsii_path.layer == poly.gdsii_element.layer:
+						
+						# Element on the same layer as net_segment
+						if poly.overlaps_bbox(net_segment.nearby_bbox):
+							net_segment.nearby_sl_polygons.append(copy.copy(poly))
+					elif lef.is_gdsii_layer_above(net_segment.gdsii_path, poly.gdsii_element, layer_map):
+						
+						# Element is one layer above the net_segment.
+						# Element is only considered "nearby" if it insects with the
+						# bounding box of the path object projected one layer above.
+						if poly.overlaps_bbox(net_segment.bbox):
+							net_segment.nearby_al_polygons.append(copy.copy(poly))
+
+					elif lef.is_gdsii_layer_below(net_segment.gdsii_path, poly.gdsii_element, layer_map):
+						
+						# Element is either one layer below the net_segment.
+						# Element is only considered "nearby" if it insects with the
+						# bounding box of the path object projected one layer below.
+						if poly.overlaps_bbox(net_segment.bbox):
+							net_segment.nearby_bl_polygons.append(copy.copy(poly))
+		elif not done_q.empty():
+			# Update queue of modified net objects and return
+			for net in nets:
+				modified_nets_q.put(copy.copy(net))
+			return

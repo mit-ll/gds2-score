@@ -11,11 +11,11 @@ import sys
 
 class Net():
 	def __init__(self, fullname, gdsii_paths, lef, layer_map):
-		self.fullname     = fullname
-		self.basename     = fullname.split('/')[-1]
-		self.num_segments = len(gdsii_paths)
-		self.segments     = []
-
+		self.fullname           = fullname
+		self.basename           = fullname.split('/')[-1]
+		self.num_segments       = len(gdsii_paths)
+		self.segments           = []
+		self.blockage_step_size = 0 # in manufacturing units
 		for path_obj in gdsii_paths:
 			self.segments.append(Net_Segment(path_obj, lef, layer_map))
 
@@ -31,6 +31,8 @@ class Net_Segment():
 		self.nearby_sl_polygons = [] # nearby polygons on the same layer
 		self.nearby_al_polygons = [] # nearby polygons on above layer
 		self.nearby_bl_polygons = [] # nearby polygons on below layer
+		self.same_layer_blockage = 0 # perimeter units blocked (according to step_size)
+		self.diff_layer_blockage = 0 # top/bottom area units blocked
 
 	# Returns the direction of the path object. Returns "V" for 
 	# a Vertical path and "H" for a horizontal path. Script exits

@@ -3,7 +3,7 @@ from gdsii.library import Library
 from gdsii.elements import *
 
 # Import matplotlib
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 # Import custom modules
 from polygon import *
@@ -750,6 +750,91 @@ def debug_weiler_atherton_algorithm_2():
 	plt.plot(poly_19.get_x_coords(), poly_19.get_y_coords())
 	plt.plot(poly_20.get_x_coords(), poly_20.get_y_coords())
 	plt.plot(poly_21.get_x_coords(), poly_21.get_y_coords())
+	plt.grid()
+	plt.show()
+
+def debug_weiler_atherton_algorithm_3():
+	# Create polygon 1
+	p1 = Point(477550, 382270) 
+	# p2 = Point(477890, 382270)
+	p3 = Point(478090, 382270)
+	p4 = Point(478090, 382410)
+	p5 = Point(477550, 382410)
+	p6 = Point(477550, 382270)
+	poly_1 = Polygon([p1, p3, p4, p5, p6])
+
+	# Create polygon 2
+	s1 = Point(476910, 382270) 
+	s2 = Point(477890, 382270) 
+	s3 = Point(477890, 382410) 
+	s4 = Point(476910, 382410) 
+	s5 = Point(476910, 382270)
+	poly_2 = Polygon([s1, s2, s3, s4, s5])
+
+	# Try to create new polygons from clipping 1 with 2
+	poly_3 = Polygon.from_polygon_clip(poly_1, poly_2)[0]
+
+	# Plot both polygons
+	plt.figure(1)
+	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	plt.plot(poly_2.get_x_coords(), poly_2.get_y_coords())
+	plt.plot(poly_3.get_x_coords(), poly_3.get_y_coords())
+	plt.grid()
+	plt.show()
+
+def debug_weiler_atherton_algorithm_4():
+	# Create polygon 1
+	p1 = Point(0, 0) 
+	p2 = Point(4, 0)
+	p3 = Point(4, 4)
+	p4 = Point(0, 4)
+	p5 = Point(0, 0)
+	poly_1 = Polygon([p1, p2, p3, p4, p5])
+
+	# Create polygon 2
+	s1 = Point(-2, 0) 
+	s2 = Point(3, 0) 
+	s3 = Point(3, 4) 
+	s4 = Point(-2, 4) 
+	s5 = Point(-2, 0)
+	poly_2 = Polygon([s1, s2, s3, s4, s5])
+
+	# Try to create new polygons from clipping 1 with 2
+	poly_3 = Polygon.from_polygon_clip(poly_1, poly_2)[0]
+
+	# Plot both polygons
+	plt.figure(1)
+	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	plt.plot(poly_2.get_x_coords(), poly_2.get_y_coords())
+	plt.plot(poly_3.get_x_coords(), poly_3.get_y_coords())
+	plt.grid()
+	plt.show()
+
+def debug_weiler_atherton_algorithm_5():
+	# Create polygon 1
+	p1 = Point(3, 0) 
+	p2 = Point(4, 0)
+	p3 = Point(4, 4)
+	p4 = Point(3, 4)
+	p5 = Point(3, 0)
+	poly_1 = Polygon([p1, p2, p3, p4, p5])
+
+	# Create polygon 2
+	s1 = Point(0, 3) 
+	s2 = Point(4, 3) 
+	s3 = Point(4, 4) 
+	s4 = Point(0, 4) 
+	s5 = Point(0, 3)
+	poly_2 = Polygon([s1, s2, s3, s4, s5])
+
+	# Try to create new polygons from clipping 1 with 2
+	poly_3 = Polygon.from_polygon_clip(poly_1, poly_2)[0]
+
+	# Plot both polygons
+	plt.figure(1)
+	plt.plot(poly_1.get_x_coords(), poly_1.get_y_coords())
+	plt.plot(poly_2.get_x_coords(), poly_2.get_y_coords())
+	plt.plot(poly_3.get_x_coords(), poly_3.get_y_coords())
 	plt.grid()
 	plt.show()
 

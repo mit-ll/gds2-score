@@ -38,12 +38,12 @@ def find_empty_placement_site(device_layer_bitmap):
 # Takes 2D numpy array bitmap that represents the placement grid
 # on a circuit layout and determines which cells are open.
 def find_4_connected_regions(device_layer_bitmap):
-	tigger_space_histogram = {}
-	num_open_sites         = 0
-	num_rows               = device_layer_bitmap.shape[0]
-	num_cols               = device_layer_bitmap.shape[1]
-	bitmap_bbox            = BBox(Point(0,0), Point(num_cols - 1, num_rows - 1))
-	start_point            = find_empty_placement_site(device_layer_bitmap)
+	trigger_spaces = {}
+	num_open_sites = 0
+	num_rows       = device_layer_bitmap.shape[0]
+	num_cols       = device_layer_bitmap.shape[1]
+	bitmap_bbox    = BBox(Point(0,0), Point(num_cols - 1, num_rows - 1))
+	start_point    = find_empty_placement_site(device_layer_bitmap)
 
 	while start_point != None:
 		connected_points  = set()
@@ -87,19 +87,22 @@ def find_4_connected_regions(device_layer_bitmap):
 					points_to_explore.add(copy.copy(new_point))
 
 		# Update trigger space histogram
-		if len(connected_points) not in tigger_space_histogram:
-			tigger_space_histogram[len(connected_points)] = 1
+		if len(connected_points) not in trigger_spaces:
+			trigger_spaces[len(connected_points)] = TriggerSpace(len(connected_points))
+			trigger_spaces[len(connected_points)].spaces.append(connected_points)
+			trigger_spaces[len(connected_points)].freq += 1
 		else:
-			tigger_space_histogram[len(connected_points)] += 1
+			trigger_spaces[len(connected_points)].spaces.append(connected_points)
+			trigger_spaces[len(connected_points)].freq += 1
 
 		# Update start point
 		start_point = find_empty_placement_site(device_layer_bitmap)
 
-	return num_open_sites, tigger_space_histogram
+	return num_open_sites, trigger_spaces
 
 def analyze_open_space_for_triggers(layout):
 	# Find open placement sites in the placement grid
-	num_open_sites, tigger_space_histogram = find_4_connected_regions(layout.def_info.placement_grid)
+	num_open_sites, trigger_spaces = find_4_connected_regions(layout.def_info.placement_grid)
 
 	# Get width of terminal for printing of the histogram
 	terminal_rows, terminal_columns = map(int, os.popen('stty size', 'r').read().split())
@@ -108,13 +111,17 @@ def analyze_open_space_for_triggers(layout):
 	print "Open/Total Placement Sites: %d / %d" % (num_open_sites, (layout.def_info.num_placement_rows * layout.def_info.num_placement_cols))
 	print "Summary of Adjacent Placement Sites:"
 	print "size  : freq"
-	for space_size in sorted(tigger_space_histogram):
+	for space_size in sorted(trigger_spaces):
 		# Create histogram bar from ASCII characters
-		if tigger_space_histogram[space_size] > (terminal_columns - 16):
+		if trigger_spaces[space_size] > (terminal_columns - 16):
 			histogram_bar = ((unichr(0x2588) * (terminal_columns - 16)) + '*').encode('utf-8')
 		else:
-			histogram_bar = (unichr(0x2588) * tigger_space_histogram[space_size]).encode('utf-8')
+			histogram_bar = (unichr(0x2588) * trigger_spaces[space_size].freq).encode('utf-8')
 
 		# Print histogram row
-		print "%6d:%5d |%s" % (space_size, tigger_space_histogram[space_size], histogram_bar)
+		print "%6d:%5d |%s" % (space_size, trigger_spaces[space_size].freq, histogram_bar)
 	print "----------------------------------------------"
+
+	# Set completed flag and save histogram
+	layout.trigger_spaces     = trigger_spaces
+	layout.trigger_space_done = False 

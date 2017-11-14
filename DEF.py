@@ -118,7 +118,7 @@ class DEF:
 												print "ERROR %s: Component (%s) width (%f) is not an even multiple of the placement site (%s)." % (inspect.stack()[0][3], curr_std_cell_name, curr_std_cell_width, curr_placement_site_name)
 												sys.exit(1)
 
-											# Mark locations on placement grid that are occupied by the standard cell
+											# Mark locations on placement grid that are occupied by a standard cell
 											for curr_site_num in range(int(curr_std_cell_width)):
 												self.placement_grid[component_row, component_col + curr_site_num] = 1
 									else:

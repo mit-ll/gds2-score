@@ -26,6 +26,7 @@ DEBUG_PRINTS  = False
 VERBOSE       = False
 NET_BLOCKAGE  = False
 TRIGGER_SPACE = False
+EDIT_DISTANCE = False
 
 def calculate_and_print_time(start_time, end_time):
 	hours, rem       = divmod(end_time - start_time, 3600)
@@ -93,6 +94,9 @@ def edit_distance_metric(layout):
 def main(argv):
 	# dbg.debug_weiler_atherton_algorithm_1()
 	# dbg.debug_weiler_atherton_algorithm_2()
+	# dbg.debug_weiler_atherton_algorithm_3()
+	# dbg.debug_weiler_atherton_algorithm_4()
+	# dbg.debug_weiler_atherton_algorithm_5()
 	# return
 	
 	# Global Program Switches
