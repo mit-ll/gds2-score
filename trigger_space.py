@@ -88,7 +88,7 @@ def find_4_connected_regions(device_layer_bitmap):
 
 		# Update trigger space histogram
 		if len(connected_points) not in trigger_spaces:
-			trigger_spaces[len(connected_points)] = TriggerSpace(len(connected_points))
+			trigger_spaces[len(connected_points)] = TriggerSpaces(len(connected_points))
 			trigger_spaces[len(connected_points)].spaces.append(connected_points)
 			trigger_spaces[len(connected_points)].freq += 1
 		else:
@@ -124,4 +124,4 @@ def analyze_open_space_for_triggers(layout):
 
 	# Set completed flag and save histogram
 	layout.trigger_spaces     = trigger_spaces
-	layout.trigger_space_done = False 
+	layout.trigger_space_done = True 

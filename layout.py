@@ -20,17 +20,19 @@ import os
 from multiprocessing import Pool, Queue, Manager
 
 class Layout():
-	def __init__(self, top_name, metal_stack_lef_fname, std_cell_lef_name, def_fname, layer_map_fname, gdsii_fname, dot_fname, fill_cell_names, pg_filename):
+	def __init__(self, top_name, metal_stack_lef_fname, std_cell_lef_name, def_fname, layer_map_fname, gdsii_fname, dot_fname, wire_rpt_fname, fill_cell_names, pg_filename):
 		self.top_level_name      = top_name 
 		self.fill_cell_names     = fill_cell_names
 		self.device_layer_nums   = {}
 		self.lef                 = LEF(metal_stack_lef_fname, std_cell_lef_name)
 		self.def_info            = DEF(def_fname, self.lef, fill_cell_names, pg_filename)
 		self.layer_map           = self.load_layer_map(layer_map_fname)
+		self.wire_stats          = self.load_wire_statistics(wire_rpt_fname)
 		self.gdsii_lib           = self.load_gdsii_library(gdsii_fname)
 		self.gdsii_structures    = self.index_gdsii_structures_by_name()
 		self.top_gdsii_structure = self.gdsii_structures[top_name]
 		self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname))
+		self.net_blockage_step   = 100 # in database units
 		self.net_blockage_done   = False
 		self.trigger_space_done  = False
 		self.trigger_spaces      = None
@@ -450,16 +452,57 @@ class Layout():
 		print "----------------------------------------------"
 		return layer_map
 
-class TriggerSpace():
+	def load_wire_statistics(self, fname):
+		net_mean   = 0.0
+		net_sigma  = 0.0
+		conn_mean  = 0.0
+		conn_sigma = 0.0
+
+		start_time = time.time()
+		print "Extracting wire length statistics..."
+
+		with open(fname, 'rb') as stream:
+			for line in stream:
+				line = line.rstrip(' \n').lstrip(' \t')
+				# Parse Net Length Stats
+				if 'Avg net length' in line:
+					line = line.split(' = ')
+					net_mean  = float(line[1].rstrip(' (sigma'))
+					net_sigma = float(line[2].rstrip(')'))
+					print "Net Length Avg:       ", net_mean
+					print "Net Length Stdv:      ", net_sigma
+				# Parse Connection Length Stats
+				elif 'Avg connection length' in line:
+					line = line.split(' = ')
+					conn_mean  = float(line[1].rstrip(' (sigma'))
+					conn_sigma = float(line[2].rstrip(')'))
+					print "Connection Length Avg:", conn_mean
+					print "Connection Stdv:      ", conn_sigma
+
+		stream.close()
+
+		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
+		print "----------------------------------------------"
+
+		return WireStats(net_mean, net_sigma, conn_mean, conn_sigma)
+
+class WireStats():
+	def __init__(self, n_mean, n_stdv, c_mean, c_stdv):
+		self.net_sigma        = n_mean
+		self.net_mean         = n_stdv
+		self.connection_sigma = c_mean
+		self.connection_mean  = c_stdv
+
+class TriggerSpaces():
 	def __init__(self, size):
 		self.size    = size # Number of 4-connected placement sites
 		self.freq    = 0    # Frequency of same size trigger spaces
 		self.spaces  = []   # List of sets of Point objects comprising a single trigger space
 		self.net_segment_2_sites = {} # maps net segments to closest trigger space sites
 
-class TriggerSite():
+class TriggerSpace():
 	def __init__(self, i, coords, md):
-		self.sites_index        = i      # Index into parent object TriggerSpace.sites list 
+		self.spaces_index       = i      # Index into parent object TriggerSpace.spaces_index list 
 		self.centers            = coords # Coords of center of placement site (manufacturing units)
 		self.edit_distances     = []
 		self.manhattan_distance = md

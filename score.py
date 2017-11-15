@@ -38,7 +38,7 @@ def calculate_and_print_time(start_time, end_time):
 # ------------------------------------------------------------------
 # Print program usage statement
 def usage():
-	print "Usage: python score.py {-a|-b|-t|-e} [-hv] -g <gdsii> -m <top module> -r <route LEF> -p <placement LEF> -l <layer map> -d <DEF> -n <Nemo .dot> [-s <placement grid .npy>]"
+	print "Usage: python score.py {-a|-b|-t|-e} [-hv] -g <gdsii> -m <top module> -r <route LEF> -p <placement LEF> -l <layer map> -d <DEF> -n <Nemo .dot> -w <wire report> [-s <placement grid .npy>]"
 	print "Options:"
 	print "	-h, --help	Show this message."
 	print "	-b, --blockage	Calculate critical net blockage metric."
@@ -53,6 +53,7 @@ def usage():
 	print "	-l, --layer_map	Layer map input file."
 	print "	-d, --def	DEF input file."
 	print "	-n, --nemo_dot	Nemo .dot file."
+	print "	-w, --wire_rpt	Wire statistics report input file."
 	print " -s, --place_grid	Placement output file (include .npy extension)."
 
 # Analyze blockage of security critical nets in GDSII
@@ -114,13 +115,14 @@ def main(argv):
 	INPUT_LAYER_MAP_FILE_PATH = 'gds/tech_nominal_25c_3_20_20_00_00_02_LB.map'
 	INPUT_GDSII_FILE_PATH 	  = 'gds/MAL_TOP.merged.gds'
 	INPUT_DOT_FILE_PATH       = 'graphs/MAL_TOP_par.supv_2.dot'
+	INPUT_WIRE_RPT_PATH       = '/Volumes/ttrippel/ICAD/OR1200/par/or1200_70core_100mhz_20fo/MAL_TOP.final.route.rpt'
 	OUTPUT_PGRID              =  None
 	# FILL_CELL_NAMES           = []
 	FILL_CELL_NAMES           = ["FILLDGCAP8_A12TR", "FILLDGCAP16_A12TR", "FILLDGCAP32_A12TR", "FILLDGCAP64_A12TR"]
 
 	# Load command line arguments
 	try:
-		opts, args = getopt.getopt(argv, "abtehvg:m:r:p:l:d:n:s:", ["all", "blockage", "trigger", "edit_distance", "help", "verbose", "gds", "top_level_module", "route_lef", "place_lef", "layer_map", "def", "nemo_dot", "place_grid"])
+		opts, args = getopt.getopt(argv, "abtehvg:m:r:p:l:d:n:w:s:", ["all", "blockage", "trigger", "edit_distance", "help", "verbose", "gds", "top_level_module", "route_lef", "place_lef", "layer_map", "def", "nemo_dot", "wire_rpt", "place_grid"])
 	except getopt.GetoptError:
 		usage()
 		sys.exit(4)
@@ -138,10 +140,12 @@ def main(argv):
 	# 	("-l" not in opt_flags and "--layer_map"        not in opt_flags) or \
 	# 	("-d" not in opt_flags and "--def"              not in opt_flags) or \
 	# 	("-n" not in opt_flags and "--nemo_dot"         not in opt_flags) or \
+	# 	("-w" not in opt_flags and "--wire_rpt"         not in opt_flags) or \
 	# 	# ("-s" not in opt_flags and "--place_grid"       not in opt_flags):
 	# 	usage()
 	# 	sys.exit(4)
 	
+	"-w", "--wire_rpt"
 	# Parse command line arguments
 	for opt, arg in opts:
 		if opt in ("-h", "--help"): 
@@ -173,6 +177,8 @@ def main(argv):
 			INPUT_DEF_FILE_PATH = copy.copy(arg)
 		elif opt in ("-n", "--nemo_dot"):
 			INPUT_DOT_FILE_PATH = copy.copy(arg)
+		elif opt in ("-w", "--wire_rpt"):
+			INPUT_WIRE_RPT_PATH = copy.copy(arg)
 		elif opt in ("-s", "--place_grid"):
 			OUTPUT_PGRID = copy.copy(arg)
 		else:
@@ -191,6 +197,7 @@ def main(argv):
 		INPUT_LAYER_MAP_FILE_PATH, \
 		INPUT_GDSII_FILE_PATH, \
 		INPUT_DOT_FILE_PATH, \
+		INPUT_WIRE_RPT_PATH, \
 		FILL_CELL_NAMES, \
 		OUTPUT_PGRID)
 

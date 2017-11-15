@@ -17,7 +17,7 @@ import pprint
 
 # Debug Print Flags
 DEBUG_INTERSECTION_CALCS   = False
-DEBUG_WA_ALGORITHM_VERBOSE = True
+DEBUG_WA_ALGORITHM_VERBOSE = False
 
 class Point():
 	def __init__(self, x, y):

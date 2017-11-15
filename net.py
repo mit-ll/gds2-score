@@ -15,12 +15,14 @@ class Net():
 		self.basename           = fullname.split('/')[-1]
 		self.num_segments       = len(gdsii_paths)
 		self.segments           = []
-		self.blockage_step_size = 0 # in manufacturing units
-		for path_obj in gdsii_paths:
-			self.segments.append(Net_Segment(path_obj, lef, layer_map))
+		for i in range(len(gdsii_paths)):
+			path_obj = gdsii_paths[i]
+			self.segments.append(Net_Segment(i, self.basename, path_obj, lef, layer_map))
 
 class Net_Segment():
-	def __init__(self, gdsii_path, lef, layer_map):
+	def __init__(self, num, net_basename, gdsii_path, lef, layer_map):
+		self.num                = num
+		self.net_basename       = net_basename
 		self.gdsii_path         = gdsii_path
 		self.layer_num          = lef.get_layer_num(gdsii_path.layer, gdsii_path.data_type, layer_map)
 		self.layer_name         = lef.get_layer_name(gdsii_path.layer, gdsii_path.data_type, layer_map)

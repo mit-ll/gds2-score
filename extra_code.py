@@ -273,6 +273,47 @@ print "Done - Time Elapsed:", (time.time() - load_layout_start_time), "seconds."
 print "----------------------------------------------"
 
 # ------------------------------------------------------------------
+# Edit Distance Debug Code
+# ------------------------------------------------------------------
+print "Size:", trigger_spaces.size
+print "Freq:", trigger_spaces.freq
+print "net_segment_2_sites:"
+pprint.pprint(trigger_spaces.net_segment_2_sites)
+
+print len(trigger_spaces.net_segment_2_sites[net_segment])
+print "Index:",              trigger_spaces.net_segment_2_sites[net_segment][i].spaces_index
+print "Centers:",            trigger_spaces.net_segment_2_sites[net_segment][i].centers
+print "Edit Distance:",      trigger_spaces.net_segment_2_sites[net_segment][i].edit_distances
+print "Manhattan Distance:", trigger_spaces.net_segment_2_sites[net_segment][i].manhattan_distance
+print [ ts.spaces_index for ts in trigger_spaces.net_segment_2_sites[net_segment] ]
+
+print "	<route_distance>"
+print "		Num Trigger Spaces:", len(trigger_spaces.spaces)
+print "		Size:              ", trigger_spaces.size
+print "		Freq:              ", trigger_spaces.freq
+
+class TriggerSpaces():
+	def __init__(self, size):
+		self.size    = size # Number of 4-connected placement sites
+		self.freq    = 0    # Frequency of same size trigger spaces
+		self.spaces  = []   # List of sets of Point objects comprising a single trigger space
+		self.net_segment_2_sites = {} # maps net segments to list of closest trigger space sites
+
+class TriggerSpace():
+	def __init__(self, i, coords, md):
+		self.spaces_index       = i      # Index into parent object TriggerSpace.spaces_index list 
+		self.centers            = coords # Coords of center of placement site (manufacturing units)
+		self.edit_distances     = []
+		self.manhattan_distance = md
+
+class WireStats():
+	def __init__(self, n_mean, n_stdv, c_mean, c_stdv):
+		self.net_sigma        = n_mean
+		self.net_mean         = n_stdv
+		self.connection_sigma = c_mean
+		self.connection_mean  = c_stdv
+
+# ------------------------------------------------------------------
 # Old (non-working) Weiler Atherton implementation
 # ------------------------------------------------------------------
 DEBUG_WA_ALGORITHM_POST_POLY = False
