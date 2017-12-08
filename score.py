@@ -4,7 +4,7 @@ import debug_prints as dbg
 # Import Example Metric Modules
 from net_blockage  import *
 from trigger_space import *
-from edit_distance import *
+from routing_distance import *
 
 # Other Imports
 import time
@@ -22,11 +22,11 @@ import copy
 # 4 = Usage Error
 
 # Global Program Switches
-DEBUG_PRINTS  = False
-VERBOSE       = False
-NET_BLOCKAGE  = False
-TRIGGER_SPACE = False
-EDIT_DISTANCE = False
+DEBUG_PRINTS     = False
+VERBOSE          = False
+NET_BLOCKAGE     = False
+TRIGGER_SPACE    = False
+ROUTING_DISTANCE = False
 
 def calculate_and_print_time(start_time, end_time):
 	hours, rem       = divmod(end_time - start_time, 3600)
@@ -43,7 +43,7 @@ def usage():
 	print "	-h, --help	Show this message."
 	print "	-b, --blockage	Calculate critical net blockage metric."
 	print "	-t, --trigger	Calculate open trigger space metric."
-	print "	-e, --edit_distance	Calculate routing edit distance."
+	print "	-e, --routing_distance	Calculate routing distance."
 	print "	-a, --all	Calculate all metrics."
 	print "	-v, --verbose Verbose prints."
 	print "	-g, --gds	GDSII input file."
@@ -78,13 +78,13 @@ def trigger_space_metric(layout):
 	print "----------------------------------------------"
 	return
 
-# Analyze edit distance required for routing
-def edit_distance_metric(layout):
+# Analyze routing distance required for routing
+def routing_distance_metric(layout):
 	start_time = time.time()
-	print "Starting Edit Distance Analysis:"
-	analyze_routing_edit_distance(layout)
+	print "Starting Routing Distance Analysis:"
+	analyze_routing_distance(layout)
 	end_time = time.time()
-	print "Done - Edit Distance Analysis."
+	print "Done - Routing Distance Analysis."
 	calculate_and_print_time(start_time, end_time)
 	print "----------------------------------------------"
 	return
@@ -93,45 +93,37 @@ def edit_distance_metric(layout):
 # Main Entry Point of GDSII-Score
 # ------------------------------------------------------------------
 def main(argv):
-	# dbg.debug_weiler_atherton_algorithm_1()
-	# dbg.debug_weiler_atherton_algorithm_2()
-	# dbg.debug_weiler_atherton_algorithm_3()
-	# dbg.debug_weiler_atherton_algorithm_4()
-	# dbg.debug_weiler_atherton_algorithm_5()
-	# return
-	
 	# Global Program Switches
 	global DEBUG_PRINTS # currently not set by command args --> set to True to turn on
 	global VERBOSE
 	global NET_BLOCKAGE
 	global TRIGGER_SPACE
-	global EDIT_DISTANCE
+	global ROUTING_DISTANCE
 
 	# Input Info/File Names 
-	TOP_LEVEL_MODULE          = 'MAL_TOP'
-	INPUT_MS_LEF_FILE_PATH    = 'gds/tech_nominal_25c_3_20_20_00_00_02_LB.lef'
-	INPUT_SC_LEF_FILE_PATH    = 'gds/sc12_base_v31_rvt_soi12s0.lef'
-	INPUT_DEF_FILE_PATH       = 'gds/MAL_TOP.def'
-	INPUT_LAYER_MAP_FILE_PATH = 'gds/tech_nominal_25c_3_20_20_00_00_02_LB.map'
-	INPUT_GDSII_FILE_PATH 	  = 'gds/MAL_TOP.merged.gds'
-	INPUT_DOT_FILE_PATH       = 'graphs/MAL_TOP_par.supv_2.dot'
-	INPUT_WIRE_RPT_PATH       = '/Volumes/ttrippel/ICAD/OR1200/par/or1200_70core_100mhz_20fo/MAL_TOP.final.route.rpt'
+	TOP_LEVEL_MODULE          = 'XXX'
+	INPUT_MS_LEF_FILE_PATH    = 'XXX.lef'
+	INPUT_SC_LEF_FILE_PATH    = 'XXX.lef'
+	INPUT_DEF_FILE_PATH       = 'XXX.def'
+	INPUT_LAYER_MAP_FILE_PATH = 'XXX.map'
+	INPUT_GDSII_FILE_PATH 	  = 'XXX.gds'
+	INPUT_DOT_FILE_PATH       = 'XXX.dot'
+	INPUT_WIRE_RPT_PATH       = 'XXX.rpt'
 	OUTPUT_PGRID              =  None
-	# FILL_CELL_NAMES           = []
-	FILL_CELL_NAMES           = ["FILLDGCAP8_A12TR", "FILLDGCAP16_A12TR", "FILLDGCAP32_A12TR", "FILLDGCAP64_A12TR"]
+	FILL_CELL_NAMES           = []
 
 	# Load command line arguments
 	try:
-		opts, args = getopt.getopt(argv, "abtehvg:m:r:p:l:d:n:w:s:", ["all", "blockage", "trigger", "edit_distance", "help", "verbose", "gds", "top_level_module", "route_lef", "place_lef", "layer_map", "def", "nemo_dot", "wire_rpt", "place_grid"])
+		opts, args = getopt.getopt(argv, "abtehvg:m:r:p:l:d:n:w:s:", ["all", "blockage", "trigger", "routing_distance", "help", "verbose", "gds", "top_level_module", "route_lef", "place_lef", "layer_map", "def", "nemo_dot", "wire_rpt", "place_grid"])
 	except getopt.GetoptError:
 		usage()
 		sys.exit(4)
 
 	# # Enforce correct usage of program
 	# opt_flags = zip(*opts)[0]
-	# if  ("-b" not in opt_flags and "--blockage"         not in opt_flags  and \
+	# if  ("-b" not in opt_flags and "--blockage"       not in opt_flags  and \
 	# 	"-t"  not in opt_flags and "--trigger"          not in opt_flags  and \
-	# 	"-e"  not in opt_flags and "--edit_distance"    not in opt_flags  and \
+	# 	"-e"  not in opt_flags and "--routing_distance" not in opt_flags  and \
 	# 	"-a"  not in opt_flags and "--all"              not in opt_flags) or \
 	# 	("-g" not in opt_flags and "--gds"              not in opt_flags) or \
 	# 	("-m" not in opt_flags and "--top_level_module" not in opt_flags) or \
@@ -155,12 +147,12 @@ def main(argv):
 			NET_BLOCKAGE = True
 		elif opt in ("-t", "--trigger"):
 			TRIGGER_SPACE = True
-		elif opt in ("-e", "--edit_distance"):
-			EDIT_DISTANCE = True
+		elif opt in ("-e", "--routing_distance"):
+			ROUTING_DISTANCE = True
 		elif opt in ("-a", "--all"):
-			NET_BLOCKAGE  = True
-			TRIGGER_SPACE = True
-			EDIT_DISTANCE = True
+			NET_BLOCKAGE     = True
+			TRIGGER_SPACE    = True
+			ROUTING_DISTANCE = True
 		elif opt in ("-v", "--verbose"):
 			VERBOSE = True
 		elif opt in ("-g", "--gds"):
@@ -225,9 +217,9 @@ def main(argv):
 		if TRIGGER_SPACE:
 			trigger_space_metric(layout)
 
-		# Edit Distance Metric
-		if EDIT_DISTANCE:
-			edit_distance_metric(layout)
+		# Routing Distance Metric
+		if ROUTING_DISTANCE:
+			routing_distance_metric(layout)
 
 	# Calculate and print total execution time
 	overall_end_time = time.time()
