@@ -101,27 +101,16 @@ def main(argv):
 	global ROUTING_DISTANCE
 
 	# Input Info/File Names 
-	# TOP_LEVEL_MODULE          = 'XXX'
-	# INPUT_MS_LEF_FILE_PATH    = 'XXX.lef'
-	# INPUT_SC_LEF_FILE_PATH    = 'XXX.lef'
-	# INPUT_DEF_FILE_PATH       = 'XXX.def'
-	# INPUT_LAYER_MAP_FILE_PATH = 'XXX.map'
-	# INPUT_GDSII_FILE_PATH     = 'XXX.gds'
-	# INPUT_DOT_FILE_PATH       = 'XXX.dot'
-	# INPUT_WIRE_RPT_PATH       = 'XXX.rpt'
-	# OUTPUT_PGRID              =  None
-	# FILL_CELL_NAMES           = []
-	TOP_LEVEL_MODULE          = 'MAL_TOP'
-	INPUT_MS_LEF_FILE_PATH    = 'gds/tech_nominal_25c_3_20_20_00_00_02_LB.lef'
-	INPUT_SC_LEF_FILE_PATH    = 'gds/sc12_base_v31_rvt_soi12s0.lef'
-	INPUT_DEF_FILE_PATH       = 'gds/MAL_TOP.def'
-	INPUT_LAYER_MAP_FILE_PATH = 'gds/tech_nominal_25c_3_20_20_00_00_02_LB.map'
-	INPUT_GDSII_FILE_PATH 	  = 'gds/MAL_TOP.merged.gds'
-	INPUT_DOT_FILE_PATH       = 'graphs/MAL_TOP_par.supv_2.dot'
-	INPUT_WIRE_RPT_PATH       = '/Volumes/ttrippel/ICAD/OR1200/par/or1200_70core_100mhz_20fo/MAL_TOP.final.route.rpt'
+	TOP_LEVEL_MODULE          = 'XXX'
+	INPUT_MS_LEF_FILE_PATH    = 'XXX.lef'
+	INPUT_SC_LEF_FILE_PATH    = 'XXX.lef'
+	INPUT_DEF_FILE_PATH       = 'XXX.def'
+	INPUT_LAYER_MAP_FILE_PATH = 'XXX.map'
+	INPUT_GDSII_FILE_PATH     = 'XXX.gds'
+	INPUT_DOT_FILE_PATH       = 'XXX.dot'
+	INPUT_WIRE_RPT_PATH       = 'XXX.rpt'
 	OUTPUT_PGRID              =  None
-	# FILL_CELL_NAMES           = []
-	FILL_CELL_NAMES           = ["FILLDGCAP8_A12TR", "FILLDGCAP16_A12TR", "FILLDGCAP32_A12TR", "FILLDGCAP64_A12TR"]
+	FILL_CELL_NAMES           = []
 
 	# Load command line arguments
 	try:
