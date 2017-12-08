@@ -134,7 +134,7 @@ def analyze_critical_net_blockage(layout, verbose):
 
 	for net in layout.critical_nets:
 		print "Analying Net: ", net.fullname
-		path_segment_counter   = 1
+		path_segment_counter = 1
 		for net_segment in net.segments:
 			total_perimeter_units += net_segment.bbox.get_perimeter()
 			total_top_bottom_area += (net_segment.polygon.get_area() * 2)
