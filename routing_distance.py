@@ -19,7 +19,7 @@ import pprint
 # 4 = Usage Error
 
 # ------------------------------------------------------------------
-# Routing Edit Distance Metric
+# Routing Distance Metric
 # ------------------------------------------------------------------
 def perimeter_blockage(net_segment, step_size):
 	return ((float(net_segment.same_layer_blockage) / (float(net_segment.bbox.get_perimeter()) / float(step_size))) * 100.0)
@@ -88,54 +88,41 @@ def route_distance(layout, trigger_spaces, net_segment):
 
 	return tspaces
 
-def analyze_routing_edit_distance(layout, target_trigger_size=0, max_target_wires=5):
+def analyze_routing_distance(layout, target_trigger_size=0, max_blockage=90.0):
 	# Verify net blockage and trigger space metrics have been computed
 	if not layout.net_blockage_done or not layout.trigger_space_done:
 		print "ERROR %s: net blockage and trigger space metrics not computed." % (inspect.stack()[0][3])
 		sys.exit(4)
 
-	# print "NB Done:", layout.net_blockage_done
-	# print "TS Done:", layout.trigger_space_done
-	# print "Placement Site Spacing (DEF):", layout.def_info.placement_rows[0].spacing.x
-	# print "Placement Site Width   (LEF):", layout.lef.placement_sites[layout.def_info.placement_rows[0].site_name].dimension.x
-
 	# Sort Critical Net Segments
 	sorted_net_segments = []
 	for net in layout.critical_nets:
 		for net_segment in net.segments:
-			if weighted_blockage(net_segment, layout.net_blockage_step) < 90.0:
+			if weighted_blockage(net_segment, layout.net_blockage_step) < max_blockage:
 				sorted_net_segments.append(net_segment)
-		# sorted_net_segments.extend(net.segments)
 	# sorted_net_segments = sorted(sorted_net_segments, key=lambda x:weighted_blockage(x, layout.net_blockage_step))
-
-	# Adjust max_target_wires
-	# if max_target_wires > len(sorted_net_segments):
-		# max_target_wires = len(sorted_net_segments)
 
 	# Filter/Map trigger spaces to critical net segments based on size and 3D manhattan distance
 	for trigger_size in sorted(layout.trigger_spaces):
 		# Filter only trigger spaces that are large enough for the target trigger circuit
 		if trigger_size >= target_trigger_size:
 			trigger_spaces = layout.trigger_spaces[trigger_size]
-			# for net_segment in sorted_net_segments[:max_target_wires]:
 			for net_segment in sorted_net_segments:
 				# Map possible trigger spaces to net segments
 				if net_segment not in trigger_spaces.net_segment_2_sites:
 					trigger_spaces.net_segment_2_sites[net_segment] = route_distance(layout, trigger_spaces, net_segment)
 				else:
-					print "ERROR <analyze_routing_edit_distance>: not possible to reach here."
+					print "ERROR <analyze_routing_distance>: not possible to reach here."
 					sys.exit(3)
 				
 	# Print Report
 	for trigger_size in sorted(layout.trigger_spaces):
 		# Filter only trigger spaces that are large enough for the target trigger circuit
 		if trigger_size >= target_trigger_size:
-			trigger_spaces = layout.trigger_spaces[trigger_size]
-
+			trigger_spaces  = layout.trigger_spaces[trigger_size]
 			trigger_counter = 0
 			for i in range(len(trigger_spaces.spaces)):
 				print "Trigger %d (Size: %d):" % (trigger_counter, trigger_size)
-				# for net_segment in sorted_net_segments[:max_target_wires]:
 				for net_segment in sorted_net_segments:
 					curr_trigger_space_ind = [ ts.spaces_index for ts in trigger_spaces.net_segment_2_sites[net_segment] ].index(i) 
 					curr_trigger_space     = trigger_spaces.net_segment_2_sites[net_segment][curr_trigger_space_ind]
