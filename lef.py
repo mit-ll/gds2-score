@@ -12,7 +12,7 @@ class LEF:
 	def __init__(self, metal_stack_lef_fname, std_cell_lef_name):
 		self.database_units     = 0
 		self.manufacturing_grid = 0
-		self.layers             = {} # Maps layer name to layer object (only RoutingLayer)
+		self.layers             = {} # Maps layer name to layer object (only Routing_Layer)
 		self.placement_sites    = {} # Maps placement site name to placement site object
 		self.standard_cells     = {} # Maps standard cell name to standard cell object
 		
@@ -97,7 +97,7 @@ class LEF:
 												range_max = float(line_list.pop(0))
 												spacing[-1].append((range_min, range_max))
 									line = stream.next().rstrip(' ;\n').lstrip()
-								self.layers[layer_name] = Routing_Layer(layer_name, layer_index, direction, pitch, offset, min_width, max_width, width, spacing)
+								self.layers[layer_name] = Routing_Layer(layer_name, layer_index, direction, pitch, offset, min_width, max_width, width, spacing, self.database_units)
 								layer_index += 1
 							# Via Layer
 							# elif "CUT" in layer_type:
@@ -247,7 +247,7 @@ class LEF:
 		return
 
 class Routing_Layer:
-	def __init__(self, name, num, direction, pitch, offset, min_width, max_width, width, spacing):
+	def __init__(self, name, num, direction, pitch, offset, min_width, max_width, width, spacing, db_units):
 		self.name      = name
 		self.layer_num = num
 		self.direction = direction
@@ -257,6 +257,7 @@ class Routing_Layer:
 		self.max_width = max_width
 		self.width     = width
 		self.spacing   = spacing
+		self.rogue_wire_width = (min_width + (2 * spacing[0][0])) * db_units # Database units
 		# self.area
 		# self.min_enclosed_area
 		# self.min_density

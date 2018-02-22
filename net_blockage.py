@@ -45,6 +45,103 @@ def bits_colored(bitmap):
 
 	return num_bits_colored
 
+def check_blockage_constrained(net_segment, layout, check_distance):
+	num_same_layer_units_checked = 0
+	same_layer_units_blocked     = 0
+	diff_layer_units_blocked     = 0
+	sl_temp_units_blocked        = 0
+	sl_prev_blocked              = False
+	sl_poly_overlap              = False
+
+	# Scan all 4 perimeter sides to check for blockages
+	for direction in ['N', 'E', 'S', 'W', 'T', 'B']:
+		if direction == 'N':
+			curr_scan_coord  = net_segment.bbox.ll.x
+			end_scan_coord   = net_segment.bbox.ur.x
+			curr_fixed_coord = net_segment.bbox.ur.y + check_distance
+		elif direction == 'E':
+			curr_scan_coord  = net_segment.bbox.ll.y
+			end_scan_coord   = net_segment.bbox.ur.y
+			curr_fixed_coord = net_segment.bbox.ur.x + check_distance
+		elif direction == 'S':
+			curr_scan_coord  = net_segment.bbox.ll.x
+			end_scan_coord   = net_segment.bbox.ur.x
+			curr_fixed_coord = net_segment.bbox.ll.y - check_distance
+		elif direction == 'W':
+			curr_scan_coord  = net_segment.bbox.ll.y
+			end_scan_coord   = net_segment.bbox.ur.y
+			curr_fixed_coord = net_segment.bbox.ll.x - check_distance
+		elif direction != 'T' and direction != 'B':
+			print "ERROR %s: unknown scan direction (%s)." % (inspect.stack()[0][3], direction)
+			sys.exit(4)
+		
+		# Analyze blockage along the perimeter on the same layer
+		if direction != 'T' and direction != 'B':
+			num_points_to_scan = float(end_scan_coord - curr_scan_coord)
+			print "		Checking %.2f units along %s edge (%d/%f units/microns away)..." % (num_points_to_scan, direction, check_distance, float(check_distance / layout.lef.database_units))
+			# print "		Start Scan Coord = %d; End Scan Coord = %d; Num Points to Scan = %d" % (curr_scan_coord, end_scan_coord, num_points_to_scan)
+			while curr_scan_coord < end_scan_coord:
+				sl_poly_overlap = False
+				for poly in net_segment.nearby_sl_polygons:
+					if direction == 'N' or direction == 'S':
+						if poly.is_point_inside(Point(curr_scan_coord, curr_fixed_coord)):
+							sl_poly_overlap = True
+							break
+					else:
+						if poly.is_point_inside(Point(curr_fixed_coord, curr_scan_coord)):
+							sl_poly_overlap = True
+							break
+				# Mark start of sub perimeter blockage count			
+				if sl_prev_blocked == False and sl_poly_overlap == True:
+					sl_prev_blocked = True
+					sl_temp_units_blocked += 1
+				# Counting sub perimeter blockage
+				elif sl_prev_blocked == True and sl_poly_overlap == True:
+					sl_temp_units_blocked += 1
+				# Mark end of sub perimeter blockage count
+				elif prev_blocked == True and sl_poly_overlap == False:
+					# Check if num sub units blocked is above threshold
+					if sl_temp_units_blocked >= layout.lef.layers[net_segment.layer_name].rogue_wire_width:
+						same_layer_units_blocked += sl_temp_units_blocked
+					# Reset counter and flag
+					sl_temp_units_blocked = 0
+					sl_prev_blocked       = False
+				num_same_layer_units_checked += 1
+				curr_scan_coord              += 1
+		# Analyze blockage along the adjacent layers (top and bottom)
+		else:
+			# Create bitmap of net segment
+			net_segment_bitmap = numpy.zeros(shape=(net_segment.bbox.get_height(), net_segment.bbox.get_width()))
+			
+			# Choose nearby polygons to analyze
+			if direction == 'T':
+				nearby_polys = net_segment.nearby_al_polygons
+			else:
+				nearby_polys = net_segment.nearby_bl_polygons
+			print "		Checking (%d) nearby polygons along %s side (GDSII Layer:) ..." % (len(nearby_polys), direction)
+
+			# Color the bitmap
+			for poly in nearby_polys:
+				clipped_polys = Polygon.from_polygon_clip(poly, net_segment.polygon)
+				# plt.figure(1)
+				# plt.plot(poly.get_x_coords(), poly.get_y_coords())
+				# plt.plot(net_segment.polygon.get_x_coords(), net_segment.polygon.get_y_coords())
+				for clipped_poly in clipped_polys:
+					# plt.plot(clipped_poly.get_x_coords(), clipped_poly.get_y_coords())
+					if clipped_poly.get_area() > 0:
+						color_bitmap(net_segment_bitmap, net_segment.bbox.ll, clipped_poly)
+				# plt.grid()
+				# plt.show()
+
+			# Calculate colored area
+			diff_layer_units_blocked += bits_colored(net_segment_bitmap)
+
+			# Free bitmap memory
+			del net_segment_bitmap
+
+	return num_same_layer_units_checked, same_layer_units_blocked, diff_layer_units_blocked
+
+
 def check_blockage(net_segment, layout, check_distance):
 	num_same_layer_units_checked = 0
 	same_layer_units_blocked     = 0
@@ -72,7 +169,7 @@ def check_blockage(net_segment, layout, check_distance):
 			print "ERROR %s: unknown scan direction (%s)." % (inspect.stack()[0][3], direction)
 			sys.exit(4)
 		
-		# Analyze blockage along the perimeter of on the same layer
+		# Analyze blockage along the perimeter on the same layer
 		if direction != 'T' and direction != 'B':
 			num_points_to_scan = (float(end_scan_coord - curr_scan_coord) / float(layout.net_blockage_step))
 			print "		Checking %.2f units along %s edge (%d/%f units/microns away)..." % (num_points_to_scan, direction, check_distance, float(check_distance / layout.lef.database_units))
