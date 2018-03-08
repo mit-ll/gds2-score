@@ -100,12 +100,15 @@ def find_4_connected_regions(device_layer_bitmap):
 
 	return num_open_sites, trigger_spaces
 
-def analyze_open_space_for_triggers(layout):
+def analyze_open_space_for_triggers(layout, print_to_stdio=False):
 	# Find open placement sites in the placement grid
 	num_open_sites, trigger_spaces = find_4_connected_regions(layout.def_info.placement_grid)
 
 	# Get width of terminal for printing of the histogram
-	terminal_rows, terminal_columns = map(int, os.popen('stty size', 'r').read().split())
+	if print_to_stdio:
+		terminal_rows, terminal_columns = map(int, os.popen('stty size', 'r').read().split())
+	else:
+		terminal_columns = 80
 
 	# Print calculations
 	print "Open/Total Placement Sites: %d / %d" % (num_open_sites, (layout.def_info.num_placement_rows * layout.def_info.num_placement_cols))
