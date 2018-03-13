@@ -38,7 +38,7 @@ def calculate_and_print_time(start_time, end_time):
 # ------------------------------------------------------------------
 # Print program usage statement
 def usage():
-	print "Usage: python score.py {-a|-b|-t|-e} [-hv] -g <gdsii> -m <top module> -r <route LEF> -p <placement LEF> -l <layer map> -d <DEF> -n <Nemo .dot> -w <wire report> [-s <placement grid .npy>]"
+	print "Usage: python score.py {-a|-b|-t|-e} [-hv] -g <gdsii> -m <top module> -r <route LEF> -p <placement LEF> -l <layer map> -d <DEF> -n <Nemo .dot> -w <wire report> --nb_step=<nb step size> --nb_type=<0 or 1> [-s <placement grid .npy>]"
 	print "Options:"
 	print "	-h, --help	Show this message."
 	print "	-b, --blockage	Calculate critical net blockage metric."
@@ -54,7 +54,9 @@ def usage():
 	print "	-d, --def	DEF input file."
 	print "	-n, --nemo_dot	Nemo .dot file."
 	print "	-w, --wire_rpt	Wire statistics report input file."
-	print " -s, --place_grid	Placement output file (include .npy extension)."
+	print "	-s, --place_grid	Placement output file (include .npy extension)."
+	print "	--nb_step	Step size for same layer net blockage calculation."
+	print "	--nb_type	Type of net blockage calculation (0 for unconstrained; 1 for LEF constrained)."
 
 # Analyze blockage of security critical nets in GDSII
 def blockage_metric(layout):
@@ -111,6 +113,8 @@ def main(argv):
 	# INPUT_WIRE_RPT_PATH       = 'XXX.rpt'
 	# OUTPUT_PGRID              =  None
 	# FILL_CELL_NAMES           = []
+	# NB_STEP                   = 100
+	# NB_TYPE                   = 0
 	TOP_LEVEL_MODULE          = 'MAL_TOP'
 	INPUT_MS_LEF_FILE_PATH    = 'gds/tech_nominal_25c_3_20_20_00_00_02_LB.lef'
 	INPUT_SC_LEF_FILE_PATH    = 'gds/sc12_base_v31_rvt_soi12s0.lef'
@@ -122,33 +126,36 @@ def main(argv):
 	OUTPUT_PGRID              =  None
 	# FILL_CELL_NAMES           = []
 	FILL_CELL_NAMES           = ["FILLDGCAP8_A12TR", "FILLDGCAP16_A12TR", "FILLDGCAP32_A12TR", "FILLDGCAP64_A12TR"]
+	NB_STEP                   = 100
+	NB_TYPE                   = 0
 
 	# Load command line arguments
 	try:
-		opts, args = getopt.getopt(argv, "abtehvg:m:r:p:l:d:n:w:s:", ["all", "blockage", "trigger", "routing_distance", "help", "verbose", "gds", "top_level_module", "route_lef", "place_lef", "layer_map", "def", "nemo_dot", "wire_rpt", "place_grid"])
+		opts, args = getopt.getopt(argv, "abtehvg:m:r:p:l:d:n:w:s:", ["all", "blockage", "trigger", "routing_distance", "help", "verbose", "gds=", "top_level_module=", "route_lef=", "place_lef=", "layer_map=", "def=", "nemo_dot=", "wire_rpt=", "place_grid=", "nb_step=", "nb_type="])
 	except getopt.GetoptError:
 		usage()
 		sys.exit(4)
 
-	# # Enforce correct usage of program
-	# opt_flags = zip(*opts)[0]
-	# if  ("-b" not in opt_flags and "--blockage"       not in opt_flags  and \
-	# 	"-t"  not in opt_flags and "--trigger"          not in opt_flags  and \
-	# 	"-e"  not in opt_flags and "--routing_distance" not in opt_flags  and \
-	# 	"-a"  not in opt_flags and "--all"              not in opt_flags) or \
-	# 	("-g" not in opt_flags and "--gds"              not in opt_flags) or \
-	# 	("-m" not in opt_flags and "--top_level_module" not in opt_flags) or \
-	# 	("-r" not in opt_flags and "--route_lef"        not in opt_flags) or \
-	# 	("-p" not in opt_flags and "--place_lef"        not in opt_flags) or \
-	# 	("-l" not in opt_flags and "--layer_map"        not in opt_flags) or \
-	# 	("-d" not in opt_flags and "--def"              not in opt_flags) or \
-	# 	("-n" not in opt_flags and "--nemo_dot"         not in opt_flags) or \
-	# 	("-w" not in opt_flags and "--wire_rpt"         not in opt_flags) or \
-	# 	# ("-s" not in opt_flags and "--place_grid"       not in opt_flags):
-	# 	usage()
-	# 	sys.exit(4)
+	# Enforce correct usage of program
+	opt_flags = zip(*opts)[0]
+	if  ("-b" not in opt_flags and "--blockage"       not in opt_flags  and \
+		"-t"  not in opt_flags and "--trigger"          not in opt_flags  and \
+		"-e"  not in opt_flags and "--routing_distance" not in opt_flags  and \
+		"-a"  not in opt_flags and "--all"              not in opt_flags) or \
+		("-g" not in opt_flags and "--gds"              not in opt_flags) or \
+		("-m" not in opt_flags and "--top_level_module" not in opt_flags) or \
+		("-r" not in opt_flags and "--route_lef"        not in opt_flags) or \
+		("-p" not in opt_flags and "--place_lef"        not in opt_flags) or \
+		("-l" not in opt_flags and "--layer_map"        not in opt_flags) or \
+		("-d" not in opt_flags and "--def"              not in opt_flags) or \
+		("-n" not in opt_flags and "--nemo_dot"         not in opt_flags) or \
+		("-w" not in opt_flags and "--wire_rpt"         not in opt_flags) or \
+		("--nb_step" not in opt_flags) or \
+		("--nb_type" not in opt_flags):
+		# ("-s" not in opt_flags and "--place_grid"       not in opt_flags):
+		usage()
+		sys.exit(4)
 	
-	"-w", "--wire_rpt"
 	# Parse command line arguments
 	for opt, arg in opts:
 		if opt in ("-h", "--help"): 
@@ -184,6 +191,10 @@ def main(argv):
 			INPUT_WIRE_RPT_PATH = copy.copy(arg)
 		elif opt in ("-s", "--place_grid"):
 			OUTPUT_PGRID = copy.copy(arg)
+		elif opt == "--nb_step":
+			NB_STEP = copy.copy(int(arg))
+		elif opt == "--nb_type":
+			NB_TYPE = copy.copy(int(arg))
 		else:
 			usage()
 			sys.exit(4) 
@@ -202,7 +213,9 @@ def main(argv):
 		INPUT_DOT_FILE_PATH, \
 		INPUT_WIRE_RPT_PATH, \
 		FILL_CELL_NAMES, \
-		OUTPUT_PGRID)
+		OUTPUT_PGRID, \
+		NB_STEP, \
+		NB_TYPE)
 
 	# # Print memory usage summary
 	# summary.print_(summary.summarize(muppy.get_objects()))

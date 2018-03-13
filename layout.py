@@ -20,7 +20,7 @@ import os
 from multiprocessing import Pool, Queue, Manager
 
 class Layout():
-	def __init__(self, top_name, metal_stack_lef_fname, std_cell_lef_name, def_fname, layer_map_fname, gdsii_fname, dot_fname, wire_rpt_fname, fill_cell_names, pg_filename):
+	def __init__(self, top_name, metal_stack_lef_fname, std_cell_lef_name, def_fname, layer_map_fname, gdsii_fname, dot_fname, wire_rpt_fname, fill_cell_names, pg_filename, nb_step, nb_type):
 		self.top_level_name      = top_name 
 		self.fill_cell_names     = fill_cell_names
 		self.device_layer_nums   = {}
@@ -32,7 +32,8 @@ class Layout():
 		self.gdsii_structures    = self.index_gdsii_structures_by_name()
 		self.top_gdsii_structure = self.gdsii_structures[top_name]
 		self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname))
-		self.net_blockage_step   = 100 # in database units
+		self.net_blockage_step   = nb_step # in database units
+		self.net_blockage_type   = nb_type # 0 for un-constrained; 1 for LEF constrained
 		self.net_blockage_done   = False
 		self.trigger_space_done  = False
 		self.trigger_spaces      = None

@@ -107,7 +107,7 @@ def check_blockage_constrained(net_segment, layout, check_distance):
 					sl_temp_units_blocked = 0
 					sl_prev_blocked       = False
 				num_same_layer_units_checked += 1
-				curr_scan_coord              += 1
+				curr_scan_coord              += layout.net_blockage_step
 		# Analyze blockage along the adjacent layers (top and bottom)
 		else:
 			# Create bitmap of net segment
@@ -260,8 +260,10 @@ def analyze_critical_net_blockage(layout, verbose):
 			
 			# Check N, E, S, W, T, B
 			start_time = time.time()
-			# num_same_layer_units_checked, same_layer_blockage, diff_layer_blockage = check_blockage(net_segment, layout, check_distance)
-			num_same_layer_units_checked, same_layer_blockage, diff_layer_blockage = check_blockage_constrained(net_segment, layout, check_distance)
+			if net_blockage_type == 1:
+				num_same_layer_units_checked, same_layer_blockage, diff_layer_blockage = check_blockage_constrained(net_segment, layout, check_distance)
+			else:
+				num_same_layer_units_checked, same_layer_blockage, diff_layer_blockage = check_blockage(net_segment, layout, check_distance)
 			net_segment.same_layer_blockage = same_layer_blockage
 			net_segment.diff_layer_blockage = diff_layer_blockage 
 			total_same_layer_blockage      += same_layer_blockage
