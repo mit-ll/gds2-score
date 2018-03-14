@@ -260,7 +260,7 @@ def analyze_critical_net_blockage(layout, verbose):
 			
 			# Check N, E, S, W, T, B
 			start_time = time.time()
-			if net_blockage_type == 1:
+			if layout.net_blockage_type == 1:
 				num_same_layer_units_checked, same_layer_blockage, diff_layer_blockage = check_blockage_constrained(net_segment, layout, check_distance)
 			else:
 				num_same_layer_units_checked, same_layer_blockage, diff_layer_blockage = check_blockage(net_segment, layout, check_distance)
