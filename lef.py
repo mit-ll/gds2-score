@@ -248,16 +248,27 @@ class LEF:
 
 class Routing_Layer:
 	def __init__(self, name, num, direction, pitch, offset, min_width, max_width, width, spacing, db_units):
-		self.name      = name
-		self.layer_num = num
-		self.direction = direction
-		self.pitch     = pitch
-		self.offset    = offset
-		self.min_width = min_width
-		self.max_width = max_width
-		self.width     = width
-		self.spacing   = spacing
-		self.rogue_wire_width = (min_width + (2 * spacing[0][0])) * db_units # Database units
+		self.name        = name
+		self.layer_num   = num
+		self.direction   = direction
+		self.pitch       = pitch
+		self.offset      = offset
+		self.min_width   = min_width
+		self.max_width   = max_width
+		self.width       = width
+		self.spacing     = spacing
+		self.min_spacing_db   = spacing[0][0] * db_units # Database units
+		self.min_width_db     = min_width * db_units # Database units
+		if self.min_spacing_db.is_integer() and self.min_width_db.is_integer():
+			self.min_spacing_db   = int(self.min_spacing_db)
+			self.min_width_db     = int(self.min_width_db)
+		else:
+			print "Min Spacing DB", self.min_spacing_db, self.min_spacing_db.is_integer()
+			print "Min Width DB", self.min_width_db, self.min_width_db.is_integer()
+			print "Rogue Wire Width", self.rogue_wire_width, self.rogue_wire_width.is_integer()
+			print "ERROR %s: spacing and/or widths not integer multiple of DB units." % (inspect.stack()[0][3])
+			sys.exit(1)
+		self.rogue_wire_width = int((self.min_width + (2 * self.spacing[0][0])) * db_units) # Database units
 		# self.area
 		# self.min_enclosed_area
 		# self.min_density

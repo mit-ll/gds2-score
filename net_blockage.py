@@ -49,76 +49,80 @@ def check_blockage_constrained(net_segment, layout, check_distance):
 	num_same_layer_units_checked = 0
 	same_layer_units_blocked     = 0
 	diff_layer_units_blocked     = 0
-	sl_temp_units_blocked        = 0
-	sl_prev_blocked              = False
-	sl_poly_overlap              = False
+	min_wire_spacing    = layout.lef.layers[net_segment.layer_name].min_spacing_db
+	min_wire_width      = layout.lef.layers[net_segment.layer_name].min_width_db
+	required_open_width = layout.lef.layers[net_segment.layer_name].rogue_wire_width
+	print "min_wire_spacing", min_wire_spacing
+	print "min_wire_width", min_wire_width
+	print "required_open_width", required_open_width
 
 	# Scan all 4 perimeter sides to check for blockages
 	for direction in ['N', 'E', 'S', 'W', 'T', 'B']:
 		if direction == 'N':
-			curr_scan_coord  = net_segment.bbox.ll.x
-			end_scan_coord   = net_segment.bbox.ur.x
-			curr_fixed_coord = net_segment.bbox.ur.y + check_distance
+			start_scan_coord  = net_segment.bbox.ll.x - min_wire_spacing
+			end_scan_coord    = net_segment.bbox.ur.x + min_wire_spacing
+			curr_fixed_coord  = net_segment.bbox.ur.y + check_distance
 		elif direction == 'E':
-			curr_scan_coord  = net_segment.bbox.ll.y
-			end_scan_coord   = net_segment.bbox.ur.y
-			curr_fixed_coord = net_segment.bbox.ur.x + check_distance
+			start_scan_coord  = net_segment.bbox.ll.y - min_wire_spacing
+			end_scan_coord    = net_segment.bbox.ur.y + min_wire_spacing
+			curr_fixed_coord  = net_segment.bbox.ur.x + check_distance
 		elif direction == 'S':
-			curr_scan_coord  = net_segment.bbox.ll.x
-			end_scan_coord   = net_segment.bbox.ur.x
-			curr_fixed_coord = net_segment.bbox.ll.y - check_distance
+			start_scan_coord  = net_segment.bbox.ll.x - min_wire_spacing
+			end_scan_coord    = net_segment.bbox.ur.x + min_wire_spacing
+			curr_fixed_coord  = net_segment.bbox.ll.y - check_distance
 		elif direction == 'W':
-			curr_scan_coord  = net_segment.bbox.ll.y
-			end_scan_coord   = net_segment.bbox.ur.y
-			curr_fixed_coord = net_segment.bbox.ll.x - check_distance
+			start_scan_coord  = net_segment.bbox.ll.y - min_wire_spacing
+			end_scan_coord    = net_segment.bbox.ur.y + min_wire_spacing
+			curr_fixed_coord  = net_segment.bbox.ll.x - check_distance
 		elif direction != 'T' and direction != 'B':
 			print "ERROR %s: unknown scan direction (%s)." % (inspect.stack()[0][3], direction)
 			sys.exit(4)
 		
 		# Analyze blockage along the perimeter on the same layer
 		if direction != 'T' and direction != 'B':
-			num_points_to_scan = float(end_scan_coord - curr_scan_coord)
+			curr_scan_coord = start_scan_coord
+			num_points_to_scan = (float(end_scan_coord - curr_scan_coord) / float(layout.net_blockage_step))
 			print "		Checking %.2f units along %s edge (%d/%f units/microns away)..." % (num_points_to_scan, direction, check_distance, float(check_distance / layout.lef.database_units))
 			# print "		Start Scan Coord = %d; End Scan Coord = %d; Num Points to Scan = %d" % (curr_scan_coord, end_scan_coord, num_points_to_scan)
+			
+			# Create Sites Blocked Bitmap 
+			if direction == 'N' or direction == 'S':
+				sites_blocked = numpy.zeros(shape=(1, net_segment.bbox.get_width() + (2 * min_wire_spacing)))
+			else:
+				sites_blocked = numpy.zeros(shape=(1, net_segment.bbox.get_height() + (2 * min_wire_spacing)))
+			sites_ind = 0
 			while curr_scan_coord < end_scan_coord:
 				sl_poly_overlap = False
 				for poly in net_segment.nearby_sl_polygons:
 					if direction == 'N' or direction == 'S':
 						if poly.is_point_inside(Point(curr_scan_coord, curr_fixed_coord)):
-							sl_poly_overlap = True
-							same_layer_units_blocked += 1
+							for i in range(sites_ind, sites_ind + layout.net_blockage_step):
+								sites_blocked[0, i] = 1
 							break
 					else:
 						if poly.is_point_inside(Point(curr_fixed_coord, curr_scan_coord)):
-							sl_poly_overlap = True
-							same_layer_units_blocked += 1
+							for i in range(sites_ind, sites_ind + layout.net_blockage_step):
+								sites_blocked[0, i] = 1
 							break
-				# Increment POTENTIAL perimeter blockage count
-				if sl_prev_blocked == False and sl_poly_overlap == False:
-					sl_temp_units_blocked += 1
-				# Mark start of REAL blockage count			
-				elif sl_prev_blocked == False and sl_poly_overlap == True:
-					sl_prev_blocked = True
-					# Check if num sub units blocked is above threshold
-					if (sl_temp_units_blocked * layout.net_blockage_step) < layout.lef.layers[net_segment.layer_name].rogue_wire_width:
-						same_layer_units_blocked += sl_temp_units_blocked
-					# Reset POTENTIAL perimeter blockage count
-					sl_temp_units_blocked = 0
-				# Mark start of POTENTIAL perimeter blockage count
-				elif sl_prev_blocked == True and sl_poly_overlap == False:
-					sl_temp_units_blocked += 1
-					sl_prev_blocked       = False
+				curr_scan_coord += layout.net_blockage_step
+				sites_ind       += layout.net_blockage_step
+
+			# Apply sliding window of size (2 * min_spacing * min_wire_width) to calculate wire position blockages
+			window_start     = start_scan_coord
+			window_end       = window_start + required_open_width
+			while window_end < end_scan_coord:
+				# print "Window Start", window_start
+				# print "Window End", window_end
+				# print "Length of Sites Blocked", len(sites_blocked)
+				# print
+				for window_curr in range(window_start, window_end):
+					if sites_blocked[0, window_curr-start_scan_coord] == 1:
+						# Mark wire position as blocked
+						same_layer_units_blocked += 1
+						break
+				window_start += 1
+				window_end   += 1
 				num_same_layer_units_checked += 1
-				curr_scan_coord              += layout.net_blockage_step
-			# Ending loop in unblocked state
-			if sl_poly_overlap == False:
-				# Check if num sub units blocked is above threshold
-				if (sl_temp_units_blocked * layout.net_blockage_step) < layout.lef.layers[net_segment.layer_name].rogue_wire_width:
-					same_layer_units_blocked += sl_temp_units_blocked
-				# Reset counters and flag
-				sl_prev_blocked       = False
-				sl_poly_overlap       = False
-				sl_temp_units_blocked = 0
 		# Analyze blockage along the adjacent layers (top and bottom)
 		else:
 			# Create bitmap of net segment
@@ -320,9 +324,6 @@ def analyze_critical_net_blockage(layout, verbose):
 		print "Analying Net: ", net.fullname
 		path_segment_counter = 1
 		for net_segment in net.segments:
-			total_perimeter_units += net_segment.bbox.get_perimeter()
-			total_top_bottom_area += (net_segment.polygon.get_area() * 2)
-
 			# Report Path Segment Condition
 			if verbose:
 				print "	Analyzing Net Segment", path_segment_counter
@@ -355,6 +356,8 @@ def analyze_critical_net_blockage(layout, verbose):
 			net_segment.diff_layer_blockage = diff_layer_blockage 
 			total_same_layer_blockage      += same_layer_blockage
 			total_diff_layer_blockage      += diff_layer_blockage
+			total_perimeter_units          += num_same_layer_units_checked
+			total_top_bottom_area          += (net_segment.polygon.get_area() * 2)
 
 			print "		Perimeter Units Blocked:  %d / %d" % (same_layer_blockage, float(num_same_layer_units_checked))
 			print "		Top/Bottom Units Blocked: %d / %d" % (diff_layer_blockage, (net_segment.polygon.get_area() * 2))
@@ -375,10 +378,10 @@ def analyze_critical_net_blockage(layout, verbose):
 	# print "Total Perimeter Units    :", total_perimeter_units
 	# print "Total Diff Layer Blockage:", total_diff_layer_blockage
 	# print "Total Top/Bottom Area    :", total_top_bottom_area
-	perimeter_blockage_percentage  = (float(total_same_layer_blockage) / (float(total_perimeter_units) / float(layout.net_blockage_step))) * 100.0
+	perimeter_blockage_percentage  = (float(total_same_layer_blockage) / float(total_perimeter_units)) * 100.0
 	top_bottom_blockage_percentage = (float(total_diff_layer_blockage) / float(total_top_bottom_area)) * 100.0
-	raw_blockage_percentage        = (float(total_same_layer_blockage + total_diff_layer_blockage) / float((float(total_perimeter_units) / float(layout.net_blockage_step)) + total_top_bottom_area)) * 100.0
-	weighted_blockage_percentage   = (((float(total_same_layer_blockage) / (float(total_perimeter_units) / float(layout.net_blockage_step))) * (float(4.0/6.0)) + (float(total_diff_layer_blockage) / float(total_top_bottom_area)) * float(2.0/6.0))) * 100.0
+	raw_blockage_percentage        = (float(total_same_layer_blockage + total_diff_layer_blockage) / float(total_perimeter_units + total_top_bottom_area)) * 100.0
+	weighted_blockage_percentage   = (((float(total_same_layer_blockage) / float(total_perimeter_units)) * float(4.0/6.0)) + ((float(total_diff_layer_blockage) / float(total_top_bottom_area)) * float(2.0/6.0))) * 100.0
 
 	# Print calculations
 	print "Perimeter Blockage Percentage:  %4.2f%%" % (perimeter_blockage_percentage) 
