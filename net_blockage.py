@@ -52,9 +52,6 @@ def check_blockage_constrained(net_segment, layout, check_distance):
 	min_wire_spacing    = layout.lef.layers[net_segment.layer_name].min_spacing_db
 	min_wire_width      = layout.lef.layers[net_segment.layer_name].min_width_db
 	required_open_width = layout.lef.layers[net_segment.layer_name].rogue_wire_width
-	print "min_wire_spacing", min_wire_spacing
-	print "min_wire_width", min_wire_width
-	print "required_open_width", required_open_width
 
 	# Scan all 4 perimeter sides to check for blockages
 	for direction in ['N', 'E', 'S', 'W', 'T', 'B']:
@@ -96,12 +93,12 @@ def check_blockage_constrained(net_segment, layout, check_distance):
 				for poly in net_segment.nearby_sl_polygons:
 					if direction == 'N' or direction == 'S':
 						if poly.is_point_inside(Point(curr_scan_coord, curr_fixed_coord)):
-							for i in range(sites_ind, sites_ind + layout.net_blockage_step):
+							for i in range(sites_ind, min(sites_ind + layout.net_blockage_step, end_scan_coord - curr_scan_coord)):
 								sites_blocked[0, i] = 1
 							break
 					else:
 						if poly.is_point_inside(Point(curr_fixed_coord, curr_scan_coord)):
-							for i in range(sites_ind, sites_ind + layout.net_blockage_step):
+							for i in range(sites_ind, min(sites_ind + layout.net_blockage_step, end_scan_coord - curr_scan_coord)):
 								sites_blocked[0, i] = 1
 							break
 				curr_scan_coord += layout.net_blockage_step
