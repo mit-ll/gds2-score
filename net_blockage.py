@@ -13,7 +13,7 @@ import numpy
 import gc
 
 # Import matplotlib
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 # # Import Memory Leak Tool
 # from pympler import muppy, summary
@@ -84,42 +84,71 @@ def check_blockage_constrained(net_segment, layout, check_distance):
 			
 			# Create Sites Blocked Bitmap 
 			if direction == 'N' or direction == 'S':
-				sites_blocked = numpy.zeros(shape=(1, net_segment.bbox.get_width() + (2 * min_wire_spacing)))
+				colors = ['g']*(end_scan_coord - start_scan_coord)
+				sites_blocked = numpy.zeros(shape=(1, end_scan_coord - start_scan_coord))
 			else:
-				sites_blocked = numpy.zeros(shape=(1, net_segment.bbox.get_height() + (2 * min_wire_spacing)))
+				colors = ['g']*(end_scan_coord - start_scan_coord)
+				sites_blocked = numpy.zeros(shape=(1, end_scan_coord - start_scan_coord))
 			sites_ind = 0
 			while curr_scan_coord < end_scan_coord:
 				sl_poly_overlap = False
 				for poly in net_segment.nearby_sl_polygons:
 					if direction == 'N' or direction == 'S':
 						if poly.is_point_inside(Point(curr_scan_coord, curr_fixed_coord)):
-							for i in range(sites_ind, min(sites_ind + layout.net_blockage_step, end_scan_coord - curr_scan_coord)):
+							for i in range(sites_ind, min(sites_ind + layout.net_blockage_step, sites_ind + (end_scan_coord - curr_scan_coord))):
 								sites_blocked[0, i] = 1
+								colors[i] = 'r'
 							break
 					else:
 						if poly.is_point_inside(Point(curr_fixed_coord, curr_scan_coord)):
-							for i in range(sites_ind, min(sites_ind + layout.net_blockage_step, end_scan_coord - curr_scan_coord)):
+							for i in range(sites_ind, min(sites_ind + layout.net_blockage_step, sites_ind + (end_scan_coord - curr_scan_coord))):
 								sites_blocked[0, i] = 1
+								colors[i] = 'r'
 							break
 				curr_scan_coord += layout.net_blockage_step
 				sites_ind       += layout.net_blockage_step
-
+	
 			# Apply sliding window of size (2 * min_spacing * min_wire_width) to calculate wire position blockages
-			window_start     = start_scan_coord
-			window_end       = window_start + required_open_width
+			window_start    = start_scan_coord
+			window_end      = window_start + required_open_width
+			# windows_blocked = 0
+			# windows_scanned = 0
+
+			# plt.ion()
+			# fig = plt.figure(1)
+			# ax = fig.add_subplot(111)
+			# net_segment_plot = ax.plot(net_segment.polygon.get_x_coords(), net_segment.polygon.get_y_coords())
+			# if direction == 'N' or direction == 'S':
+			# 	blocked_line  = ax.scatter(range(start_scan_coord, end_scan_coord), [curr_fixed_coord]*len(range(start_scan_coord, end_scan_coord)), color=colors)
+			# 	scan_line,    = ax.plot([window_start, window_end-1], [curr_fixed_coord+10]*2, 'k')
+			# else:
+			# 	blocked_line  = ax.scatter([curr_fixed_coord]*len(range(start_scan_coord, end_scan_coord)), range(start_scan_coord, end_scan_coord), color=colors)
+			# 	scan_line,    = ax.plot([curr_fixed_coord+10]*2, [window_start, window_end-1], 'k')
+			# ax.grid()
+
 			while window_end < end_scan_coord:
 				# print "Window Start", window_start
 				# print "Window End", window_end
 				# print "Length of Sites Blocked", len(sites_blocked)
 				# print
+				# if direction == 'N' or direction == 'S':
+				# 	scan_line.set_xdata([window_start, window_end-1])
+				# else:
+				# 	scan_line.set_ydata([window_start, window_end-1])
+				# fig.canvas.draw()
+				# raw_input("		Hit any key to continue...")
+
 				for window_curr in range(window_start, window_end):
 					if sites_blocked[0, window_curr-start_scan_coord] == 1:
 						# Mark wire position as blocked
 						same_layer_units_blocked += 1
+						# windows_blocked += 1
 						break
 				window_start += 1
 				window_end   += 1
+				# windows_scanned += 1
 				num_same_layer_units_checked += 1
+			# print "		Windows blocked %d/%d on %s edge" % (windows_blocked, windows_scanned, direction)
 		# Analyze blockage along the adjacent layers (top and bottom)
 		else:
 			# Create bitmap of net segment
