@@ -114,7 +114,7 @@ def check_blockage_constrained(net_segment, layout, check_distance):
 			# windows_blocked = 0
 			# windows_scanned = 0
 
-			# plt.ion()
+			# # plt.ion()
 			# fig = plt.figure(1)
 			# ax = fig.add_subplot(111)
 			# net_segment_plot = ax.plot(net_segment.polygon.get_x_coords(), net_segment.polygon.get_y_coords())
@@ -125,8 +125,9 @@ def check_blockage_constrained(net_segment, layout, check_distance):
 			# 	blocked_line  = ax.scatter([curr_fixed_coord]*len(range(start_scan_coord, end_scan_coord)), range(start_scan_coord, end_scan_coord), color=colors)
 			# 	scan_line,    = ax.plot([curr_fixed_coord+10]*2, [window_start, window_end-1], 'k')
 			# ax.grid()
+			# plt.show()
 
-			while window_end < end_scan_coord:
+			while window_end <= end_scan_coord:
 				# print "Window Start", window_start
 				# print "Window End", window_end
 				# print "Length of Sites Blocked", len(sites_blocked)
@@ -148,7 +149,7 @@ def check_blockage_constrained(net_segment, layout, check_distance):
 				window_end   += 1
 				# windows_scanned += 1
 				num_same_layer_units_checked += 1
-			# print "		Windows blocked %d/%d on %s edge" % (windows_blocked, windows_scanned, direction)
+			print "		Windows blocked %d/%d on %s edge" % (windows_blocked, windows_scanned, direction)
 		# Analyze blockage along the adjacent layers (top and bottom)
 		else:
 			# Create bitmap of net segment
