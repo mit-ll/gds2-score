@@ -13,7 +13,7 @@ import numpy
 import gc
 
 # Import matplotlib
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 # # Import Memory Leak Tool
 # from pympler import muppy, summary
