@@ -8,7 +8,7 @@ import numpy
 import sys
 
 class DEF:
-	def __init__(self, def_fname, lef_info, fill_cell_names, pg_filename):
+	def __init__(self, def_fname, lef_info, fill_cell_names, pg_filename, critical_nets, lef):
 		self.database_units           = 0
 		self.die_bbox                 = None
 		self.placement_rows           = []
@@ -18,13 +18,13 @@ class DEF:
 		self.placement_grid_bbox      = None
 
 		# Load DEF files
-		self.load_def_file(def_fname, lef_info, fill_cell_names)
+		self.load_def_file(def_fname, lef_info, fill_cell_names, critical_nets, lef)
 
 		# Save Placement Grid to File
 		if pg_filename != None:
 			self.save_placement_grid(pg_filename)
 
-	def load_def_file(self, def_fname, lef_info, fill_cell_names):
+	def load_def_file(self, def_fname, lef_info, fill_cell_names, critical_nets, lef):
 		print "Loading DEF file ..."
 		start_time = time.time()
 
@@ -132,12 +132,50 @@ class DEF:
 		# Close LEF File
 		stream.close()
 
+		# # Simulate Placement Defenses
+		# total_num_psites  = self.num_placement_rows * self.num_placement_cols; 
+		# num_filled_cells  = 0
+		# target_fill_ratio = 0.95
+		# empty_cell_coords = {} # (coords tuple: r, c) --> <distance to closest security-critical net>
+
+		# # Calculate Open-Site Distances to Security-Critical Nets
+		# for row in range(self.placement_grid.shape[0]):
+		# 	for col in range(self.placement_grid.shape[1]):
+		# 		# Placement Site Already Blocked
+		# 		if self.placement_grid[row, col] == 1:
+		# 			num_filled_cells += 1
+		# 		else:
+		# 			placement_site_name = self.placement_rows[row].site_name
+		# 			curr_net_seg_pos    = critical_nets[0].segments[0].bbox.get_center()
+		# 			curr_psite_pos_x    = self.placement_rows[row].origin.x + (lef.placement_sites[placement_site_name].dimension.x * col) + (lef.placement_sites[placement_site_name].dimension.x / 2)
+		# 			curr_psite_pos_y    = self.placement_rows[row].origin.y + (lef.placement_sites[placement_site_name].dimension.y / 2)
+		# 			empty_cell_coords[(row, col)] = abs(curr_psite_pos_x - curr_net_seg_pos.x) + abs(curr_psite_pos_y - curr_net_seg_pos.y)
+		# 			for net in critical_nets:
+		# 				for net_segment in net.segments:
+		# 					placement_site_name = self.placement_rows[row].site_name
+		# 					curr_net_seg_pos = net_segment.bbox.get_center()
+		# 					curr_psite_pos_x = self.placement_rows[row].origin.x + (lef.placement_sites[placement_site_name].dimension.x * col) + (lef.placement_sites[placement_site_name].dimension.x / 2)
+		# 					curr_psite_pos_y = self.placement_rows[row].origin.y + (lef.placement_sites[placement_site_name].dimension.y / 2)
+		# 					distance_to_closest_secnet = abs(curr_psite_pos_x - curr_net_seg_pos.x) + abs(curr_psite_pos_y - curr_net_seg_pos.y)
+		# 					if distance_to_closest_secnet < empty_cell_coords[(row, col)]:
+		# 						empty_cell_coords[(row, col)] = distance_to_closest_secnet
+
+		# # Sort empty_cell_coords by distances
+		# sorted_empty_cell_coords = sorted(empty_cell_coords.items(), key=lambda x:x[1])
+		
+		# # Mark top X-percent of spaces as filled
+		# for empty_psite in sorted_empty_cell_coords:
+		# 	# if (float(num_filled_cells) / float(total_num_psites)) < target_fill_ratio:
+		# 	if (float(num_filled_cells) / float(total_num_psites)) < target_fill_ratio and empty_psite[0][0] > 10:
+		# 		self.placement_grid[empty_psite[0][0], empty_psite[0][1]] = 1
+		# 		num_filled_cells += 1
+
 		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
 		print "----------------------------------------------"
 		return
 
 	def save_placement_grid(self, pg_filename):
-		numpy.save(pg_filename, self.placement_grid)
+		numpy.savetxt(pg_filename, self.placement_grid)
 
 # Placement row as defined in the DEF file. The placement row has 
 # dimensions that are in units of # of sites.

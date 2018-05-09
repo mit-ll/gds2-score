@@ -25,13 +25,13 @@ class Layout():
 		self.fill_cell_names     = fill_cell_names
 		self.device_layer_nums   = {}
 		self.lef                 = LEF(metal_stack_lef_fname, std_cell_lef_name)
-		self.def_info            = DEF(def_fname, self.lef, fill_cell_names, pg_filename)
 		self.layer_map           = self.load_layer_map(layer_map_fname)
 		self.wire_stats          = self.load_wire_statistics(wire_rpt_fname)
 		self.gdsii_lib           = self.load_gdsii_library(gdsii_fname)
 		self.gdsii_structures    = self.index_gdsii_structures_by_name()
 		self.top_gdsii_structure = self.gdsii_structures[top_name]
 		self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname))
+		self.def_info            = DEF(def_fname, self.lef, fill_cell_names, pg_filename, self.critical_nets, self.lef)
 		self.net_blockage_step   = nb_step # in database units
 		self.net_blockage_type   = nb_type # 0 for un-constrained; 1 for LEF constrained
 		self.net_blockage_done   = False
