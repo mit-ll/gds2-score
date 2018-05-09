@@ -115,7 +115,7 @@ def check_blockage_constrained(net_segment, layout, check_distance):
 			windows_scanned = 0
 			windows_blocked = 0
 
-			# plt.ion()
+			# # plt.ion()
 			# fig = plt.figure(1)
 			# ax = fig.add_subplot(111)
 			# net_segment_plot = ax.plot(net_segment.polygon.get_x_coords(), net_segment.polygon.get_y_coords())
@@ -126,6 +126,7 @@ def check_blockage_constrained(net_segment, layout, check_distance):
 			# 	blocked_line  = ax.scatter([curr_fixed_coord]*len(range(start_scan_coord, end_scan_coord)), range(start_scan_coord, end_scan_coord), color=colors)
 			# 	scan_line,    = ax.plot([curr_fixed_coord+10]*2, [window_start, window_end-1], 'k')
 			# ax.grid()
+			# plt.show()
 
 			while window_end <= end_scan_coord:
 				# print "Window Start", window_start
