@@ -84,7 +84,7 @@ class LEF:
 										min_width = float(line_list[1])
 									elif "MAXWIDTH" in line_list:
 										max_width = float(line_list[1])
-									elif "WIDTH" in line_list:
+									elif "WIDTH" in line_list and "MIN" not in line and "MAX" not in line:
 										width = float(line_list[1])
 									elif "SPACING" in line_list:
 										line_list.pop(0)
@@ -268,7 +268,7 @@ class Routing_Layer:
 			print "Rogue Wire Width", self.rogue_wire_width, self.rogue_wire_width.is_integer()
 			print "ERROR %s: spacing and/or widths not integer multiple of DB units." % (inspect.stack()[0][3])
 			sys.exit(1)
-		self.rogue_wire_width = int((self.min_width + (2 * self.spacing[0][0])) * db_units) # Database units
+		self.rogue_wire_width = int((self.min_width + (2 * self.spacing[0][0])) * db_units) - 2 # Database units
 		# self.area
 		# self.min_enclosed_area
 		# self.min_density
