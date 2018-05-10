@@ -315,8 +315,8 @@ def analyze_critical_net_blockage(layout, verbose):
 				print "		Layer:                ", net_segment.layer_num
 				print "		Perimeter:            ", net_segment.bbox.get_perimeter()
 				print "		Step Size:            ", layout.net_blockage_step
-				# print "		Pitch:                ", layout.lef.layers[net_segment.layer_name].pitch 
-				# print "		Default Width:        ", layout.lef.layers[net_segment.layer_name].width 
+				print "		Pitch:                ", layout.lef.layers[net_segment.layer_name].pitch 
+				print "		Default Width:        ", layout.lef.layers[net_segment.layer_name].width 
 				# print "		Real Width:           ", (float(net_segment.bbox.get_width()) / float(layout.lef.database_units))
 				# print "		Real Height:          ", (float(net_segment.bbox.get_height()) / float(layout.lef.database_units))
 				print "		Top and Bottom Area:  ", (net_segment.polygon.get_area() * 2)
