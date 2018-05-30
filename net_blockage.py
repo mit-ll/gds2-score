@@ -56,25 +56,25 @@ def check_blockage_constrained(net_segment, layout, check_distance):
 	# Scan all 4 perimeter sides to check for blockages
 	for direction in ['N', 'E', 'S', 'W', 'T', 'B']:
 		if direction == 'N':
-			start_scan_coord         = net_segment.bbox.ll.x - min_wire_spacing
-			end_scan_coord           = net_segment.bbox.ur.x + min_wire_spacing
-			curr_fixed_coord_pitch   = net_segment.bbox.ur.y + check_distance
-			curr_fixed_coord_overlap = net_segment.bbox.ur.y + 1
+			start_scan_coord         = net_segment.polygon.bbox.ll.x - min_wire_spacing
+			end_scan_coord           = net_segment.polygon.bbox.ur.x + min_wire_spacing
+			curr_fixed_coord_pitch   = net_segment.polygon.bbox.ur.y + check_distance
+			curr_fixed_coord_overlap = net_segment.polygon.bbox.ur.y + 2
 		elif direction == 'E':
-			start_scan_coord         = net_segment.bbox.ll.y - min_wire_spacing
-			end_scan_coord           = net_segment.bbox.ur.y + min_wire_spacing
-			curr_fixed_coord_pitch   = net_segment.bbox.ur.x + check_distance
-			curr_fixed_coord_overlap = net_segment.bbox.ur.x + 1
+			start_scan_coord         = net_segment.polygon.bbox.ll.y - min_wire_spacing
+			end_scan_coord           = net_segment.polygon.bbox.ur.y + min_wire_spacing
+			curr_fixed_coord_pitch   = net_segment.polygon.bbox.ur.x + check_distance
+			curr_fixed_coord_overlap = net_segment.polygon.bbox.ur.x + 2
 		elif direction == 'S':
-			start_scan_coord         = net_segment.bbox.ll.x - min_wire_spacing
-			end_scan_coord           = net_segment.bbox.ur.x + min_wire_spacing
-			curr_fixed_coord_pitch   = net_segment.bbox.ll.y - check_distance
-			curr_fixed_coord_overlap = net_segment.bbox.ll.y - 1
+			start_scan_coord         = net_segment.polygon.bbox.ll.x - min_wire_spacing
+			end_scan_coord           = net_segment.polygon.bbox.ur.x + min_wire_spacing
+			curr_fixed_coord_pitch   = net_segment.polygon.bbox.ll.y - check_distance
+			curr_fixed_coord_overlap = net_segment.polygon.bbox.ll.y - 2
 		elif direction == 'W':
-			start_scan_coord         = net_segment.bbox.ll.y - min_wire_spacing
-			end_scan_coord           = net_segment.bbox.ur.y + min_wire_spacing
-			curr_fixed_coord_pitch   = net_segment.bbox.ll.x - check_distance
-			curr_fixed_coord_overlap = net_segment.bbox.ll.x - 1
+			start_scan_coord         = net_segment.polygon.bbox.ll.y - min_wire_spacing
+			end_scan_coord           = net_segment.polygon.bbox.ur.y + min_wire_spacing
+			curr_fixed_coord_pitch   = net_segment.polygon.bbox.ll.x - check_distance
+			curr_fixed_coord_overlap = net_segment.polygon.bbox.ll.x - 2
 		elif direction != 'T' and direction != 'B':
 			print "ERROR %s: unknown scan direction (%s)." % (inspect.stack()[0][3], direction)
 			sys.exit(4)
@@ -177,7 +177,7 @@ def check_blockage_constrained(net_segment, layout, check_distance):
 		# Analyze blockage along the adjacent layers (top and bottom)
 		else:
 			# Create bitmap of net segment
-			net_segment_bitmap = numpy.zeros(shape=(net_segment.bbox.get_height(), net_segment.bbox.get_width()))
+			net_segment_bitmap = numpy.zeros(shape=(net_segment.polygon.bbox.get_height(), net_segment.polygon.bbox.get_width()))
 			
 			# Choose nearby polygons to analyze
 			if direction == 'T':
@@ -195,7 +195,7 @@ def check_blockage_constrained(net_segment, layout, check_distance):
 				for clipped_poly in clipped_polys:
 					# plt.plot(clipped_poly.get_x_coords(), clipped_poly.get_y_coords())
 					if clipped_poly.get_area() > 0:
-						color_bitmap(net_segment_bitmap, net_segment.bbox.ll, clipped_poly)
+						color_bitmap(net_segment_bitmap, net_segment.polygon.bbox.ll, clipped_poly)
 				# plt.grid()
 				# plt.show()
 
@@ -216,25 +216,25 @@ def check_blockage(net_segment, layout, check_distance):
 	# Scan all 4 perimeter sides to check for blockages
 	for direction in ['N', 'E', 'S', 'W', 'T', 'B']:
 		if direction == 'N':
-			curr_scan_coord          = net_segment.bbox.ll.x
-			end_scan_coord           = net_segment.bbox.ur.x
-			curr_fixed_coord_overlap = net_segment.bbox.ur.y + 1
-			curr_fixed_coord_pitch   = net_segment.bbox.ur.y + check_distance
+			curr_scan_coord          = net_segment.polygon.bbox.ll.x
+			end_scan_coord           = net_segment.polygon.bbox.ur.x
+			curr_fixed_coord_overlap = net_segment.polygon.bbox.ur.y + 1
+			curr_fixed_coord_pitch   = net_segment.polygon.bbox.ur.y + check_distance
 		elif direction == 'E':
-			curr_scan_coord          = net_segment.bbox.ll.y
-			end_scan_coord           = net_segment.bbox.ur.y
-			curr_fixed_coord_overlap = net_segment.bbox.ur.x + 1
-			curr_fixed_coord_pitch   = net_segment.bbox.ur.x + check_distance
+			curr_scan_coord          = net_segment.polygon.bbox.ll.y
+			end_scan_coord           = net_segment.polygon.bbox.ur.y
+			curr_fixed_coord_overlap = net_segment.polygon.bbox.ur.x + 1
+			curr_fixed_coord_pitch   = net_segment.polygon.bbox.ur.x + check_distance
 		elif direction == 'S':
-			curr_scan_coord          = net_segment.bbox.ll.x
-			end_scan_coord           = net_segment.bbox.ur.x
-			curr_fixed_coord_overlap = net_segment.bbox.ll.y - 1
-			curr_fixed_coord_pitch   = net_segment.bbox.ll.y - check_distance
+			curr_scan_coord          = net_segment.polygon.bbox.ll.x
+			end_scan_coord           = net_segment.polygon.bbox.ur.x
+			curr_fixed_coord_overlap = net_segment.polygon.bbox.ll.y - 1
+			curr_fixed_coord_pitch   = net_segment.polygon.bbox.ll.y - check_distance
 		elif direction == 'W':
-			curr_scan_coord          = net_segment.bbox.ll.y
-			end_scan_coord           = net_segment.bbox.ur.y
-			curr_fixed_coord_overlap = net_segment.bbox.ll.x - 1
-			curr_fixed_coord_pitch   = net_segment.bbox.ll.x - check_distance
+			curr_scan_coord          = net_segment.polygon.bbox.ll.y
+			end_scan_coord           = net_segment.polygon.bbox.ur.y
+			curr_fixed_coord_overlap = net_segment.polygon.bbox.ll.x - 1
+			curr_fixed_coord_pitch   = net_segment.polygon.bbox.ll.x - check_distance
 		elif direction != 'T' and direction != 'B':
 			print "ERROR %s: unknown scan direction (%s)." % (inspect.stack()[0][3], direction)
 			sys.exit(4)
@@ -246,7 +246,7 @@ def check_blockage(net_segment, layout, check_distance):
 			print "		Checking %.2f units along %s edge (%d/%f units/microns away)..." % (num_points_to_scan, direction, check_distance, float(check_distance / layout.lef.database_units))
 			# print "		Start Scan Coord = %d; End Scan Coord = %d; Num Points to Scan = %d" % (curr_scan_coord, end_scan_coord, num_points_to_scan)
 			while curr_scan_coord < end_scan_coord:
-				for poly in net_segment.nearby_sl_polygons:
+				for poly in net_segment.polygon.nearby_sl_polygons:
 					if direction == 'N' or direction == 'S':
 						if poly.is_point_inside(Point(curr_scan_coord, curr_fixed_coord_pitch)) or poly.is_point_inside(Point(curr_scan_coord, curr_fixed_coord_overlap)):
 							same_layer_units_blocked += 1
@@ -265,7 +265,7 @@ def check_blockage(net_segment, layout, check_distance):
 		# Analyze blockage along the adjacent layers (top and bottom)
 		else:
 			# Create bitmap of net segment
-			net_segment_bitmap = numpy.zeros(shape=(net_segment.bbox.get_height(), net_segment.bbox.get_width()))
+			net_segment_bitmap = numpy.zeros(shape=(net_segment.polygon.bbox.get_height(), net_segment.polygon.bbox.get_width()))
 			
 			# Choose nearby polygons to analyze
 			if direction == 'T':
@@ -283,7 +283,7 @@ def check_blockage(net_segment, layout, check_distance):
 				for clipped_poly in clipped_polys:
 					# plt.plot(clipped_poly.get_x_coords(), clipped_poly.get_y_coords())
 					if clipped_poly.get_area() > 0:
-						color_bitmap(net_segment_bitmap, net_segment.bbox.ll, clipped_poly)
+						color_bitmap(net_segment_bitmap, net_segment.polygon.bbox.ll, clipped_poly)
 				# plt.grid()
 				# plt.show()
 
@@ -309,28 +309,44 @@ def analyze_critical_net_blockage(layout, verbose):
 		print "Analying Net: ", net.fullname
 		path_segment_counter = 1
 		for net_segment in net.segments:
+			# Get GDSII element type
+			if isinstance(net_segment.polygon.gdsii_element, Path):
+				gdsii_element_type = "Path"
+			elif isinstance(net_segment.polygon.gdsii_element, Boundary):
+				gdsii_element_type = "Boundary"
+			else:
+				gdsii_element_type = "Unknown"
 			# Report Path Segment Condition
 			if verbose:
 				print "	Analyzing Net Segment", path_segment_counter
 				print "		Layer:                ", net_segment.layer_num
-				print "		Perimeter:            ", net_segment.bbox.get_perimeter()
+				print "		GDSII Element:        ", gdsii_element_type
+				print "		Perimeter:            ", net_segment.polygon.bbox.get_perimeter()
 				print "		Step Size:            ", layout.net_blockage_step
 				print "		Pitch:                ", layout.lef.layers[net_segment.layer_name].pitch 
 				print "		Default Width:        ", layout.lef.layers[net_segment.layer_name].width 
-				# print "		Real Width:           ", (float(net_segment.bbox.get_width()) / float(layout.lef.database_units))
-				# print "		Real Height:          ", (float(net_segment.bbox.get_height()) / float(layout.lef.database_units))
+				# print "		Real Width:           ", (float(net_segment.polygon.bbox.get_width()) / float(layout.lef.database_units))
+				# print "		Real Height:          ", (float(net_segment.polygon.bbox.get_height()) / float(layout.lef.database_units))
 				print "		Top and Bottom Area:  ", (net_segment.polygon.get_area() * 2)
-				print "		BBox (M-Units):       ", net_segment.bbox.get_bbox_as_list()
-				print "		BBox (Microns):       ", net_segment.bbox.get_bbox_as_list_microns(1.0 / layout.lef.database_units)
+				print "		BBox (M-Units):       ", net_segment.polygon.bbox.get_bbox_as_list()
+				print "		BBox (Microns):       ", net_segment.polygon.bbox.get_bbox_as_list_microns(1.0 / layout.lef.database_units)
 				print "		Nearby BBox (M-Units):", net_segment.nearby_bbox.get_bbox_as_list()
 				print "		Nearby BBox (Microns):", net_segment.nearby_bbox.get_bbox_as_list_microns(1.0 / layout.lef.database_units)
 				print "		Nearby Polygons:      ", len(net_segment.nearby_al_polygons) + len(net_segment.nearby_sl_polygons)
-				print "		Klayout Query: " 
-				print "			paths on layer %d/%d of cell MAL_TOP where" % (net_segment.gdsii_path.layer, net_segment.gdsii_path.data_type)
-				print "			shape.path.bbox.left==%d &&"  % (net_segment.bbox.ll.x)
-				print "			shape.path.bbox.right==%d &&" % (net_segment.bbox.ur.x)
-				print "			shape.path.bbox.top==%d &&"   % (net_segment.bbox.ur.y)
-				print "			shape.path.bbox.bottom==%d"   % (net_segment.bbox.ll.y)
+				if gdsii_element_type == "Path":
+					print "		Klayout Query: " 
+					print "			paths on layer %d/%d of cell MAL_TOP where" % (net_segment.polygon.gdsii_element.layer, net_segment.polygon.gdsii_element.data_type)
+					print "			shape.path.bbox.left==%d &&"  % (net_segment.polygon.bbox.ll.x)
+					print "			shape.path.bbox.right==%d &&" % (net_segment.polygon.bbox.ur.x)
+					print "			shape.path.bbox.top==%d &&"   % (net_segment.polygon.bbox.ur.y)
+					print "			shape.path.bbox.bottom==%d"   % (net_segment.polygon.bbox.ll.y)
+				elif gdsii_element_type == "Boundary":
+					print "		Klayout Query: " 
+					print "			boxes on layer %d/%d of cell MAL_TOP where" % (net_segment.polygon.gdsii_element.layer, net_segment.polygon.gdsii_element.data_type)
+					print "			shape.box.left==%d &&"  % (net_segment.polygon.bbox.ll.x)
+					print "			shape.box.right==%d &&" % (net_segment.polygon.bbox.ur.x)
+					print "			shape.box.top==%d &&"   % (net_segment.polygon.bbox.ur.y)
+					print "			shape.box.bottom==%d"   % (net_segment.polygon.bbox.ll.y)
 
 			# check_path_blockage() Parameters
 			check_distance = (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width)) * layout.lef.database_units

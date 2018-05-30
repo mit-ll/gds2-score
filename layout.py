@@ -168,25 +168,25 @@ class Layout():
 	# i.e. the polygon intersects the net_segments 
 	# "nearby" bounding box.
 	def is_polygon_nearby(self, poly, net_segment):
-		if net_segment.gdsii_path.layer == poly.gdsii_element.layer:
+		if net_segment.polygon.gdsii_element.layer == poly.gdsii_element.layer:
 			
 			# Element on the same layer as net_segment
 			if poly.overlaps_bbox(net_segment.nearby_bbox):
 				net_segment.nearby_sl_polygons.append(poly)
-		elif self.lef.is_gdsii_layer_above(net_segment.gdsii_path, poly.gdsii_element, self.layer_map):
+		elif self.lef.is_gdsii_layer_above(net_segment.polygon.gdsii_element, poly.gdsii_element, self.layer_map):
 			
 			# Element is one layer above the net_segment.
 			# Element is only considered "nearby" if it insects with the
 			# bounding box of the path object projected one layer above.
-			if poly.overlaps_bbox(net_segment.bbox):
+			if poly.overlaps_bbox(net_segment.polygon.bbox):
 				net_segment.nearby_al_polygons.append(poly)
 
-		elif self.lef.is_gdsii_layer_below(net_segment.gdsii_path, poly.gdsii_element, self.layer_map):
+		elif self.lef.is_gdsii_layer_below(net_segment.polygon.gdsii_element, poly.gdsii_element, self.layer_map):
 			
 			# Element is either one layer below the net_segment.
 			# Element is only considered "nearby" if it insects with the
 			# bounding box of the path object projected one layer below.
-			if poly.overlaps_bbox(net_segment.bbox):
+			if poly.overlaps_bbox(net_segment.polygon.bbox):
 				net_segment.nearby_bl_polygons.append(poly)
 
 	# Extracts a list of GDSII elements (converted to polygon objects) that are in close
@@ -294,15 +294,15 @@ class Layout():
 		for structure in self.gdsii_lib:
 			if structure.name == self.top_level_name:
 				for element in structure:
-					if isinstance(element, Path):
-						path_name = element.properties[0][1] # property 1 of Path element is the net name
-						if path_name in critical_paths:
-							critical_paths[path_name].append(element)
+					if element.properties:
+						net_name = element.properties[0][1] # property 1 of Path element is the net name
+						if net_name in critical_paths:
+							critical_paths[net_name].extend(self.generate_polys_from_element(element))
 						else:
 							# Check if path is critical or not
-							path_basename = path_name.split('/')[-1]
+							path_basename = net_name.split('/')[-1]
 							if path_basename in critical_net_names.values():
-								critical_paths[path_name] = [element]
+								critical_paths[net_name] = self.generate_polys_from_element(element)
 				break
 
 		# Initialize Net Objects

@@ -179,9 +179,10 @@ class LineSegment():
 
 class BBox():
 	def __init__(self, ll, ur):
-		self.ll = ll
-		self.ur = ur
-		self.length = max((self.ur.x - self.ll.x), (self.ur.y - self.ll.y))
+		self.ll     = ll
+		self.ur     = ur
+		self.height = self.ur.y - self.ll.y
+		self.width  = self.ur.x - self.ll.x
 
 	@classmethod
 	def from_polygon(cls, poly):

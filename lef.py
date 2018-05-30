@@ -181,10 +181,14 @@ class LEF:
 				return layer_map[gds_layer_num][gds_data_type]
 
 	# Returns the logical layer number associated with a given 
-	# GDSII layer number and data type.
+	# GDSII layer number and data type. Returns -1 if layer is not
+	# a ROUTING layer, i.e. layer is a DEVICE or VIA layer.
 	def get_layer_num(self, gds_layer_num, gds_data_type, layer_map):
 		layer_name = self.get_layer_name(gds_layer_num, gds_data_type, layer_map)
-		return self.layers[layer_name].layer_num
+		if layer_name in self.layers:
+			return self.layers[layer_name].layer_num
+		else:
+			return -1
 
 	# Returns the True if the GDSII layer number is BELOW the 
 	# reference GDSII layer number.

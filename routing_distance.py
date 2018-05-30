@@ -22,13 +22,13 @@ import pprint
 # Routing Distance Metric
 # ------------------------------------------------------------------
 def perimeter_blockage(net_segment, step_size):
-	return ((float(net_segment.same_layer_blockage) / (float(net_segment.bbox.get_perimeter()) / float(step_size))) * 100.0)
+	return ((float(net_segment.same_layer_blockage) / (float(net_segment.polygon.bbox.get_perimeter()) / float(step_size))) * 100.0)
 
 def top_bottom_blockage(net_segment):
 	return ((float(net_segment.diff_layer_blockage) / float(net_segment.polygon.get_area() * 2)) * 100.0)
 
 def raw_blockage(net_segment, step_size):
-	return ((float(net_segment.same_layer_blockage + net_segment.diff_layer_blockage) / float((float(net_segment.bbox.get_perimeter()) / float(step_size)) + (net_segment.polygon.get_area() * 2))) * 100.0)
+	return ((float(net_segment.same_layer_blockage + net_segment.diff_layer_blockage) / float((float(net_segment.polygon.bbox.get_perimeter()) / float(step_size)) + (net_segment.polygon.get_area() * 2))) * 100.0)
 
 def weighted_blockage(net_segment, step_size):
 	return ((perimeter_blockage(net_segment, step_size) * float(4.0/6.0)) + (top_bottom_blockage(net_segment) * float(2.0/6.0)))
@@ -50,7 +50,7 @@ def route_distance(layout, trigger_spaces, net_segment):
 	tspaces = []
 
 	# Calculate net segment center
-	net_segment_center = net_segment.bbox.get_center()
+	net_segment_center = net_segment.polygon.bbox.get_center()
 	
 	# Determine placement site(s) in trigger space(s) of a given size that are closest to the net segment
 	ind = 0
