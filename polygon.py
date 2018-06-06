@@ -263,6 +263,7 @@ class BBox():
 		y_coords = [self.ll.y, self.ll.y, self.ur.y, self.ur.y, self.ll.y]
 		plt.plot(x_coords, y_coords)
 
+# Coords = list of Point objects, starting and ending with first point
 class Polygon():
 	def __init__(self, coords, gdsii_element=None):
 		self.num_coords    = len(coords)

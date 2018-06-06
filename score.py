@@ -12,9 +12,6 @@ import sys
 import getopt
 import copy
 
-# # Import Memory Leak Tool
-# from pympler import muppy, summary
-
 # Possible ERROR Codes:
 # 1 = Error loading input load_files
 # 2 = Unknown GDSII object attributes/attribute types
@@ -216,10 +213,6 @@ def main(argv):
 		OUTPUT_PGRID, \
 		NB_STEP, \
 		NB_TYPE)
-
-	# # Print memory usage summary
-	# summary.print_(summary.summarize(muppy.get_objects()))
-	# raw_input("Press key to continue...")
 
 	if DEBUG_PRINTS:
 		dbg.debug_print_lib_obj(layout.gdsii_lib)

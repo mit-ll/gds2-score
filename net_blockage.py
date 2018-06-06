@@ -15,9 +15,6 @@ import gc
 # Import matplotlib
 # import matplotlib.pyplot as plt
 
-# # Import Memory Leak Tool
-# from pympler import muppy, summary
-
 # Possible ERROR Codes:
 # 1 = Error loading input load_files
 # 2 = Unknown GDSII object attributes/attribute types
@@ -45,13 +42,15 @@ def bits_colored(bitmap):
 
 	return num_bits_colored
 
-def check_blockage_constrained(net_segment, layout, check_distance):
+def check_blockage_constrained(net_segment, layout):
 	num_same_layer_units_checked = 0
 	same_layer_units_blocked     = 0
 	diff_layer_units_blocked     = 0
 	sides_unblocked 			 = []
-	min_wire_spacing    = layout.lef.layers[net_segment.layer_name].min_spacing_db - 1
-	required_open_width = layout.lef.layers[net_segment.layer_name].rogue_wire_width
+	min_wire_spacing             = layout.lef.layers[net_segment.layer_name].min_spacing_db - 1
+	required_open_width          = layout.lef.layers[net_segment.layer_name].rogue_wire_width
+	check_distance               = (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width)) * layout.lef.database_units
+	print "		Check Distance (uM):  ", (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width))
 
 	# Scan all 4 perimeter sides to check for blockages
 	for direction in ['N', 'E', 'S', 'W', 'T', 'B']:
@@ -207,11 +206,13 @@ def check_blockage_constrained(net_segment, layout, check_distance):
 
 	return num_same_layer_units_checked, same_layer_units_blocked, sides_unblocked, diff_layer_units_blocked
 
-def check_blockage(net_segment, layout, check_distance):
+def check_blockage(net_segment, layout):
 	num_same_layer_units_checked = 0
 	same_layer_units_blocked     = 0
 	diff_layer_units_blocked     = 0
 	sides_unblocked 			 = []
+	check_distance               = (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width)) * layout.lef.database_units
+	print "		Check Distance (uM):  ", (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width))
 
 	# Scan all 4 perimeter sides to check for blockages
 	for direction in ['N', 'E', 'S', 'W', 'T', 'B']:
@@ -348,16 +349,12 @@ def analyze_critical_net_blockage(layout, verbose):
 					print "			shape.box.top==%d &&"   % (net_segment.polygon.bbox.ur.y)
 					print "			shape.box.bottom==%d"   % (net_segment.polygon.bbox.ll.y)
 
-			# check_path_blockage() Parameters
-			check_distance = (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width)) * layout.lef.database_units
-			print "		Check Distance (uM):  ", (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width))
-
 			# Check N, E, S, W, T, B
 			start_time = time.time()
 			if layout.net_blockage_type == 1:
-				num_same_layer_units_checked, same_layer_blockage, sides_unblocked, diff_layer_blockage = check_blockage_constrained(net_segment, layout, check_distance)
+				num_same_layer_units_checked, same_layer_blockage, sides_unblocked, diff_layer_blockage = check_blockage_constrained(net_segment, layout)
 			else:
-				num_same_layer_units_checked, same_layer_blockage, sides_unblocked, diff_layer_blockage = check_blockage(net_segment, layout, check_distance)
+				num_same_layer_units_checked, same_layer_blockage, sides_unblocked, diff_layer_blockage = check_blockage(net_segment, layout)
 			net_segment.same_layer_blockage = same_layer_blockage
 			net_segment.diff_layer_blockage = diff_layer_blockage 
 			total_same_layer_blockage      += same_layer_blockage
@@ -373,12 +370,6 @@ def analyze_critical_net_blockage(layout, verbose):
 			print "		----------------------------------------------"
 
 			path_segment_counter += 1
-
-		# gc.collect()
-
-		# # Print memory usage summary
-		# summary.print_(summary.summarize(muppy.get_objects()))
-		# raw_input("Press key to continue...")
 
 	# Calculate raw and weighted blockage percentages.
 	# Weighted acounts for area vs. perimeter blockage
