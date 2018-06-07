@@ -15,6 +15,8 @@ class LEF:
 		self.layers             = {} # Maps layer name to layer object (only Routing_Layer)
 		self.placement_sites    = {} # Maps placement site name to placement site object
 		self.standard_cells     = {} # Maps standard cell name to standard cell object
+		self.top_routing_layer_num    = 0
+		self.bottom_routing_layer_num = 1
 		
 		# Load LEF files
 		self.load_metal_stack_lef_file(metal_stack_lef_fname)
@@ -24,7 +26,7 @@ class LEF:
 		print "Loading Metal Stack LEF file ..."
 		start_time = time.time()
 
-		layer_index = 1
+		self.top_routing_layer_num = 0
 		# Open LEF File
 		with open(lef_fname, 'rb') as stream:
 			for line in stream:
@@ -97,8 +99,12 @@ class LEF:
 												range_max = float(line_list.pop(0))
 												spacing[-1].append((range_min, range_max))
 									line = stream.next().rstrip(' ;\n').lstrip()
-								self.layers[layer_name] = Routing_Layer(layer_name, layer_index, direction, pitch, offset, min_width, max_width, width, spacing, self.database_units)
-								layer_index += 1
+								self.top_routing_layer_num += 1
+								# Map routing layer NAME to routing layer object
+								self.layers[layer_name] = Routing_Layer(layer_name, self.top_routing_layer_num, direction, pitch, offset, min_width, max_width, width, spacing, self.database_units)
+								# Map logical routing layer NUMBER to routing layer object
+								self.layers[self.top_routing_layer_num] = self.layers[layer_name]
+								
 							# Via Layer
 							# elif "CUT" in layer_type:
 					# Placement Site Definitions
@@ -261,14 +267,14 @@ class Routing_Layer:
 		self.max_width   = max_width
 		self.width       = width
 		self.spacing     = spacing
-		self.min_spacing_db   = spacing[0][0] * db_units # Database units
-		self.min_width_db     = min_width * db_units # Database units
+		self.min_spacing_db = spacing[0][0] * db_units # Database units
+		self.min_width_db   = min_width * db_units     # Database units
 		if self.min_spacing_db.is_integer() and self.min_width_db.is_integer():
-			self.min_spacing_db   = int(self.min_spacing_db)
-			self.min_width_db     = int(self.min_width_db)
+			self.min_spacing_db = int(self.min_spacing_db)
+			self.min_width_db   = int(self.min_width_db)
 		else:
-			print "Min Spacing DB", self.min_spacing_db, self.min_spacing_db.is_integer()
-			print "Min Width DB", self.min_width_db, self.min_width_db.is_integer()
+			print "Min Spacing DB",   self.min_spacing_db,   self.min_spacing_db.is_integer()
+			print "Min Width DB",     self.min_width_db,     self.min_width_db.is_integer()
 			print "Rogue Wire Width", self.rogue_wire_width, self.rogue_wire_width.is_integer()
 			print "ERROR %s: spacing and/or widths not integer multiple of DB units." % (inspect.stack()[0][3])
 			sys.exit(1)

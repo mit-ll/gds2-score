@@ -21,18 +21,6 @@ import pprint
 # ------------------------------------------------------------------
 # Routing Distance Metric
 # ------------------------------------------------------------------
-def perimeter_blockage(net_segment, step_size):
-	return ((float(net_segment.same_layer_blockage) / (float(net_segment.polygon.bbox.get_perimeter()) / float(step_size))) * 100.0)
-
-def top_bottom_blockage(net_segment):
-	return ((float(net_segment.diff_layer_blockage) / float(net_segment.polygon.get_area() * 2)) * 100.0)
-
-def raw_blockage(net_segment, step_size):
-	return ((float(net_segment.same_layer_blockage + net_segment.diff_layer_blockage) / float((float(net_segment.polygon.bbox.get_perimeter()) / float(step_size)) + (net_segment.polygon.get_area() * 2))) * 100.0)
-
-def weighted_blockage(net_segment, step_size):
-	return ((perimeter_blockage(net_segment, step_size) * float(4.0/6.0)) + (top_bottom_blockage(net_segment) * float(2.0/6.0)))
-
 # Calculate center of placement site in manufacturing units
 def calculate_closest_placement_site_center(layout, placement_site):
 	placement_site_name = layout.def_info.placement_rows[placement_site.y].site_name
@@ -98,9 +86,8 @@ def analyze_routing_distance(layout, target_trigger_size=0, max_blockage=90.0):
 	sorted_net_segments = []
 	for net in layout.critical_nets:
 		for net_segment in net.segments:
-			if weighted_blockage(net_segment, layout.net_blockage_step) < max_blockage:
+			if net_segment.get_weighted_blockage_percentage() < max_blockage:
 				sorted_net_segments.append(net_segment)
-	# sorted_net_segments = sorted(sorted_net_segments, key=lambda x:weighted_blockage(x, layout.net_blockage_step))
 
 	# Filter/Map trigger spaces to critical net segments based on size and 3D manhattan distance
 	for trigger_size in sorted(layout.trigger_spaces):

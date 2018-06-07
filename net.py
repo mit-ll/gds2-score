@@ -25,14 +25,25 @@ class Net():
 
 class Net_Segment():
 	def __init__(self, num, net_basename, poly, lef, layer_num, layer_name):
-		self.num                = num
-		self.net_basename       = net_basename
-		self.layer_num          = layer_num
-		self.layer_name         = layer_name
-		self.polygon            = poly
-		self.nearby_bbox        = BBox.from_bbox_and_extension(self.polygon.bbox, (2 * (self.polygon.bbox.width + self.polygon.bbox.height)))
-		self.nearby_sl_polygons = [] # nearby polygons on the same layer
-		self.nearby_al_polygons = [] # nearby polygons on above layer
-		self.nearby_bl_polygons = [] # nearby polygons on below layer
-		self.same_layer_blockage = 0 # perimeter units blocked (according to step_size)
-		self.diff_layer_blockage = 0 # top/bottom area units blocked
+		self.num                 = num
+		self.net_basename        = net_basename
+		self.layer_num           = layer_num
+		self.layer_name          = layer_name
+		self.polygon             = poly
+		self.nearby_bbox         = BBox.from_bbox_and_extension(self.polygon.bbox, (2 * (self.polygon.bbox.width + self.polygon.bbox.height)))
+		self.nearby_sl_polygons  = [] # nearby polygons on the same layer
+		self.nearby_al_polygons  = [] # nearby polygons on above layer
+		self.nearby_bl_polygons  = [] # nearby polygons on below layer
+		self.same_layer_units_blocked = 0 # perimeter windows blocked (according to step_size)
+		self.diff_layer_units_blocked = 0 # top/bottom area units blocked
+		self.same_layer_units_checked = 0 # locations valid rogue wires can be attached around wire perimeter
+		self.diff_layer_units_checked = 0 # locations valid rogue wires can be attached along wire top/bottom
+	
+	def get_perimeter_blockage_percentage(self):
+		return ((float(self.same_layer_units_blocked) / float(self.same_layer_units_checked)) * 100.0)
+
+	def get_top_bottom_blockage_percentage(self):
+		return ((float(self.diff_layer_units_blocked) / float(self.diff_layer_units_checked)) * 100.0)
+
+	def get_weighted_blockage_percentage(self):
+		return ((self.get_perimeter_blockage_percentage() * float(4.0/6.0)) + (self.get_top_bottom_blockage_percentage() * float(2.0/6.0)))

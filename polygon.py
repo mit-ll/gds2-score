@@ -320,6 +320,21 @@ class Polygon():
 			coords.append(Point(coord[0], coord[1]))
 		return cls(coords, boundary)
 
+	@classmethod
+	def from_rect_poly_and_extension(cls, rect_poly, height_extension, width_extension):
+		# Verify rect_poly is a rectangle, i.e. has exactly 5 coords (1st and last coord are the same)
+		if rect_poly.num_coords != 5:
+			print "ERROR %s: polygon is not a rectangle." % (inspect.stack()[0][3])
+			sys.exit(4)
+
+		ll_corner = Point(rect_poly.bbox.ll.x - width_extension, rect_poly.bbox.ll.y - height_extension)
+		lr_corner = Point(rect_poly.bbox.ur.x + width_extension, rect_poly.bbox.ll.y - height_extension)
+		ur_corner = Point(rect_poly.bbox.ur.x + width_extension, rect_poly.bbox.ur.y + height_extension)
+		ul_corner = Point(rect_poly.bbox.ll.x - width_extension, rect_poly.bbox.ur.y + height_extension)
+		coords    = [ll_corner, lr_corner, ur_corner, ul_corner, ll_corner] 
+		
+		return cls(coords)
+
 	# Weiler-Atherton Algorithm
 	@classmethod
 	def intersection_is_vertex(cls, poly_edge, clip_edge, intersection):
