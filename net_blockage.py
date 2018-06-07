@@ -44,9 +44,8 @@ def num_al_windows_blocked(bitmap, net_segment, required_open_width):
 	windows_scanned  = 0
 	windows_blocked  = 0
 
-	# Compute window boundaries
+	# Compute window row boundary
 	window_row_end = min(window_row_start + required_open_width, bitmap.shape[0] - 1)
-	window_col_end = min(window_col_start + required_open_width, bitmap.shape[1] - 1)
 
 	# plt.ion()
 	# fig = plt.figure(1)
@@ -57,6 +56,8 @@ def num_al_windows_blocked(bitmap, net_segment, required_open_width):
 	# plt.show()
 
 	while window_row_end < bitmap.shape[0]:
+		# Compute window col boundary
+		window_col_end = min(window_col_start + required_open_width, bitmap.shape[1] - 1)
 		while window_col_end < bitmap.shape[1]:
 			
 			# print "Window Row Range: (%d, %d)" % (window_row_start, window_row_end)
