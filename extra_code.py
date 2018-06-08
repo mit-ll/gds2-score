@@ -574,4 +574,143 @@ def build_wa_graph_old(cls, poly, clip_poly):
 		dbg.debug_print_wa_incoming_points(incoming)
 
 	return wa_graph, outgoing, incoming
-			
+
+# ------------------------------------------------------------------
+# T/B Layer net blockage WA-Algo debug code (constrained and non)
+# ------------------------------------------------------------------
+# Color the bitmap
+for poly in nearby_polys:
+	clipped_polys = Polygon.from_polygon_clip(poly, net_segment_area_poly)
+	# plt.figure(1)
+	# plt.plot(poly.get_x_coords(), poly.get_y_coords())
+	# plt.plot(net_segment.polygon.get_x_coords(), net_segment.polygon.get_y_coords())
+	for clipped_poly in clipped_polys:
+		# plt.plot(clipped_poly.get_x_coords(), clipped_poly.get_y_coords())
+		if clipped_poly.get_area() > 0:
+			color_bitmap(net_segment_bitmap, net_segment_area_poly.bbox.ll, clipped_poly)
+	# plt.grid()
+	# plt.show()
+
+# ------------------------------------------------------------------
+# Same Layer (constrained) net blockage sliding window debug code
+# ------------------------------------------------------------------
+# Scan all 4 perimeter sides to check for blockages
+for direction in ['N', 'E', 'S', 'W', 'T', 'B']:
+	if direction == 'N':
+		start_scan_coord         = net_segment.polygon.bbox.ll.x - sl_min_wire_spacing
+		end_scan_coord           = net_segment.polygon.bbox.ur.x + sl_min_wire_spacing
+		curr_fixed_coord_pitch   = net_segment.polygon.bbox.ur.y + check_distance
+		curr_fixed_coord_overlap = net_segment.polygon.bbox.ur.y + 2
+	elif direction == 'E':
+		start_scan_coord         = net_segment.polygon.bbox.ll.y - sl_min_wire_spacing
+		end_scan_coord           = net_segment.polygon.bbox.ur.y + sl_min_wire_spacing
+		curr_fixed_coord_pitch   = net_segment.polygon.bbox.ur.x + check_distance
+		curr_fixed_coord_overlap = net_segment.polygon.bbox.ur.x + 2
+	elif direction == 'S':
+		start_scan_coord         = net_segment.polygon.bbox.ll.x - sl_min_wire_spacing
+		end_scan_coord           = net_segment.polygon.bbox.ur.x + sl_min_wire_spacing
+		curr_fixed_coord_pitch   = net_segment.polygon.bbox.ll.y - check_distance
+		curr_fixed_coord_overlap = net_segment.polygon.bbox.ll.y - 2
+	elif direction == 'W':
+		start_scan_coord         = net_segment.polygon.bbox.ll.y - sl_min_wire_spacing
+		end_scan_coord           = net_segment.polygon.bbox.ur.y + sl_min_wire_spacing
+		curr_fixed_coord_pitch   = net_segment.polygon.bbox.ll.x - check_distance
+		curr_fixed_coord_overlap = net_segment.polygon.bbox.ll.x - 2
+	elif direction != 'T' and direction != 'B':
+		print "ERROR %s: unknown scan direction (%s)." % (inspect.stack()[0][3], direction)
+		sys.exit(4)
+	
+	# Analyze blockage along the perimeter on the same layer
+	if direction != 'T' and direction != 'B':
+		curr_scan_coord = start_scan_coord
+		num_points_to_scan = (float(end_scan_coord - curr_scan_coord) / float(layout.net_blockage_step))
+		print "		Checking %.2f units along %s edge (%d/%f units/microns away)..." % (num_points_to_scan, direction, check_distance, float(check_distance / layout.lef.database_units))
+		# print "		Start Scan Coord = %d; End Scan Coord = %d; Num Points to Scan = %d" % (curr_scan_coord, end_scan_coord, num_points_to_scan)
+		
+		# Create Sites Blocked Bitmap 
+		# colors  = ['g']*(end_scan_coord - start_scan_coord)
+		# markers = ['.']*(end_scan_coord - start_scan_coord)
+		sites_blocked = numpy.zeros(shape=(1, end_scan_coord - start_scan_coord))
+		sites_ind = 0
+		while curr_scan_coord < end_scan_coord:
+			sl_poly_overlap = False
+			for poly in net_segment.nearby_sl_polygons:
+				if direction == 'N' or direction == 'S':
+					if poly.is_point_inside(Point(curr_scan_coord, curr_fixed_coord_pitch)) or poly.is_point_inside(Point(curr_scan_coord, curr_fixed_coord_overlap)):
+						for i in range(sites_ind, min(sites_ind + layout.net_blockage_step, sites_ind + (end_scan_coord - curr_scan_coord))):
+							sites_blocked[0, i] = 1
+							# colors[i]  = 'r'
+							# markers[i] = 'x'
+						break
+				else:
+					if poly.is_point_inside(Point(curr_fixed_coord_pitch, curr_scan_coord)) or poly.is_point_inside(Point(curr_fixed_coord_overlap, curr_scan_coord)):
+						for i in range(sites_ind, min(sites_ind + layout.net_blockage_step, sites_ind + (end_scan_coord - curr_scan_coord))):
+							sites_blocked[0, i] = 1
+							# colors[i]  = 'r'
+							# markers[i] = 'x'
+						break
+			curr_scan_coord += layout.net_blockage_step
+			sites_ind       += layout.net_blockage_step
+
+		# Apply sliding window of size (2 * min_spacing * min_wire_width) to calculate wire position blockages
+		window_start    = start_scan_coord
+		window_end      = window_start + sl_required_open_width
+		windows_scanned = 0
+		windows_blocked = 0
+
+		# # plt.ion()
+		# fig = plt.figure(1)
+		# ax = fig.add_subplot(111)
+		# net_segment_plot = ax.plot(net_segment.polygon.get_x_coords(), net_segment.polygon.get_y_coords())
+		# if direction == 'N' or direction == 'S':
+		# 	blocked_line  = ax.scatter(range(start_scan_coord, end_scan_coord), [curr_fixed_coord_pitch]*len(range(start_scan_coord, end_scan_coord)), color=colors)
+		# 	scan_line,    = ax.plot([window_start, window_end-1], [curr_fixed_coord_pitch+10]*2, 'k')
+		# else:
+		# 	blocked_line  = ax.scatter([curr_fixed_coord_pitch]*len(range(start_scan_coord, end_scan_coord)), range(start_scan_coord, end_scan_coord), color=colors)
+		# 	scan_line,    = ax.plot([curr_fixed_coord_pitch+10]*2, [window_start, window_end-1], 'k')
+		# ax.grid()
+		# plt.show()
+
+		while window_end <= end_scan_coord:
+			# print "Window Start", window_start
+			# print "Window End", window_end
+			# print "Length of Sites Blocked", len(sites_blocked)
+			# print
+			# if direction == 'N' or direction == 'S':
+			# 	scan_line.set_xdata([window_start, window_end-1])
+			# else:
+			# 	scan_line.set_ydata([window_start, window_end-1])
+			# fig.canvas.draw()
+			# raw_input("		Hit any key to continue...")
+
+			for window_curr in range(window_start, window_end):
+				if sites_blocked[0, window_curr-start_scan_coord] == 1:
+					# Mark wire position as blocked
+					same_layer_units_blocked += 1
+					windows_blocked += 1
+					break
+
+			window_start                 += 1
+			window_end                   += 1
+			windows_scanned              += 1
+			num_same_layer_units_checked += 1
+
+		if windows_blocked < windows_scanned:
+			sides_unblocked.append(direction)
+		# print "		Windows blocked %d/%d on %s edge" % (windows_blocked, windows_scanned, direction)
+
+		# fig = plt.figure(1)
+		# ax = fig.add_subplot(111)
+		# for poly in net_segment.nearby_sl_polygons:
+		# 	ax.plot(poly.get_x_coords(), poly.get_y_coords(), color='k')
+		# net_segment_plot = ax.plot(net_segment.polygon.get_x_coords(), net_segment.polygon.get_y_coords(), color='b', linewidth=3)
+		# if direction == 'N' or direction == 'S':
+		# 	x = range(start_scan_coord, end_scan_coord)
+		# 	y = [curr_fixed_coord_pitch]*len(range(start_scan_coord, end_scan_coord))
+		# else:
+		# 	x = [curr_fixed_coord_pitch]*len(range(start_scan_coord, end_scan_coord))
+		# 	y = range(start_scan_coord, end_scan_coord)
+		# for xp, yp, c, m in zip(x, y, colors, markers):
+		# 	ax.scatter([xp],[yp], color=c, marker=m)
+		# ax.grid()
+		# plt.show()

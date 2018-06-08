@@ -1,3 +1,7 @@
+# Import GDSII Library
+from gdsii.library import Library
+from gdsii.elements import *
+
 # Import Custom Modules
 import debug_prints as dbg
 from polygon import *
@@ -31,58 +35,36 @@ def color_bitmap(bitmap, offset, poly):
 			if poly.is_point_inside(Point(col + offset.x + 0.5, row + offset.y + 0.5)):
 				bitmap[row, col] = 1
 
-def is_window_blocked(bitmap, row_start, row_end, col_start, col_end):
-	for row in range(row_start, min(row_end + 1, bitmap.shape[0])):
-		for col in range(col_start, min(col_end + 1, bitmap.shape[1])):
+def adjust_bitmap_for_min_space(bitmap, net_segment, al_min_wire_spacing):
+	# Mark units blocked by min-spacing LEF design rule
+	for row in range(al_min_wire_spacing, bitmap.shape[0] - al_min_wire_spacing):
+		for col in range(al_min_wire_spacing, bitmap.shape[1] - al_min_wire_spacing):
 			if bitmap[row, col] == 1:
-				return True
-	return False
+				# Compute north/south row offsets
+				north_row = min(row + al_min_wire_spacing + 1, bitmap.shape[0])
+				south_row = max(row - al_min_wire_spacing, 0)
 
-def num_al_windows_blocked(bitmap, net_segment, required_open_width):
-	window_row_start = 0
-	window_col_start = 0
-	windows_scanned  = 0
-	windows_blocked  = 0
+				# Compute east/west col offsets
+				east_col = min(col + al_min_wire_spacing + 1, bitmap.shape[1])
+				west_col = max(col - al_min_wire_spacing, 0)
 
-	# Compute window row boundary
-	window_row_end = min(window_row_start + required_open_width, bitmap.shape[0] - 1)
+				# Mark surrounding spaces as blocked
+				for space_row in range(south_row, north_row):
+					for space_col in range(west_col, east_col):
+						bitmap[row, col] = 1
 
-	# plt.ion()
-	# fig = plt.figure(1)
-	# ax = fig.add_subplot(111)
-	# ax.plot(net_segment.polygon.get_x_coords(), net_segment.polygon.get_y_coords())
-	# ax.imshow(bitmap)
-	# ax.grid()
-	# plt.show()
+	return bitmap
 
-	while window_row_end < bitmap.shape[0]:
-		# Compute window col boundary
-		window_col_end = min(window_col_start + required_open_width, bitmap.shape[1] - 1)
-		while window_col_end < bitmap.shape[1]:
-			
-			# print "Window Row Range: (%d, %d)" % (window_row_start, window_row_end)
-			# print "Window Col Range: (%d, %d)" % (window_col_start, window_col_end)
-			
-			# Check if window is blocked
-			if is_window_blocked(bitmap, window_row_start, window_row_end, window_col_start, window_col_end):
-				windows_blocked += 1
-				# print "Window is Blocked"
-			windows_scanned += 1
-			
-			# ax.plot([window_col_start, window_col_stop, window_col_stop, window_col_start, window_col_start], [window_row_start, window_row_stop, window_row_stop, window_row_start, window_row_start])
-			# fig.canvas.draw()
-			# raw_input("		Hit any key to continue...")
+def bits_colored(bitmap):
+	colored = 0
 
-			# Update window COLUMN starting point
-			window_col_start += 1
-			window_col_end = window_col_start + required_open_width
-		
-		# Update window ROW starting point
-		window_row_start += 1
-		window_row_end = window_row_start + required_open_width
-
-
-	return windows_blocked, windows_scanned
+	# Count number of units blocked 
+	for row in range(bitmap.shape[0]):
+		for col in range(bitmap.shape[1]):
+			if bitmap[row, col] == 1:
+				colored += 1
+	
+	return colored
 
 def check_blockage_constrained(net_segment, layout):
 	num_same_layer_units_checked = 0
@@ -129,8 +111,6 @@ def check_blockage_constrained(net_segment, layout):
 			# print "		Start Scan Coord = %d; End Scan Coord = %d; Num Points to Scan = %d" % (curr_scan_coord, end_scan_coord, num_points_to_scan)
 			
 			# Create Sites Blocked Bitmap 
-			# colors  = ['g']*(end_scan_coord - start_scan_coord)
-			# markers = ['.']*(end_scan_coord - start_scan_coord)
 			sites_blocked = numpy.zeros(shape=(1, end_scan_coord - start_scan_coord))
 			sites_ind = 0
 			while curr_scan_coord < end_scan_coord:
@@ -140,15 +120,11 @@ def check_blockage_constrained(net_segment, layout):
 						if poly.is_point_inside(Point(curr_scan_coord, curr_fixed_coord_pitch)) or poly.is_point_inside(Point(curr_scan_coord, curr_fixed_coord_overlap)):
 							for i in range(sites_ind, min(sites_ind + layout.net_blockage_step, sites_ind + (end_scan_coord - curr_scan_coord))):
 								sites_blocked[0, i] = 1
-								# colors[i]  = 'r'
-								# markers[i] = 'x'
 							break
 					else:
 						if poly.is_point_inside(Point(curr_fixed_coord_pitch, curr_scan_coord)) or poly.is_point_inside(Point(curr_fixed_coord_overlap, curr_scan_coord)):
 							for i in range(sites_ind, min(sites_ind + layout.net_blockage_step, sites_ind + (end_scan_coord - curr_scan_coord))):
 								sites_blocked[0, i] = 1
-								# colors[i]  = 'r'
-								# markers[i] = 'x'
 							break
 				curr_scan_coord += layout.net_blockage_step
 				sites_ind       += layout.net_blockage_step
@@ -159,31 +135,7 @@ def check_blockage_constrained(net_segment, layout):
 			windows_scanned = 0
 			windows_blocked = 0
 
-			# # plt.ion()
-			# fig = plt.figure(1)
-			# ax = fig.add_subplot(111)
-			# net_segment_plot = ax.plot(net_segment.polygon.get_x_coords(), net_segment.polygon.get_y_coords())
-			# if direction == 'N' or direction == 'S':
-			# 	blocked_line  = ax.scatter(range(start_scan_coord, end_scan_coord), [curr_fixed_coord_pitch]*len(range(start_scan_coord, end_scan_coord)), color=colors)
-			# 	scan_line,    = ax.plot([window_start, window_end-1], [curr_fixed_coord_pitch+10]*2, 'k')
-			# else:
-			# 	blocked_line  = ax.scatter([curr_fixed_coord_pitch]*len(range(start_scan_coord, end_scan_coord)), range(start_scan_coord, end_scan_coord), color=colors)
-			# 	scan_line,    = ax.plot([curr_fixed_coord_pitch+10]*2, [window_start, window_end-1], 'k')
-			# ax.grid()
-			# plt.show()
-
 			while window_end <= end_scan_coord:
-				# print "Window Start", window_start
-				# print "Window End", window_end
-				# print "Length of Sites Blocked", len(sites_blocked)
-				# print
-				# if direction == 'N' or direction == 'S':
-				# 	scan_line.set_xdata([window_start, window_end-1])
-				# else:
-				# 	scan_line.set_ydata([window_start, window_end-1])
-				# fig.canvas.draw()
-				# raw_input("		Hit any key to continue...")
-
 				for window_curr in range(window_start, window_end):
 					if sites_blocked[0, window_curr-start_scan_coord] == 1:
 						# Mark wire position as blocked
@@ -200,22 +152,6 @@ def check_blockage_constrained(net_segment, layout):
 				sides_unblocked.append(direction)
 			# print "		Windows blocked %d/%d on %s edge" % (windows_blocked, windows_scanned, direction)
 
-			# fig = plt.figure(1)
-			# ax = fig.add_subplot(111)
-			# for poly in net_segment.nearby_sl_polygons:
-			# 	ax.plot(poly.get_x_coords(), poly.get_y_coords(), color='k')
-			# net_segment_plot = ax.plot(net_segment.polygon.get_x_coords(), net_segment.polygon.get_y_coords(), color='b', linewidth=3)
-			# if direction == 'N' or direction == 'S':
-			# 	x = range(start_scan_coord, end_scan_coord)
-			# 	y = [curr_fixed_coord_pitch]*len(range(start_scan_coord, end_scan_coord))
-			# else:
-			# 	x = [curr_fixed_coord_pitch]*len(range(start_scan_coord, end_scan_coord))
-			# 	y = range(start_scan_coord, end_scan_coord)
-			# for xp, yp, c, m in zip(x, y, colors, markers):
-			# 	ax.scatter([xp],[yp], color=c, marker=m)
-			# ax.grid()
-			# plt.show()
-
 		# Analyze blockage along the adjacent layers (top and bottom)
 		else:
 			# Only analyze if top/bottom adjacent layer is routable
@@ -223,7 +159,6 @@ def check_blockage_constrained(net_segment, layout):
 				# Get minimum wire width/spacing constraints for the adjacent layer
 				al_min_wire_spacing    = layout.lef.layers[net_segment.layer_num + 1].min_spacing_db - 1
 				al_required_open_width = layout.lef.layers[net_segment.layer_num + 1].rogue_wire_width
-				al_routing_direction   = layout.lef.layers[net_segment.layer_num + 1].direction
 
 				# Get nearby polygons to analyze
 				nearby_polys = net_segment.nearby_al_polygons
@@ -231,42 +166,38 @@ def check_blockage_constrained(net_segment, layout):
 				# Get minimum wire width/spacing constraints for the adjacent layer
 				al_min_wire_spacing    = layout.lef.layers[net_segment.layer_num - 1].min_spacing_db - 1
 				al_required_open_width = layout.lef.layers[net_segment.layer_num - 1].rogue_wire_width
-				al_routing_direction   = layout.lef.layers[net_segment.layer_num - 1].direction
 
 				# Get nearby polygons to analyze
 				nearby_polys = net_segment.nearby_bl_polygons
 			else:
 				continue
-
-			# Create bitmap of nets segment
+			
+			# Create bitmap
 			net_segment_area_poly = Polygon.from_rect_poly_and_extension(net_segment.polygon, al_min_wire_spacing, al_min_wire_spacing)
 			net_segment_bitmap    = numpy.zeros(shape=(net_segment_area_poly.bbox.get_height(), net_segment_area_poly.bbox.get_width()))
-
 			print "		Checking (%d) nearby polygons along %s side (GDSII Layer:) ..." % (len(nearby_polys), direction)
 
 			# Color the bitmap
 			for poly in nearby_polys:
 				clipped_polys = Polygon.from_polygon_clip(poly, net_segment_area_poly)
-				# plt.figure(1)
-				# plt.plot(poly.get_x_coords(), poly.get_y_coords())
-				# plt.plot(net_segment.polygon.get_x_coords(), net_segment.polygon.get_y_coords())
 				for clipped_poly in clipped_polys:
-					# plt.plot(clipped_poly.get_x_coords(), clipped_poly.get_y_coords())
 					if clipped_poly.get_area() > 0:
 						color_bitmap(net_segment_bitmap, net_segment_area_poly.bbox.ll, clipped_poly)
-				# plt.grid()
-				# plt.show()
+			
+			# Trim bitmap		
+			# net_segment_bitmap = net_segment_bitmap[al_min_wire_spacing:(net_segment_bitmap.shape[0] - al_min_wire_spacing), al_min_wire_spacing:(net_segment_bitmap.shape[1] - al_min_wire_spacing)]						
 
-			# Calculate windows blocked			
-			windows_blocked, windows_scanned = num_al_windows_blocked(net_segment_bitmap, net_segment, al_required_open_width)
+			# Calculate database units blocked		
+			num_units_checked = net_segment.polygon.get_area()
+			num_units_blocked = bits_colored(net_segment_bitmap)
 			
 			# Updated sides unblocked
-			if windows_blocked < windows_scanned:
+			if num_units_blocked < num_units_checked:
 				sides_unblocked.append(direction)
 
 			# Updated different layer blockage stats
-			num_diff_layer_units_checked += windows_scanned
-			diff_layer_units_blocked     += windows_blocked
+			num_diff_layer_units_checked += num_units_checked
+			diff_layer_units_blocked     += num_units_blocked
 
 			# Free bitmap memory
 			del net_segment_bitmap
@@ -346,15 +277,9 @@ def check_blockage(net_segment, layout):
 			# Color the bitmap
 			for poly in nearby_polys:
 				clipped_polys = Polygon.from_polygon_clip(poly, net_segment.polygon)
-				# plt.figure(1)
-				# plt.plot(poly.get_x_coords(), poly.get_y_coords())
-				# plt.plot(net_segment.polygon.get_x_coords(), net_segment.polygon.get_y_coords())
 				for clipped_poly in clipped_polys:
-					# plt.plot(clipped_poly.get_x_coords(), clipped_poly.get_y_coords())
 					if clipped_poly.get_area() > 0:
 						color_bitmap(net_segment_bitmap, net_segment.polygon.bbox.ll, clipped_poly)
-				# plt.grid()
-				# plt.show()
 
 			# Calculate colored area
 			diff_layer_units_blocked     += bits_colored(net_segment_bitmap)
@@ -439,7 +364,7 @@ def analyze_critical_net_blockage(layout, verbose):
 			print "		Top/Bottom Units Blocked: %d / %d" % (diff_layer_blockage, num_diff_layer_units_checked)
 			print "		Done - Time Elapsed:", (time.time() - start_time), "seconds."
 			print "		----------------------------------------------"
-
+			sys.exit(1)
 			path_segment_counter += 1
 
 	# Calculate raw and weighted blockage percentages.

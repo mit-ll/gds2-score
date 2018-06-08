@@ -65,6 +65,7 @@ class LEF:
 								min_width = None
 								max_width = None
 								width     = None 
+								area      = None
 								spacing   = []
 
 								line = stream.next().rstrip(' ;\n').lstrip()
@@ -98,10 +99,16 @@ class LEF:
 												range_min = float(line_list.pop(0))
 												range_max = float(line_list.pop(0))
 												spacing[-1].append((range_min, range_max))
+											else:
+												# TODO: Handle additional spacing Rules: http://edi.truevue.org/edi/14.17/lefdefref/LEFSyntax.html#UsingSpacingRules
+												print "UNSUPPORTED %s: spacing rules (%s) not supported." % (inspect.stack()[0][3], token)
+												sys.exit(3)
+									elif "AREA" in line_list:
+										area = float(line_list[1])
 									line = stream.next().rstrip(' ;\n').lstrip()
 								self.top_routing_layer_num += 1
 								# Map routing layer NAME to routing layer object
-								self.layers[layer_name] = Routing_Layer(layer_name, self.top_routing_layer_num, direction, pitch, offset, min_width, max_width, width, spacing, self.database_units)
+								self.layers[layer_name] = Routing_Layer(layer_name, self.top_routing_layer_num, direction, pitch, offset, min_width, max_width, width, spacing, self.database_units, area)
 								# Map logical routing layer NUMBER to routing layer object
 								self.layers[self.top_routing_layer_num] = self.layers[layer_name]
 								
@@ -257,7 +264,7 @@ class LEF:
 		return
 
 class Routing_Layer:
-	def __init__(self, name, num, direction, pitch, offset, min_width, max_width, width, spacing, db_units):
+	def __init__(self, name, num, direction, pitch, offset, min_width, max_width, width, spacing, db_units, area):
 		self.name        = name
 		self.layer_num   = num
 		self.direction   = direction
@@ -267,6 +274,7 @@ class Routing_Layer:
 		self.max_width   = max_width
 		self.width       = width
 		self.spacing     = spacing
+		self.area        = area
 		self.min_spacing_db = spacing[0][0] * db_units # Database units
 		self.min_width_db   = min_width * db_units     # Database units
 		if self.min_spacing_db.is_integer() and self.min_width_db.is_integer():
@@ -279,7 +287,6 @@ class Routing_Layer:
 			print "ERROR %s: spacing and/or widths not integer multiple of DB units." % (inspect.stack()[0][3])
 			sys.exit(1)
 		self.rogue_wire_width = int((self.min_width + (2 * self.spacing[0][0])) * db_units) - 2 # Database units
-		# self.area
 		# self.min_enclosed_area
 		# self.min_density
 		# self.max_density
