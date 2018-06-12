@@ -245,11 +245,11 @@ def check_blockage_constrained(net_segment, layout):
 			net_segment_area_bitmap = numpy.zeros(shape=(net_segment_area_poly.bbox.get_height(), net_segment_area_poly.bbox.get_width()))
 			print "		Checking (%d) nearby polygons along %s side (GDSII Layer:) ..." % (len(nearby_polys), direction)
 
-			# Color the bitmap
-			for poly in nearby_polys:
-				# First check if bounding boxes overlap
-				if net_segment.polygon.bbox.overlaps_bbox(poly.bbox):
-					color_bitmap(net_segment_area_bitmap, net_segment.polygon.bbox.ll, poly)
+			# # Color the bitmap
+			# for poly in nearby_polys:
+			# 	# First check if bounding boxes overlap
+			# 	if net_segment.polygon.bbox.overlaps_bbox(poly.bbox):
+			# 		color_bitmap(net_segment_area_bitmap, net_segment.polygon.bbox.ll, poly)
 			
 			# Calculate windows blocked
 			windows_scanned, windows_blocked = compute_al_windows_blocked(net_segment_area_bitmap, net_segment, al_min_width, al_min_wire_spacing, al_required_open_width)

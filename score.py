@@ -35,7 +35,7 @@ def calculate_and_print_time(start_time, end_time):
 # ------------------------------------------------------------------
 # Print program usage statement
 def usage():
-	print "Usage: python score.py {-a|-b|-t|-e} [-hv] -g <gdsii> -m <top module> -r <route LEF> -p <placement LEF> -l <layer map> -d <DEF> -n <Nemo .dot> -w <wire report> --nb_step=<nb step size> --nb_type=<0 or 1> [-s <placement grid .npy>]"
+	print "Usage: python score.py {-a|-b|-t|-e} [-hv] -g <gdsii> -m <top module> -r <route LEF> -p <placement LEF> -l <layer map> -d <DEF> -n <Nemo .dot> -w <wire report> --nb_step=<nb step size> --nb_type=<0 or 1> [-s <placement grid .npy> --mod=<full path> ]"
 	print "Options:"
 	print "	-h, --help	Show this message."
 	print "	-b, --blockage	Calculate critical net blockage metric."
@@ -54,7 +54,7 @@ def usage():
 	print "	-s, --place_grid	Placement output file (include .npy extension)."
 	print "	--nb_step	Step size for same layer net blockage calculation."
 	print "	--nb_type	Type of net blockage calculation (0 for unconstrained; 1 for LEF constrained)."
-	print " --mod Running a custom ICAD module."
+	print " --mod	Running a custom ICAD module."
 
 # Analyze blockage of security critical nets in GDSII
 def blockage_metric(layout):
@@ -194,8 +194,8 @@ def main(argv):
 		elif opt == "--nb_type":
 			NB_TYPE = copy.copy(int(arg))
 		elif opt == "--mod":
-			MOD         = True
-			module_name = copy.copy(arg)
+			MOD              = True
+			module_full_path = copy.copy(arg)
 		else:
 			usage()
 			sys.exit(4) 
@@ -242,18 +242,26 @@ def main(argv):
 		if ROUTING_DISTANCE:
 			routing_distance_metric(layout)
 
-		# Run Custom Modules
+		# Custom Module
 		if MOD:
+			# Load Custom Module
+			module_directory, module_name = os.path.split(module_full_path)
+			module_name = os.path.splitext(module_name)[0]
+			path        = list(sys.path)
+			sys.path.insert(0, module_directory)
+			try:
+				custom_module = __import__(module_name, fromlist=[''])
+			finally:
+				sys.path[:] = path # restore path
+
+			# Run Custom Module
 			start_time = time.time()
 			print "Running Custom Module (%s)..." % (module_name)
-			custom_module = __import__(module_name, fromlist=[''])
 			custom_module.run(layout)
 			end_time = time.time()
 			print "Done - Custom Module (%s)" % (module_name)
 			calculate_and_print_time(start_time, end_time)
 			print "----------------------------------------------"
-			
-			
 
 	# Calculate and print total execution time
 	overall_end_time = time.time()
