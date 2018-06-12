@@ -199,6 +199,16 @@ def main(argv):
 	# Start program timer
 	overall_start_time = time.time()
 
+	# dbg.debug_weiler_atherton_algorithm_1()
+	# dbg.debug_weiler_atherton_algorithm_2()
+	# dbg.debug_weiler_atherton_algorithm_3()
+	# dbg.debug_weiler_atherton_algorithm_4()
+	# dbg.debug_weiler_atherton_algorithm_5()
+	# dbg.debug_weiler_atherton_algorithm_6()
+	# dbg.debug_weiler_atherton_algorithm_7()
+	# dbg.debug_weiler_atherton_algorithm_8()
+	# return
+
 	# Load layout and critical nets
 	layout = Layout( \
 		TOP_LEVEL_MODULE, \

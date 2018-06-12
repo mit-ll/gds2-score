@@ -270,7 +270,7 @@ class Polygon():
 		self.coords        = coords
 		self.gdsii_element = gdsii_element
 		self.bbox          = BBox.from_polygon(self)
-		
+
 	@classmethod
 	def from_gdsii_path(cls, path):
 		if is_path_type_supported(path):
@@ -324,6 +324,7 @@ class Polygon():
 	def from_rect_poly_and_extension(cls, rect_poly, height_extension, width_extension):
 		# Verify rect_poly is a rectangle, i.e. has exactly 5 coords (1st and last coord are the same)
 		if rect_poly.num_coords != 5:
+			print "Num coords:", rect_poly.num_coords
 			print "ERROR %s: polygon is not a rectangle." % (inspect.stack()[0][3])
 			sys.exit(4)
 
@@ -440,7 +441,8 @@ class Polygon():
 			new_poly_coords.append(start_vertex)
 
 			# Construct new polygon object
-			new_polys.append(Polygon(new_poly_coords))
+			if len(new_poly_coords) > 3:
+				new_polys.append(Polygon(new_poly_coords))
 
 		return new_polys
 

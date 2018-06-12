@@ -35,36 +35,59 @@ def color_bitmap(bitmap, offset, poly):
 			if poly.is_point_inside(Point(col + offset.x + 0.5, row + offset.y + 0.5)):
 				bitmap[row, col] = 1
 
-def adjust_bitmap_for_min_space(bitmap, net_segment, al_min_wire_spacing):
-	# Mark units blocked by min-spacing LEF design rule
-	for row in range(al_min_wire_spacing, bitmap.shape[0] - al_min_wire_spacing):
-		for col in range(al_min_wire_spacing, bitmap.shape[1] - al_min_wire_spacing):
-			if bitmap[row, col] == 1:
-				# Compute north/south row offsets
-				north_row = min(row + al_min_wire_spacing + 1, bitmap.shape[0])
-				south_row = max(row - al_min_wire_spacing, 0)
-
-				# Compute east/west col offsets
-				east_col = min(col + al_min_wire_spacing + 1, bitmap.shape[1])
-				west_col = max(col - al_min_wire_spacing, 0)
-
-				# Mark surrounding spaces as blocked
-				for space_row in range(south_row, north_row):
-					for space_col in range(west_col, east_col):
-						bitmap[row, col] = 1
-
-	return bitmap
-
 def bits_colored(bitmap):
-	colored = 0
+	return numpy.count_nonzero(bitmap)
 
-	# Count number of units blocked 
-	for row in range(bitmap.shape[0]):
-		for col in range(bitmap.shape[1]):
-			if bitmap[row, col] == 1:
-				colored += 1
+def compute_al_windows_blocked(bitmap, net_segment, al_min_wire_width, al_min_wire_spacing, al_required_open_width):
+	windows_scanned = 0
+	windows_blocked = 0
+	num_rows = bitmap.shape[0]
+	num_cols = bitmap.shape[1]
+
+	if net_segment.polygon.bbox.get_width() > net_segment.polygon.bbox.get_height():
+		# Horizontal Path or Boundary
+		if net_segment.polygon.bbox.get_width() > al_min_wire_width:
+			# Wide enough for 1 width of AL wire
+			window_width  = al_required_open_width
+			window_height = num_rows
+		else:
+			print "UNSUPPORTED %s: constrained HORIZONTAL adjacent layer net blockage." % (inspect.stack()[0][3], token)
+			sys.exit(3)
+	elif net_segment.polygon.bbox.get_width() < net_segment.polygon.bbox.get_height():
+		# Vertical Path or Boundary
+		if net_segment.polygon.bbox.get_height() > al_min_wire_width:
+			window_width  = num_cols
+			window_height = al_required_open_width
+		else:
+			print "UNSUPPORTED %s: constrained VERTICAL adjacent layer net blockage." % (inspect.stack()[0][3], token)
+			sys.exit(3)
+	else:
+		print "UNSUPPORTED %s: SQUARE adjacent layer polygon." % (inspect.stack()[0][3], token)
+		sys.exit(3)
+
 	
-	return colored
+	# Set window Y dimensions
+	window_start_y = 0
+	window_end_y   = window_start_y + window_height
+
+	# Scan windows
+	while window_end_y <= num_rows:
+		# Set window X dimensions
+		window_start_x = 0
+		window_end_x   = window_start_x + window_width
+		# print "				Window Start: (%d, %d)" % (window_start_x, window_start_y)
+		# print "				Window End  : (%d, %d)" % (window_end_x, window_end_y)
+		while window_end_x <= num_cols:
+			if bitmap[window_start_y:window_end_y, window_start_x:window_end_x].any():
+				windows_blocked += 1
+			windows_scanned += 1
+			window_start_x  += 1
+			window_end_x    += 1
+		window_start_y += 1
+		window_end_y   += 1
+
+	# print "			Windows Blocked: %d / %d" % (windows_blocked, windows_scanned)
+	return windows_scanned, windows_blocked
 
 def check_blockage_constrained(net_segment, layout):
 	num_same_layer_units_checked = 0
@@ -75,7 +98,7 @@ def check_blockage_constrained(net_segment, layout):
 	sl_min_wire_spacing          = layout.lef.layers[net_segment.layer_name].min_spacing_db - 1
 	sl_required_open_width       = layout.lef.layers[net_segment.layer_name].rogue_wire_width
 	check_distance               = (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width)) * layout.lef.database_units
-	print "		Check Distance (uM):  ", (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width))
+	print "		Check Distance (uM):    ", (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width))
 
 	# Scan all 4 perimeter sides to check for blockages
 	for direction in ['N', 'E', 'S', 'W', 'T', 'B']:
@@ -155,15 +178,17 @@ def check_blockage_constrained(net_segment, layout):
 		# Analyze blockage along the adjacent layers (top and bottom)
 		else:
 			# Only analyze if top/bottom adjacent layer is routable
-			if   direction == 'T' and ((net_segment.layer_num + 1) <= layout.lef.top_routing_layer_num):
+			if   direction == 'T' and (net_segment.layer_num < layout.lef.top_routing_layer_num):
 				# Get minimum wire width/spacing constraints for the adjacent layer
+				al_min_width           = layout.lef.layers[net_segment.layer_num + 1].min_width_db
 				al_min_wire_spacing    = layout.lef.layers[net_segment.layer_num + 1].min_spacing_db - 1
 				al_required_open_width = layout.lef.layers[net_segment.layer_num + 1].rogue_wire_width
 
 				# Get nearby polygons to analyze
 				nearby_polys = net_segment.nearby_al_polygons
-			elif direction == 'B' and ((net_segment.layer_num - 1) >= layout.lef.bottom_routing_layer_num):
+			elif direction == 'B' and (net_segment.layer_num > layout.lef.bottom_routing_layer_num):
 				# Get minimum wire width/spacing constraints for the adjacent layer
+				al_min_width           = layout.lef.layers[net_segment.layer_num - 1].min_width_db
 				al_min_wire_spacing    = layout.lef.layers[net_segment.layer_num - 1].min_spacing_db - 1
 				al_required_open_width = layout.lef.layers[net_segment.layer_num - 1].rogue_wire_width
 
@@ -173,34 +198,27 @@ def check_blockage_constrained(net_segment, layout):
 				continue
 			
 			# Create bitmap
-			net_segment_area_poly = Polygon.from_rect_poly_and_extension(net_segment.polygon, al_min_wire_spacing, al_min_wire_spacing)
-			net_segment_bitmap    = numpy.zeros(shape=(net_segment_area_poly.bbox.get_height(), net_segment_area_poly.bbox.get_width()))
+			net_segment_area_poly   = Polygon.from_rect_poly_and_extension(net_segment.polygon, al_min_wire_spacing, al_min_wire_spacing)
+			net_segment_area_bitmap = numpy.zeros(shape=(net_segment_area_poly.bbox.get_height(), net_segment_area_poly.bbox.get_width()))
 			print "		Checking (%d) nearby polygons along %s side (GDSII Layer:) ..." % (len(nearby_polys), direction)
 
 			# Color the bitmap
 			for poly in nearby_polys:
-				clipped_polys = Polygon.from_polygon_clip(poly, net_segment_area_poly)
-				for clipped_poly in clipped_polys:
-					if clipped_poly.get_area() > 0:
-						color_bitmap(net_segment_bitmap, net_segment_area_poly.bbox.ll, clipped_poly)
+				color_bitmap(net_segment_area_bitmap, net_segment.polygon.bbox.ll, poly)
 			
-			# Trim bitmap		
-			# net_segment_bitmap = net_segment_bitmap[al_min_wire_spacing:(net_segment_bitmap.shape[0] - al_min_wire_spacing), al_min_wire_spacing:(net_segment_bitmap.shape[1] - al_min_wire_spacing)]						
-
-			# Calculate database units blocked		
-			num_units_checked = net_segment.polygon.get_area()
-			num_units_blocked = bits_colored(net_segment_bitmap)
+			# Calculate windows blocked
+			windows_scanned, windows_blocked = compute_al_windows_blocked(net_segment_area_bitmap, net_segment, al_min_width, al_min_wire_spacing, al_required_open_width)
 			
 			# Updated sides unblocked
-			if num_units_blocked < num_units_checked:
+			if windows_blocked < windows_scanned:
 				sides_unblocked.append(direction)
 
 			# Updated different layer blockage stats
-			num_diff_layer_units_checked += num_units_checked
-			diff_layer_units_blocked     += num_units_blocked
+			num_diff_layer_units_checked += windows_scanned
+			diff_layer_units_blocked     += windows_blocked
 
 			# Free bitmap memory
-			del net_segment_bitmap
+			del net_segment_area_bitmap
 
 	return num_same_layer_units_checked, same_layer_units_blocked, sides_unblocked, num_diff_layer_units_checked, diff_layer_units_blocked
 
@@ -268,18 +286,18 @@ def check_blockage(net_segment, layout):
 			net_segment_bitmap = numpy.zeros(shape=(net_segment.polygon.bbox.get_height(), net_segment.polygon.bbox.get_width()))
 			
 			# Choose nearby polygons to analyze
-			if direction == 'T':
+			if direction == 'T' and (net_segment.layer_num < layout.lef.top_routing_layer_num):
 				nearby_polys = net_segment.nearby_al_polygons
-			else:
+			elif direction == 'B' and (net_segment.layer_num > layout.lef.bottom_routing_layer_num):
 				nearby_polys = net_segment.nearby_bl_polygons
+			else:
+				continue
+
 			print "		Checking (%d) nearby polygons along %s side (GDSII Layer:) ..." % (len(nearby_polys), direction)
 
 			# Color the bitmap
 			for poly in nearby_polys:
-				clipped_polys = Polygon.from_polygon_clip(poly, net_segment.polygon)
-				for clipped_poly in clipped_polys:
-					if clipped_poly.get_area() > 0:
-						color_bitmap(net_segment_bitmap, net_segment.polygon.bbox.ll, clipped_poly)
+				color_bitmap(net_segment_bitmap, net_segment.polygon.bbox.ll, poly)
 
 			# Calculate colored area
 			diff_layer_units_blocked     += bits_colored(net_segment_bitmap)
@@ -314,29 +332,34 @@ def analyze_critical_net_blockage(layout, verbose):
 			# Report Path Segment Condition
 			if verbose:
 				print "	Analyzing Net Segment", path_segment_counter
-				print "		Layer:                ", net_segment.layer_num
-				print "		GDSII Element:        ", gdsii_element_type
-				print "		Perimeter:            ", net_segment.polygon.bbox.get_perimeter()
-				print "		Step Size:            ", layout.net_blockage_step
-				print "		Pitch:                ", layout.lef.layers[net_segment.layer_name].pitch 
-				print "		Default Width:        ", layout.lef.layers[net_segment.layer_name].width 
-				# print "		Real Width:           ", (float(net_segment.polygon.bbox.get_width()) / float(layout.lef.database_units))
-				# print "		Real Height:          ", (float(net_segment.polygon.bbox.get_height()) / float(layout.lef.database_units))
-				print "		Top and Bottom Area:  ", (net_segment.polygon.get_area() * 2)
-				print "		BBox (M-Units):       ", net_segment.polygon.bbox.get_bbox_as_list()
-				print "		BBox (Microns):       ", net_segment.polygon.bbox.get_bbox_as_list_microns(1.0 / layout.lef.database_units)
-				print "		Nearby BBox (M-Units):", net_segment.nearby_bbox.get_bbox_as_list()
-				print "		Nearby BBox (Microns):", net_segment.nearby_bbox.get_bbox_as_list_microns(1.0 / layout.lef.database_units)
-				print "		Nearby Polygons:      ", len(net_segment.nearby_al_polygons) + len(net_segment.nearby_sl_polygons)
+				print "		Layer:                    ", net_segment.layer_num
+				print "		GDSII Element:            ", gdsii_element_type
+				print "		Perimeter (dbu):          ", net_segment.polygon.bbox.get_perimeter()
+				print "		Step Size (dbu):          ", layout.net_blockage_step
+				print "		Pitch (uM):               ", layout.lef.layers[net_segment.layer_name].pitch 
+				print "		Default Width (uM):       ", layout.lef.layers[net_segment.layer_name].width 
+				print "		Min SL Width (uM):        ", layout.lef.layers[net_segment.layer_num].min_width
+				if net_segment.layer_num < layout.lef.top_routing_layer_num:
+					print "		Min TL Width (uM):        ", layout.lef.layers[net_segment.layer_num + 1].min_width 
+				if net_segment.layer_num > layout.lef.bottom_routing_layer_num:
+					print "		Min BL Width (uM):        ", layout.lef.layers[net_segment.layer_num - 1].min_width 
+				print "		Top and Bottom Area (dbu):", (net_segment.polygon.get_area() * 2)
+				print "		BBox (M-Units):           ", net_segment.polygon.bbox.get_bbox_as_list()
+				print "		Nearby SL BBox (M-Units): ", net_segment.nearby_sl_bbox.get_bbox_as_list()
+				if net_segment.layer_num < layout.lef.top_routing_layer_num:
+					print "		Nearby TL BBox (M-Units): ", net_segment.nearby_al_bbox.get_bbox_as_list()
+				if net_segment.layer_num > layout.lef.bottom_routing_layer_num:
+					print "		Nearby BL BBox (M-Units): ", net_segment.nearby_bl_bbox.get_bbox_as_list()
+				print "		Num. Nearby Polygons:     ", len(net_segment.nearby_al_polygons) + len(net_segment.nearby_bl_polygons) + len(net_segment.nearby_sl_polygons)
 				if gdsii_element_type == "Path":
-					print "		Klayout Query: " 
+					print "		Klayout Query:       " 
 					print "			paths on layer %d/%d of cell MAL_TOP where" % (net_segment.polygon.gdsii_element.layer, net_segment.polygon.gdsii_element.data_type)
 					print "			shape.path.bbox.left==%d &&"  % (net_segment.polygon.bbox.ll.x)
 					print "			shape.path.bbox.right==%d &&" % (net_segment.polygon.bbox.ur.x)
 					print "			shape.path.bbox.top==%d &&"   % (net_segment.polygon.bbox.ur.y)
 					print "			shape.path.bbox.bottom==%d"   % (net_segment.polygon.bbox.ll.y)
 				elif gdsii_element_type == "Boundary":
-					print "		Klayout Query: " 
+					print "		Klayout Query:       " 
 					print "			boxes on layer %d/%d of cell MAL_TOP where" % (net_segment.polygon.gdsii_element.layer, net_segment.polygon.gdsii_element.data_type)
 					print "			shape.box.left==%d &&"  % (net_segment.polygon.bbox.ll.x)
 					print "			shape.box.right==%d &&" % (net_segment.polygon.bbox.ur.x)
@@ -364,7 +387,7 @@ def analyze_critical_net_blockage(layout, verbose):
 			print "		Top/Bottom Units Blocked: %d / %d" % (diff_layer_blockage, num_diff_layer_units_checked)
 			print "		Done - Time Elapsed:", (time.time() - start_time), "seconds."
 			print "		----------------------------------------------"
-			sys.exit(1)
+			
 			path_segment_counter += 1
 
 	# Calculate raw and weighted blockage percentages.

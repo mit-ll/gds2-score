@@ -30,7 +30,15 @@ class Net_Segment():
 		self.layer_num           = layer_num
 		self.layer_name          = layer_name
 		self.polygon             = poly
-		self.nearby_bbox         = BBox.from_bbox_and_extension(self.polygon.bbox, (2 * (self.polygon.bbox.width + self.polygon.bbox.height)))
+		self.nearby_sl_bbox      = BBox.from_bbox_and_extension(self.polygon.bbox, (lef.layers[layer_num].pitch * lef.database_units))
+		if layer_num < lef.top_routing_layer_num:
+			self.nearby_al_bbox  = BBox.from_bbox_and_extension(self.polygon.bbox, lef.layers[layer_num + 1].min_spacing_db)
+		else:
+			self.nearby_al_bbox  = None
+		if layer_num > lef.bottom_routing_layer_num:
+			self.nearby_bl_bbox  = BBox.from_bbox_and_extension(self.polygon.bbox, lef.layers[layer_num - 1].min_spacing_db)
+		else:
+			self.nearby_bl_bbox  = None
 		self.nearby_sl_polygons  = [] # nearby polygons on the same layer
 		self.nearby_al_polygons  = [] # nearby polygons on above layer
 		self.nearby_bl_polygons  = [] # nearby polygons on below layer

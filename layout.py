@@ -171,14 +171,15 @@ class Layout():
 		if net_segment.polygon.gdsii_element.layer == poly.gdsii_element.layer:
 			
 			# Element on the same layer as net_segment
-			if poly.overlaps_bbox(net_segment.nearby_bbox):
+			if poly.overlaps_bbox(net_segment.nearby_sl_bbox):
 				net_segment.nearby_sl_polygons.append(poly)
+
 		elif self.lef.is_gdsii_layer_above(net_segment.polygon.gdsii_element, poly.gdsii_element, self.layer_map):
 			
 			# Element is one layer above the net_segment.
 			# Element is only considered "nearby" if it insects with the
 			# bounding box of the path object projected one layer above.
-			if poly.overlaps_bbox(net_segment.polygon.bbox):
+			if poly.overlaps_bbox(net_segment.nearby_al_bbox):
 				net_segment.nearby_al_polygons.append(poly)
 
 		elif self.lef.is_gdsii_layer_below(net_segment.polygon.gdsii_element, poly.gdsii_element, self.layer_map):
@@ -186,7 +187,7 @@ class Layout():
 			# Element is either one layer below the net_segment.
 			# Element is only considered "nearby" if it insects with the
 			# bounding box of the path object projected one layer below.
-			if poly.overlaps_bbox(net_segment.polygon.bbox):
+			if poly.overlaps_bbox(net_segment.nearby_bl_bbox):
 				net_segment.nearby_bl_polygons.append(poly)
 
 	# Extracts a list of GDSII elements (converted to polygon objects) that are in close
