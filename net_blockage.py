@@ -14,7 +14,6 @@ import sys
 import inspect
 import copy
 import numpy
-import gc
 
 # Import matplotlib
 # import matplotlib.pyplot as plt
@@ -50,6 +49,7 @@ def compute_al_windows_blocked(bitmap, net_segment, al_min_wire_width, al_min_wi
 			# Wide enough for 1 width of AL wire
 			window_width  = al_required_open_width
 			window_height = num_rows
+			patch_wire_direction = 'H'
 		else:
 			print "UNSUPPORTED %s: constrained HORIZONTAL adjacent layer net blockage." % (inspect.stack()[0][3], token)
 			sys.exit(3)
@@ -58,6 +58,7 @@ def compute_al_windows_blocked(bitmap, net_segment, al_min_wire_width, al_min_wi
 		if net_segment.polygon.bbox.get_height() > al_min_wire_width:
 			window_width  = num_cols
 			window_height = al_required_open_width
+			patch_wire_direction = 'V'
 		else:
 			print "UNSUPPORTED %s: constrained VERTICAL adjacent layer net blockage." % (inspect.stack()[0][3], token)
 			sys.exit(3)
@@ -65,26 +66,64 @@ def compute_al_windows_blocked(bitmap, net_segment, al_min_wire_width, al_min_wi
 		print "UNSUPPORTED %s: SQUARE adjacent layer polygon." % (inspect.stack()[0][3], token)
 		sys.exit(3)
 
-	
 	# Set window Y dimensions
 	window_start_y = 0
 	window_end_y   = window_start_y + window_height
+	
+	# # Keep track of patching points
+	# prev_window_blocked = True
+	# start_patch_pt      = None
+	# patch_points        = []
 
 	# Scan windows
 	while window_end_y <= num_rows:
 		# Set window X dimensions
 		window_start_x = 0
 		window_end_x   = window_start_x + window_width
-		# print "				Window Start: (%d, %d)" % (window_start_x, window_start_y)
-		# print "				Window End  : (%d, %d)" % (window_end_x, window_end_y)
 		while window_end_x <= num_cols:
 			if bitmap[window_start_y:window_end_y, window_start_x:window_end_x].any():
 				windows_blocked += 1
+				prev_window_blocked = True
+
+			# 	if start_patch_pt:
+			# 		if patch_wire_direction == 'H':
+			# 			end_patch_pt = Point(window_end_x - al_min_wire_spacing - 1, net_segment.polygon.bbox.get_height() / 2)
+			# 		elif patch_wire_direction == 'V':
+			# 			end_patch_pt = Point(net_segment.polygon.bbox.get_height() / 2, window_end_y - al_min_wire_spacing - 1)
+			# 		else:
+			# 			print "UNSUPPORTED %s: wire patching direction." % (inspect.stack()[0][3], token)
+			# 			sys.exit(3)
+			# 		patch_points.append((start_patch_pt, end_patch_pt))
+			# 		start_patch_pt = None
+			# 		end_patch_pt   = None
+
+			# elif prev_window_blocked:
+			# 	prev_window_blocked = False
+			# 	if patch_wire_direction == 'H':
+			# 		start_patch_pt = Point(window_start_x + al_min_wire_spacing + 1, net_segment.polygon.bbox.get_height() / 2)
+			# 	elif patch_wire_direction == 'V':
+			# 		start_patch_pt = Point(net_segment.polygon.bbox.get_height() / 2, window_start_y + al_min_wire_spacing + 1)
+			# 	else:
+			# 		print "UNSUPPORTED %s: wire patching direction." % (inspect.stack()[0][3], token)
+			# 		sys.exit(3)
+
 			windows_scanned += 1
 			window_start_x  += 1
 			window_end_x    += 1
 		window_start_y += 1
 		window_end_y   += 1
+
+	# if not prev_window_blocked and start_patch_pt:
+	# 	if patch_wire_direction == 'H':
+	# 		end_patch_pt = Point(window_end_x - al_min_wire_spacing - 1, net_segment.polygon.bbox.get_height() / 2)
+	# 	elif patch_wire_direction == 'V':
+	# 		end_patch_pt = Point(net_segment.polygon.bbox.get_height() / 2, window_end_y - al_min_wire_spacing - 1)
+	# 	else:
+	# 		print "UNSUPPORTED %s: wire patching direction." % (inspect.stack()[0][3], token)
+	# 		sys.exit(3)
+	# 	patch_points.append((start_patch_pt, end_patch_pt))
+
+	# print "Patch Points:", patch_points
 
 	# print "			Windows Blocked: %d / %d" % (windows_blocked, windows_scanned)
 	return windows_scanned, windows_blocked
@@ -98,7 +137,7 @@ def check_blockage_constrained(net_segment, layout):
 	sl_min_wire_spacing          = layout.lef.layers[net_segment.layer_name].min_spacing_db - 1
 	sl_required_open_width       = layout.lef.layers[net_segment.layer_name].rogue_wire_width
 	check_distance               = (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width)) * layout.lef.database_units
-	print "		Check Distance (uM):    ", (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width))
+	print "		Check Distance (uM):", (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width))
 
 	# Scan all 4 perimeter sides to check for blockages
 	for direction in ['N', 'E', 'S', 'W', 'T', 'B']:
@@ -197,6 +236,10 @@ def check_blockage_constrained(net_segment, layout):
 			else:
 				continue
 			
+			# Skip iteration if no nearbly polygons
+			if not nearby_polys:
+				continue
+
 			# Create bitmap
 			net_segment_area_poly   = Polygon.from_rect_poly_and_extension(net_segment.polygon, al_min_wire_spacing, al_min_wire_spacing)
 			net_segment_area_bitmap = numpy.zeros(shape=(net_segment_area_poly.bbox.get_height(), net_segment_area_poly.bbox.get_width()))
@@ -204,7 +247,9 @@ def check_blockage_constrained(net_segment, layout):
 
 			# Color the bitmap
 			for poly in nearby_polys:
-				color_bitmap(net_segment_area_bitmap, net_segment.polygon.bbox.ll, poly)
+				# First check if bounding boxes overlap
+				if net_segment.polygon.bbox.overlaps_bbox(poly.bbox):
+					color_bitmap(net_segment_area_bitmap, net_segment.polygon.bbox.ll, poly)
 			
 			# Calculate windows blocked
 			windows_scanned, windows_blocked = compute_al_windows_blocked(net_segment_area_bitmap, net_segment, al_min_width, al_min_wire_spacing, al_required_open_width)
@@ -229,7 +274,7 @@ def check_blockage(net_segment, layout):
 	diff_layer_units_blocked     = 0
 	sides_unblocked 			 = []
 	check_distance               = (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width)) * layout.lef.database_units
-	print "		Check Distance (uM):  ", (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width))
+	print "		Check Distance (uM):", (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width))
 
 	# Scan all 4 perimeter sides to check for blockages
 	for direction in ['N', 'E', 'S', 'W', 'T', 'B']:
@@ -288,16 +333,18 @@ def check_blockage(net_segment, layout):
 			# Choose nearby polygons to analyze
 			if direction == 'T' and (net_segment.layer_num < layout.lef.top_routing_layer_num):
 				nearby_polys = net_segment.nearby_al_polygons
+				print "		Checking (%d) nearby polygons along %s side (Layer: %d) ..." % (len(nearby_polys), direction, net_segment.layer_num + 1)
 			elif direction == 'B' and (net_segment.layer_num > layout.lef.bottom_routing_layer_num):
 				nearby_polys = net_segment.nearby_bl_polygons
+				print "		Checking (%d) nearby polygons along %s side (Layer: %d) ..." % (len(nearby_polys), direction, net_segment.layer_num - 1)
 			else:
 				continue
 
-			print "		Checking (%d) nearby polygons along %s side (GDSII Layer:) ..." % (len(nearby_polys), direction)
-
 			# Color the bitmap
 			for poly in nearby_polys:
-				color_bitmap(net_segment_bitmap, net_segment.polygon.bbox.ll, poly)
+				# First check if bounding boxes overlap
+				if net_segment.polygon.bbox.overlaps_bbox(poly.bbox):
+					color_bitmap(net_segment_bitmap, net_segment.polygon.bbox.ll, poly)
 
 			# Calculate colored area
 			diff_layer_units_blocked     += bits_colored(net_segment_bitmap)
@@ -319,7 +366,7 @@ def analyze_critical_net_blockage(layout, verbose):
 	# layout.extract_nearby_polygons_parallel()
 
 	for net in layout.critical_nets:
-		print "Analying Net: ", net.fullname
+		print "Analyzing Net: ", net.fullname
 		path_segment_counter = 1
 		for net_segment in net.segments:
 			# Get GDSII element type
@@ -376,6 +423,7 @@ def analyze_critical_net_blockage(layout, verbose):
 			net_segment.diff_layer_units_blocked = diff_layer_blockage 
 			net_segment.same_layer_units_checked = num_same_layer_units_checked
 			net_segment.diff_layer_units_checked = num_diff_layer_units_checked 
+			net_segment.sides_unblocked          = sides_unblocked
 			total_same_layer_blockage            += same_layer_blockage
 			total_diff_layer_blockage            += diff_layer_blockage
 			total_perimeter_units                += num_same_layer_units_checked

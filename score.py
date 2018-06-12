@@ -54,6 +54,7 @@ def usage():
 	print "	-s, --place_grid	Placement output file (include .npy extension)."
 	print "	--nb_step	Step size for same layer net blockage calculation."
 	print "	--nb_type	Type of net blockage calculation (0 for unconstrained; 1 for LEF constrained)."
+	print " --mod Running a custom ICAD module."
 
 # Analyze blockage of security critical nets in GDSII
 def blockage_metric(layout):
@@ -98,6 +99,7 @@ def main(argv):
 	global NET_BLOCKAGE
 	global TRIGGER_SPACE
 	global ROUTING_DISTANCE
+	global MOD
 
 	# Input Info/File Names 
 	# TOP_LEVEL_MODULE          = 'XXX'
@@ -128,7 +130,7 @@ def main(argv):
 
 	# Load command line arguments
 	try:
-		opts, args = getopt.getopt(argv, "abtehvg:m:r:p:l:d:n:w:s:", ["all", "blockage", "trigger", "routing_distance", "help", "verbose", "gds=", "top_level_module=", "route_lef=", "place_lef=", "layer_map=", "def=", "nemo_dot=", "wire_rpt=", "place_grid=", "nb_step=", "nb_type="])
+		opts, args = getopt.getopt(argv, "abtehvg:m:r:p:l:d:n:w:s:", ["all", "blockage", "trigger", "routing_distance", "help", "verbose", "gds=", "top_level_module=", "route_lef=", "place_lef=", "layer_map=", "def=", "nemo_dot=", "wire_rpt=", "place_grid=", "nb_step=", "nb_type=", "mod="])
 	except getopt.GetoptError:
 		usage()
 		sys.exit(4)
@@ -149,7 +151,6 @@ def main(argv):
 		("-w" not in opt_flags and "--wire_rpt"         not in opt_flags) or \
 		("--nb_step" not in opt_flags) or \
 		("--nb_type" not in opt_flags):
-		# ("-s" not in opt_flags and "--place_grid"       not in opt_flags):
 		usage()
 		sys.exit(4)
 	
@@ -192,22 +193,15 @@ def main(argv):
 			NB_STEP = copy.copy(int(arg))
 		elif opt == "--nb_type":
 			NB_TYPE = copy.copy(int(arg))
+		elif opt == "--mod":
+			MOD         = True
+			module_name = copy.copy(arg)
 		else:
 			usage()
 			sys.exit(4) 
 	
 	# Start program timer
 	overall_start_time = time.time()
-
-	# dbg.debug_weiler_atherton_algorithm_1()
-	# dbg.debug_weiler_atherton_algorithm_2()
-	# dbg.debug_weiler_atherton_algorithm_3()
-	# dbg.debug_weiler_atherton_algorithm_4()
-	# dbg.debug_weiler_atherton_algorithm_5()
-	# dbg.debug_weiler_atherton_algorithm_6()
-	# dbg.debug_weiler_atherton_algorithm_7()
-	# dbg.debug_weiler_atherton_algorithm_8()
-	# return
 
 	# Load layout and critical nets
 	layout = Layout( \
@@ -247,6 +241,19 @@ def main(argv):
 		# Routing Distance Metric
 		if ROUTING_DISTANCE:
 			routing_distance_metric(layout)
+
+		# Run Custom Modules
+		if MOD:
+			start_time = time.time()
+			print "Running Custom Module (%s)..." % (module_name)
+			custom_module = __import__(module_name, fromlist=[''])
+			custom_module.run(layout)
+			end_time = time.time()
+			print "Done - Custom Module (%s)" % (module_name)
+			calculate_and_print_time(start_time, end_time)
+			print "----------------------------------------------"
+			
+			
 
 	# Calculate and print total execution time
 	overall_end_time = time.time()

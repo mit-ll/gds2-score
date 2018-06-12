@@ -42,6 +42,7 @@ class Net_Segment():
 		self.nearby_sl_polygons  = [] # nearby polygons on the same layer
 		self.nearby_al_polygons  = [] # nearby polygons on above layer
 		self.nearby_bl_polygons  = [] # nearby polygons on below layer
+		self.sides_unblocked     = [] # sides of net segment polygon not 100% blocked
 		self.same_layer_units_blocked = 0 # perimeter windows blocked (according to step_size)
 		self.diff_layer_units_blocked = 0 # top/bottom area units blocked
 		self.same_layer_units_checked = 0 # locations valid rogue wires can be attached around wire perimeter
