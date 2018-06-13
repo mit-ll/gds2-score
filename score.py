@@ -24,6 +24,7 @@ VERBOSE          = False
 NET_BLOCKAGE     = False
 TRIGGER_SPACE    = False
 ROUTING_DISTANCE = False
+MOD              = False
 
 def calculate_and_print_time(start_time, end_time):
 	hours, rem       = divmod(end_time - start_time, 3600)

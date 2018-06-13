@@ -32,17 +32,19 @@ class Net_Segment():
 		self.polygon             = poly
 		self.nearby_sl_bbox      = BBox.from_bbox_and_extension(self.polygon.bbox, (lef.layers[layer_num].pitch * lef.database_units))
 		if layer_num < lef.top_routing_layer_num:
-			self.nearby_al_bbox  = BBox.from_bbox_and_extension(self.polygon.bbox, lef.layers[layer_num + 1].min_spacing_db)
+			self.nearby_al_bbox  = BBox.from_bbox_and_extension(self.polygon.bbox, lef.layers[layer_num + 1].min_spacing_db - 1)
 		else:
 			self.nearby_al_bbox  = None
 		if layer_num > lef.bottom_routing_layer_num:
-			self.nearby_bl_bbox  = BBox.from_bbox_and_extension(self.polygon.bbox, lef.layers[layer_num - 1].min_spacing_db)
+			self.nearby_bl_bbox  = BBox.from_bbox_and_extension(self.polygon.bbox, lef.layers[layer_num - 1].min_spacing_db - 1)
 		else:
 			self.nearby_bl_bbox  = None
 		self.nearby_sl_polygons  = [] # nearby polygons on the same layer
 		self.nearby_al_polygons  = [] # nearby polygons on above layer
 		self.nearby_bl_polygons  = [] # nearby polygons on below layer
 		self.sides_unblocked     = [] # sides of net segment polygon not 100% blocked
+		self.top_unblocked_windows    = [] # Areas with no blockage above net segment
+		self.bottom_unblocked_windows = [] # Areas with no blockage below net segment
 		self.same_layer_units_blocked = 0 # perimeter windows blocked (according to step_size)
 		self.diff_layer_units_blocked = 0 # top/bottom area units blocked
 		self.same_layer_units_checked = 0 # locations valid rogue wires can be attached around wire perimeter

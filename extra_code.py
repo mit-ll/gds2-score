@@ -714,3 +714,32 @@ for direction in ['N', 'E', 'S', 'W', 'T', 'B']:
 		# 	ax.scatter([xp],[yp], color=c, marker=m)
 		# ax.grid()
 		# plt.show()
+
+# -----------------------------------------------------------------------
+# Adjacent Layer (constrained) net blockage bitmap creation optimization
+# -----------------------------------------------------------------------
+# Create bitmap
+nearby_polys_bbox       = BBox.from_multiple_polygons(nearby_polys)
+net_segment_area_bitmap = numpy.zeros(shape=(nearby_polys_bbox.get_height(), nearby_polys_bbox.get_width()), dtype=bool)
+print "		Checking (%d) nearby polygons along %s side (GDSII Layer:) ..." % (len(nearby_polys), direction)
+
+# Color the bitmap
+for poly in nearby_polys:
+	# Create bitmap of nearby polygon -- TODO: Fix this
+	nearby_poly_bitmap = numpy.ones(shape=(poly.bbox.get_height(), poly.bbox.get_width()), dtype=bool)
+
+	# Compute offsets
+	offset_x = poly.bbox.ll.x - nearby_polys_bbox.ll.x
+	offset_y = poly.bbox.ll.y - nearby_polys_bbox.ll.y
+	nearby_poly_width  = nearby_poly_bitmap.shape[1]
+	nearby_poly_height = nearby_poly_bitmap.shape[0]
+
+	# Color main polygon
+	net_segment_area_bitmap[offset_y : nearby_poly_height, offset_x : nearby_poly_width] |= nearby_poly_bitmap
+
+# Clip bitmap to min spacing region surrounding net segment projection
+offset_x = nearby_bbox.ll.x - nearby_polys_bbox.ll.x
+width    = nearby_bbox.get_width()
+offset_y = nearby_bbox.ll.y - nearby_polys_bbox.ll.y
+height   = nearby_bbox.get_height()
+net_segment_area_bitmap = net_segment_area_bitmap[offset_y : height, offset_x : width]
