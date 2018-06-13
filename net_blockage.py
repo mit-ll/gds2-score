@@ -98,7 +98,7 @@ class Window():
 		return bitmap[self.window.p1.y : self.window.p2.y, self.window.p1.x : self.window.p2.x]
 
 	def print_window(self):
-		self.window.print_coords()
+		self.window.print_segment()
 
 # Sets bits inside the ploygon to 1
 def color_bitmap(bitmap, offset, poly):	
