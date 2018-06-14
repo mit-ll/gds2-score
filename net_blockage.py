@@ -97,8 +97,11 @@ class Window():
 	def get_bitmap_splice(self, bitmap):
 		return bitmap[self.window.p1.y : self.window.p2.y, self.window.p1.x : self.window.p2.x]
 
-	def print_window(self):
-		self.window.print_segment()
+	def print_window(self, convert_to_microns=False, scale_factor=1):
+		if convert_to_microns:
+			self.window.print_segment(convert_to_microns=True, scale_factor=scale_factor)
+		else:
+			self.window.print_segment()
 
 # Sets bits inside the ploygon to 1
 def color_bitmap(bitmap, offset, poly):	

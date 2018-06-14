@@ -54,9 +54,12 @@ class Point():
 	def distance_from(self, P):
 		return math.sqrt((P.x - self.x)**2 + (P.y - self.y)**2)
 
-	def print_coords(self):
-		# print "(x: %5d; y: %5d)" % (self.x, self.y),
-		print "(x: %d; y: %d)" % (self.x, self.y),
+	def print_coords(self, convert_to_microns=False, scale_factor=1):
+		if convert_to_microns:
+			print "(x: %.3f; y: %.3f)" % (self.x * scale_factor, self.y * scale_factor),
+		else:
+			# print "(x: %5d; y: %5d)" % (self.x, self.y),
+			print "(x: %d; y: %d)" % (self.x, self.y),
 
 # Line Segment
 class LineSegment():
@@ -173,9 +176,12 @@ class LineSegment():
 		if self.p1.y == self.p2.y:
 			return True
 		return False
-
-	def print_segment(self):
-		print "P1(x: %d; y: %d) --- P2(x: %d; y: %d)" % (self.p1.x, self.p1.y, self.p2.x, self.p2.y)
+		
+	def print_segment(self, convert_to_microns=False, scale_factor=1):
+		if convert_to_microns:
+			print "P1(x: %.3f; y: %.3f) --- P2(x: %.3f; y: %.3f)" % (self.p1.x * scale_factor, self.p1.y * scale_factor, self.p2.x * scale_factor, self.p2.y * scale_factor)
+		else:
+			print "P1(x: %d; y: %d) --- P2(x: %d; y: %d)" % (self.p1.x, self.p1.y, self.p2.x, self.p2.y)
 
 class BBox():
 	def __init__(self, ll, ur):
@@ -837,18 +843,22 @@ class Polygon():
 		if self.num_coords == 5:
 			return self.bbox.is_point_inside_bbox(P)
 		else:
-			# Ray Casting Algorithm 
-			inside = False
-			for edge in self.edges():
-				if edge.on_segment(P):
-					return True
-				elif P.y > min(edge.p1.y, edge.p2.y) and P.y <= max(edge.p1.y, edge.p2.y):
-					if P.x <= max(edge.p1.x, edge.p2.x):
-						if edge.p1.y != edge.p2.y:
-							x_intersection = ((P.y - edge.p1.y) * ((edge.p2.x - edge.p1.x) / (edge.p2.y - edge.p1.y))) + edge.p1.x
-						if edge.p1.x == edge.p2.x or P.x <= x_intersection:
-								inside = not inside
-			return inside
+			# Check if point is inside bbox first
+			if self.bbox.is_point_inside_bbox(P):
+				# Ray Casting Algorithm 
+				inside = False
+				for edge in self.edges():
+					if edge.on_segment(P):
+						return True
+					elif P.y > min(edge.p1.y, edge.p2.y) and P.y <= max(edge.p1.y, edge.p2.y):
+						if P.x <= max(edge.p1.x, edge.p2.x):
+							if edge.p1.y != edge.p2.y:
+								x_intersection = ((P.y - edge.p1.y) * ((edge.p2.x - edge.p1.x) / (edge.p2.y - edge.p1.y))) + edge.p1.x
+							if edge.p1.x == edge.p2.x or P.x <= x_intersection:
+									inside = not inside
+				return inside
+			else:
+				return False
 
 	# Returns True if the provided bounding box overlaps the bounding
 	# box of the polygon. Otherwise, returns False.
