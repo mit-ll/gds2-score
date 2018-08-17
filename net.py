@@ -9,6 +9,82 @@ import inspect
 import sys
 # from multiprocessing import Lock
 
+class Window():
+	def __init__(self, start_pt, width, height, direction):
+		self.initial_start_pt = start_pt
+		self.width            = width
+		self.height           = height
+		self.direction        = direction
+		self.window           = LineSegment(copy.deepcopy(start_pt), Point.from_point_and_offset(start_pt, width, height))
+
+	def reset_x_position(self):
+		self.window.p1.x = self.initial_start_pt.x
+		self.window.p2.x = self.initial_start_pt.x + self.width 
+
+	def reset_y_position(self):
+		self.window.p1.y = self.initial_start_pt.y
+		self.window.p2.y = self.initial_start_pt.y + self.height
+
+	def reset_position(self):
+		self.reset_x_position()
+		self.reset_y_position()
+
+	def get_start_pt_copy(self):
+		return copy.deepcopy(self.window.p1)
+
+	def get_start_pt(self):
+		return self.window.p1
+
+	def get_end_pt(self):
+		return self.window.p2
+
+	def shift_horizontal(self, step):
+		self.window.p1.x += step
+		self.window.p2.x += step
+
+	def shift_vertical(self, step):
+		self.window.p1.y += step
+		self.window.p2.y += step
+
+	def increase_width(self, step):
+		self.width       += step
+		self.window.p2.x += step
+
+	def increase_height(self, step):
+		self.window.p1
+		self.height      += step
+		self.window.p2.y += step
+
+	def offset(self, offset_pt):
+		self.window.p1.x += offset_pt.x
+		self.window.p2.x += offset_pt.x
+		self.window.p1.y += offset_pt.y
+		self.window.p2.y += offset_pt.y
+
+	def get_window_center_line_segment(self):
+		if self.direction == 'H':
+			y_pt = self.window.p1.y + (self.height / 2)
+			p1 = Point(self.window.p1.x, y_pt)
+			p2 = Point(self.window.p2.x, y_pt)
+		elif self.direction == 'V':
+			x_pt = self.window.p1.x + (self.width / 2)
+			p1 = Point(x_pt, self.window.p1.y)
+			p2 = Point(x_pt, self.window.p2.y)
+		else:
+			print "UNSUPPORTED %s: window direction." % (inspect.stack()[0][3], token)
+			sys.exit(3)
+
+		return LineSegment(p1, p2)
+
+	def get_bitmap_splice(self, bitmap):
+		return bitmap[self.window.p1.y : self.window.p2.y, self.window.p1.x : self.window.p2.x]
+
+	def print_window(self, convert_to_microns=False, scale_factor=1):
+		if convert_to_microns:
+			self.window.print_segment(convert_to_microns=True, scale_factor=scale_factor)
+		else:
+			self.window.print_segment()
+
 class Net():
 	def __init__(self, fullname, gdsii_elements, lef, layer_map):
 		self.fullname           = fullname
@@ -43,6 +119,10 @@ class Net_Segment():
 		self.nearby_al_polygons  = [] # nearby polygons on above layer
 		self.nearby_bl_polygons  = [] # nearby polygons on below layer
 		self.sides_unblocked     = [] # sides of net segment polygon not 100% blocked
+		self.north_unblocked_windows  = [] # Areas with no blockage north of net segment
+		self.south_unblocked_windows  = [] # Areas with no blockage south of net segment
+		self.east_unblocked_windows   = [] # Areas with no blockage east of net segment
+		self.west_unblocked_windows   = [] # Areas with no blockage west of net segment
 		self.top_unblocked_windows    = [] # Areas with no blockage above net segment
 		self.bottom_unblocked_windows = [] # Areas with no blockage below net segment
 		self.same_layer_units_blocked = 0 # perimeter windows blocked (according to step_size)
@@ -58,3 +138,32 @@ class Net_Segment():
 
 	def get_weighted_blockage_percentage(self):
 		return ((self.get_perimeter_blockage_percentage() * float(4.0/6.0)) + (self.get_top_bottom_blockage_percentage() * float(2.0/6.0)))
+
+	def consolidate_sl_unblocked_windows(self):
+		for direction in ['N', 'S', 'E', 'W']:
+			if   direction == 'N':
+				windows = self.north_unblocked_windows
+			elif direction == 'S':
+				windows = self.south_unblocked_windows
+			elif direction == 'E':
+				windows = self.east_unblocked_windows
+			elif direction == 'W':
+				windows = self.west_unblocked_windows
+			start_ind = 0
+			end_ind   = 1
+			while end_ind < len(windows):
+				current_window      = windows[start_ind]
+				next_window         = windows[end_ind]
+				current_window_line = current_window.get_window_center_line_segment()
+				next_window_line    = next_window.get_window_center_line_segment()
+				if (current_window_line.p1 + end_ind) == next_window_line.p1:
+					if window.direction == 'H':
+						windows[i].increase_width(1)
+					elif window.direction == 'V':
+						windows[i].increase_height(1)
+					windows.pop(end_ind)
+				else:
+					start_ind = end_ind
+					end_ind   = start_ind + 1
+					
+

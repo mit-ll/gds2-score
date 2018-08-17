@@ -283,7 +283,6 @@ class Routing_Layer:
 		else:
 			print "Min Spacing DB",   self.min_spacing_db,   self.min_spacing_db.is_integer()
 			print "Min Width DB",     self.min_width_db,     self.min_width_db.is_integer()
-			print "Rogue Wire Width", self.rogue_wire_width, self.rogue_wire_width.is_integer()
 			print "ERROR %s: spacing and/or widths not integer multiple of DB units." % (inspect.stack()[0][3])
 			sys.exit(1)
 		self.rogue_wire_width = int((self.min_width + (2 * self.spacing[0][0])) * db_units) - 2 # Database units
