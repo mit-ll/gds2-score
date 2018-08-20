@@ -119,12 +119,7 @@ class Net_Segment():
 		self.nearby_al_polygons  = [] # nearby polygons on above layer
 		self.nearby_bl_polygons  = [] # nearby polygons on below layer
 		self.sides_unblocked     = [] # sides of net segment polygon not 100% blocked
-		self.north_unblocked_windows  = [] # Areas with no blockage north of net segment
-		self.south_unblocked_windows  = [] # Areas with no blockage south of net segment
-		self.east_unblocked_windows   = [] # Areas with no blockage east of net segment
-		self.west_unblocked_windows   = [] # Areas with no blockage west of net segment
-		self.top_unblocked_windows    = [] # Areas with no blockage above net segment
-		self.bottom_unblocked_windows = [] # Areas with no blockage below net segment
+		self.unblocked_windows   = {'N': [], 'S': [], 'E': [], 'W': [], 'T': [], 'B': []} # Areas with no blockage north of net segment
 		self.same_layer_units_blocked = 0 # perimeter windows blocked (according to step_size)
 		self.diff_layer_units_blocked = 0 # top/bottom area units blocked
 		self.same_layer_units_checked = 0 # locations valid rogue wires can be attached around wire perimeter
@@ -165,5 +160,5 @@ class Net_Segment():
 				else:
 					start_ind = end_ind
 					end_ind   = start_ind + 1
-					
+
 

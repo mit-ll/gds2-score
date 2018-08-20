@@ -34,15 +34,48 @@ def color_bitmap_al(bitmap, offset, poly):
 			if poly.is_point_inside(Point(col + offset.x + 0.5, row + offset.y + 0.5)):
 				bitmap[row, col] = 1
 
+# Color same layer bitmap by setting bits inside any polygon to 1
+def color_bitmap_sl(bitmap, curr_pitch_pt, curr_overlap_pt, end_pitch_pt, nearby_polys, layout, direction):	
+	num_sites = max(bitmap.shape[0], bitmap.shape[1])
+	step_size = layout.net_blockage_step
+	sites_ind = 0
+	while curr_pitch_pt != end_pitch_pt:
+		for poly in nearby_polys:
+			if poly.is_point_inside(curr_pitch_pt) or poly.is_point_inside(curr_overlap_pt):
+				for i in range(sites_ind, min(sites_ind + layout.net_blockage_step, num_sites)):
+					if direction == 'N' or direction == 'S':
+						bitmap[0, i] = 1
+					elif direction == 'E' or direction == 'W':
+						bitmap[i, 0] = 1
+					else:
+						print "ERROR %s: unknown scan direction (%s)." % (inspect.stack()[0][3], direction)
+						sys.exit(4)
+				break
+
+		if direction == 'N' or direction == 'S':
+			curr_pitch_pt.shift(step_size, 0)
+			curr_overlap_pt.shift(step_size, 0)
+		elif direction == 'E' or direction == 'W':
+			curr_pitch_pt.shift(0, step_size)
+			curr_overlap_pt.shift(0, step_size)
+		else:
+			print "ERROR %s: unknown scan direction (%s)." % (inspect.stack()[0][3], direction)
+			sys.exit(4)
+
+		sites_ind += step_size
+
+	return bitmap
+
 # Computes number of bits colored 
 def bits_colored(bitmap):
 	return numpy.count_nonzero(bitmap)
-
-def compute_al_windows_blocked(bitmap, layout, net_segment, offset, side, num_nearby_polys):
-	windows_scanned = 0
-	windows_blocked = 0
-	num_rows        = bitmap.shape[0]
-	num_cols        = bitmap.shape[1]
+	
+def compute_windows_blocked(bitmap, layout, net_segment, offset, side, num_nearby_polys):
+	windows_scanned        = 0
+	windows_blocked        = 0
+	num_rows               = bitmap.shape[0]
+	num_cols               = bitmap.shape[1]
+	sl_required_open_width = layout.lef.layers[net_segment.layer_name].rogue_wire_width
 
 	# Get minimum wire spacing rules
 	if side == 'T':
@@ -53,31 +86,31 @@ def compute_al_windows_blocked(bitmap, layout, net_segment, offset, side, num_ne
 		# Get minimum wire width/spacing constraints for the adjacent layer
 		min_wire_width      = layout.lef.layers[net_segment.layer_num - 1].min_width_db
 		required_open_width = layout.lef.layers[net_segment.layer_num - 1].rogue_wire_width
-	else:
-		print "UNSUPPORTED %s: side for computing net blockage." % (inspect.stack()[0][3], token)
-		sys.exit(3)
 
-	# Get direction of wire (horizontal or vertical)
-	if net_segment.polygon.bbox.get_width() > net_segment.polygon.bbox.get_height():
-		# Horizontal Path or Boundary
-		if net_segment.polygon.bbox.get_width() > min_wire_width:
-			# Wide enough for 1 width of AL wire
-			scan_window                = Window(Point(0, 0), required_open_width, num_rows, 'H')
-			windows_scanned_precompute = num_cols - required_open_width + 1
-		else:
-			print "UNSUPPORTED %s: constrained HORIZONTAL adjacent layer net blockage." % (inspect.stack()[0][3], token)
-			sys.exit(3)
-	elif net_segment.polygon.bbox.get_width() < net_segment.polygon.bbox.get_height():
-		# Vertical Path or Boundary
-		if net_segment.polygon.bbox.get_height() > min_wire_width:
-			scan_window                = Window(Point(0, 0), num_cols, required_open_width, 'V')
-			windows_scanned_precompute = num_rows - required_open_width + 1
-		else:
-			print "UNSUPPORTED %s: constrained VERTICAL adjacent layer net blockage." % (inspect.stack()[0][3], token)
-			sys.exit(3)
-	else:
-		print "UNSUPPORTED %s: SQUARE adjacent layer polygon." % (inspect.stack()[0][3], token)
-		sys.exit(3)
+	# Configure Scan Window
+	if side == 'N' or side == 'S':
+		scan_window = Window(Point(0,0), sl_required_open_width, 1, 'H')
+	elif side == 'E' or side == 'W':
+		scan_window = Window(Point(0,0), 1, sl_required_open_width, 'V')
+	elif side == 'T' or side == 'B':
+		# Get direction of wire (horizontal or vertical)
+		if net_segment.polygon.bbox.get_width() > net_segment.polygon.bbox.get_height():
+			# Horizontal Path or Boundary
+			if net_segment.polygon.bbox.get_width() > min_wire_width:
+				# Wide enough for 1 width of AL wire
+				scan_window                = Window(Point(0, 0), required_open_width, num_rows, 'H')
+				windows_scanned_precompute = num_cols - required_open_width + 1
+			else:
+				print "UNSUPPORTED %s: constrained HORIZONTAL adjacent layer net blockage." % (inspect.stack()[0][3], token)
+				sys.exit(3)
+		elif net_segment.polygon.bbox.get_width() < net_segment.polygon.bbox.get_height():
+			# Vertical Path or Boundary
+			if net_segment.polygon.bbox.get_height() > min_wire_width:
+				scan_window                = Window(Point(0, 0), num_cols, required_open_width, 'V')
+				windows_scanned_precompute = num_rows - required_open_width + 1
+			else:
+				print "UNSUPPORTED %s: constrained VERTICAL adjacent layer net blockage." % (inspect.stack()[0][3], token)
+				sys.exit(3)
 	
 	# ---------------------------------------
 	# Eearly Termination Optimizations
@@ -114,10 +147,7 @@ def compute_al_windows_blocked(bitmap, layout, net_segment, offset, side, num_ne
 					unblocked_window.offset(offset) 
 
 					# Append window to list of unblocked windows
-					if side == 'T':
-						net_segment.top_unblocked_windows.append(unblocked_window) 
-					elif side == 'B':
-						net_segment.bottom_unblocked_windows.append(unblocked_window) 
+					net_segment.unblocked_windows[side].append(unblocked_window) 
 					unblocked_window = None
 			
 			elif prev_window_blocked:
@@ -144,10 +174,7 @@ def compute_al_windows_blocked(bitmap, layout, net_segment, offset, side, num_ne
 		unblocked_window.offset(offset) 
 
 		# Append window to list of unblocked windows
-		if side == 'T':
-			net_segment.top_unblocked_windows.append(unblocked_window) 
-		elif side == 'B':
-			net_segment.bottom_unblocked_windows.append(unblocked_window) 
+		net_segment.unblocked_windows[side].append(unblocked_window) 
 		unblocked_window = None
 
 	# print "			Window End:"
@@ -157,93 +184,32 @@ def compute_al_windows_blocked(bitmap, layout, net_segment, offset, side, num_ne
 
 	return windows_scanned, windows_blocked
 
-# Color same layer bitmap by setting bits inside any polygon to 1
-def color_bitmap_sl(bitmap, curr_pitch_pt, curr_overlap_pt, end_pitch_pt, nearby_polys, layout, direction):	
-	num_sites = bitmap.shape[1]
-	step_size = layout.net_blockage_step
-	sites_ind = 0
-	while curr_pitch_pt != end_pitch_pt:
-		for poly in nearby_polys:
-			if poly.is_point_inside(curr_pitch_pt) or poly.is_point_inside(curr_overlap_pt):
-				for i in range(sites_ind, min(sites_ind + layout.net_blockage_step, num_sites)):
-					bitmap[0, i] = 1
-				break
-
-		if direction == 'N' or direction == 'S':
-			curr_pitch_pt.shift(step_size, 0)
-			curr_overlap_pt.shift(step_size, 0)
-		elif direction == 'E' or direction == 'W':
-			curr_pitch_pt.shift(0, step_size)
-			curr_overlap_pt.shift(0, step_size)
-		else:
-			print "ERROR %s: unknown scan direction (%s)." % (inspect.stack()[0][3], direction)
-			sys.exit(4)
-
-		sites_ind       += step_size
-
-	return bitmap
-
-# Apply sliding window of size (2 * min_spacing * min_wire_width) to calculate wire position blockages
-def compute_sl_windows_blocked(bitmap, layout, net_segment, offset, direction):
-	windows_scanned        = 0
-	windows_blocked        = 0
-	num_rows               = bitmap.shape[0]
-	num_cols               = bitmap.shape[1]
-	sl_required_open_width = layout.lef.layers[net_segment.layer_name].rogue_wire_width
+# # Apply sliding window of size (2 * min_spacing * min_wire_width) to calculate wire position blockages
+# def compute_sl_windows_blocked(bitmap, layout, net_segment, offset, direction):
+# 	windows_scanned        = 0
+# 	windows_blocked        = 0
+# 	num_rows               = bitmap.shape[0]
+# 	num_cols               = bitmap.shape[1]
+# 	sl_required_open_width = layout.lef.layers[net_segment.layer_name].rogue_wire_width
 	
-	# window_start    = start_scan_coord
-	# window_end      = window_start + sl_required_open_width
-	# windows_scanned = 0
-	# windows_blocked = 0
-
-	# while window_end <= end_scan_coord:
-	# 	window_unblocked = True
-	# 	for window_curr in range(window_start, window_end):
-	# 		if bitmap[0, window_curr-start_scan_coord] == 1:
-	# 			# Mark wire position as blocked
-	# 			windows_blocked          += 1
-	# 			window_unblocked         = False
-	# 			break
-		
-	# 	# Update Window Position
-	# 	window_start    += 1
-	# 	window_end      += 1
-	# 	windows_scanned += 1
-
-	if direction == 'N' or direction == 'S':
-		scan_window = Window(Point(0,0), sl_required_open_width, 0, 'H')
-	elif direction == 'E' or direction == 'W':
-		scan_window = Window(Point(0,0), 0, sl_required_open_width, 'V')
+# 	# Configure Scan Window
+# 	if direction == 'N' or direction == 'S':
+# 		scan_window = Window(Point(0,0), sl_required_open_width, 1, 'H')
+# 	elif direction == 'E' or direction == 'W':
+# 		scan_window = Window(Point(0,0), 1, sl_required_open_width, 'V')
 	
-	while scan_window.get_end_pt().x <= num_rows:
-		scan_window.reset_y_position
-		while scan_window.get_end_pt().y <= num_cols:
-			if scan_window.get_bitmap_splice(bitmap).any():
-				windows_blocked += 1
-			windows_scanned += 1	
-			scan_window.shift_vertical(1)
-		scan_window.shift_horizontal(1)
+# 	# print "				Direction:", direction, ", Rows:", num_rows, ", EP-Y:", scan_window.get_end_pt().y, ", Columns:", num_cols, ", EP-X:", scan_window.get_end_pt().x
 
-		# # Record unblocked window location
-		# if window_unblocked:
-		# 	if direction == 'N':
-		# 		start_pt_x = window_start
-		# 		start_pt_y = curr_fixed_coord_pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width * layout.lef.database_units)
-		# 		net_segment.top_unblocked_windows.append(Window(Point(start_pt_x, start_pt_y), sl_required_open_width, layout.lef.layers[net_segment.layer_num].min_width_db, 'H'))
-		# 	elif direction == 'S':
-		# 		start_pt_x = window_start
-		# 		start_pt_y = curr_fixed_coord_pitch + (0.5 * layout.lef.layers[net_segment.layer_name].width * layout.lef.database_units)
-		# 		net_segment.top_unblocked_windows.append(Window(Point(start_pt_x, start_pt_y), sl_required_open_width, layout.lef.layers[net_segment.layer_num].min_width_db, 'H'))
-		# 	elif direction == 'E':
-		# 		start_pt_x = curr_fixed_coord_pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width * layout.lef.database_units)
-		# 		start_pt_y = window_start
-		# 		net_segment.top_unblocked_windows.append(Window(Point(start_pt_x, start_pt_y), layout.lef.layers[net_segment.layer_num].min_width_db, sl_required_open_width, 'V'))
-		# 	elif direction == 'W':
-		# 		start_pt_x = curr_fixed_coord_pitch + (0.5 * layout.lef.layers[net_segment.layer_name].width * layout.lef.database_units)
-		# 		start_pt_y = window_start
-		# 		net_segment.top_unblocked_windows.append(Window(Point(start_pt_x, start_pt_y), layout.lef.layers[net_segment.layer_num].min_width_db, sl_required_open_width, 'V'))	
+# 	while scan_window.get_end_pt().x <= num_cols:
+# 		scan_window.reset_y_position()
+# 		while scan_window.get_end_pt().y <= num_rows:
+# 			if scan_window.get_bitmap_splice(bitmap).any():
+# 				windows_blocked += 1
+# 			windows_scanned += 1	
+# 			scan_window.shift_vertical(1)
+# 		scan_window.shift_horizontal(1)
 
-	return windows_scanned, windows_blocked
+# 	return windows_scanned, windows_blocked
 
 def check_blockage_constrained(net_segment, layout):
 	num_same_layer_units_checked = 0
@@ -305,11 +271,16 @@ def check_blockage_constrained(net_segment, layout):
 			# print "		Start Scan Coord = %d; End Scan Coord = %d; Num Points to Scan = %d" % (curr_scan_coord, end_scan_coord, num_points_to_scan)
 			
 			# Create Bitmap 
-			sl_bitmap = numpy.zeros(shape=(1, end_scan_coord - start_scan_coord))
+			if direction == 'N' or direction == 'S':
+				sl_bitmap = numpy.zeros(shape=(1, end_scan_coord - start_scan_coord))
+			elif direction == 'E' or direction == 'W':
+				sl_bitmap = numpy.zeros(shape=(end_scan_coord - start_scan_coord, 1))
+			
+			# Color Bitmap
 			sl_bitmap = color_bitmap_sl(sl_bitmap, curr_pitch_pt, curr_overlap_pt, end_pitch_pt, net_segment.nearby_sl_polygons, layout, direction)			
 
 			# Calculate windows blocked
-			windows_scanned, windows_blocked = compute_sl_windows_blocked(sl_bitmap, layout, net_segment, start_pitch_pt, direction)
+			windows_scanned, windows_blocked = compute_windows_blocked(sl_bitmap, layout, net_segment, start_pitch_pt, direction, 1)
 			num_same_layer_units_checked     += windows_scanned
 			same_layer_units_blocked         += windows_blocked
 
@@ -344,7 +315,7 @@ def check_blockage_constrained(net_segment, layout):
 				color_bitmap_al(al_bitmap, nearby_bbox.ll, poly)
 			
 			# Calculate windows blocked
-			windows_scanned, windows_blocked = compute_al_windows_blocked(al_bitmap, layout, net_segment, nearby_bbox.ll, direction, len(nearby_polys))
+			windows_scanned, windows_blocked = compute_windows_blocked(al_bitmap, layout, net_segment, nearby_bbox.ll, direction, len(nearby_polys))
 			
 			# Updated sides unblocked
 			if windows_blocked < windows_scanned:
