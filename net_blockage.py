@@ -118,7 +118,12 @@ def compute_windows_blocked(bitmap, layout, net_segment, offset, side, num_nearb
 	# CASE #1: If no nearbly polygons, skip calculation and
 	# return number of windows that would have been scanned.
 	if num_nearby_polys == 0:
-		return windows_scanned_precompute, 0
+		if side == 'T':
+			net_segment.unblocked_windows[side].append(Window.from_bbox(net_segment.nearby_al_bbox, scan_window.direction))
+			return windows_scanned_precompute, 0
+		elif side == 'B':
+			net_segment.unblocked_windows[side].append(Window.from_bbox(net_segment.nearby_bl_bbox, scan_window.direction))
+			return windows_scanned_precompute, 0
 	# ---------------------------------------
 
 	# Keep track of patching points
@@ -183,33 +188,6 @@ def compute_windows_blocked(bitmap, layout, net_segment, offset, side, num_nearb
 	# print "			Windows Precomputed:  %d" % (windows_scanned_precompute)
 
 	return windows_scanned, windows_blocked
-
-# # Apply sliding window of size (2 * min_spacing * min_wire_width) to calculate wire position blockages
-# def compute_sl_windows_blocked(bitmap, layout, net_segment, offset, direction):
-# 	windows_scanned        = 0
-# 	windows_blocked        = 0
-# 	num_rows               = bitmap.shape[0]
-# 	num_cols               = bitmap.shape[1]
-# 	sl_required_open_width = layout.lef.layers[net_segment.layer_name].rogue_wire_width
-	
-# 	# Configure Scan Window
-# 	if direction == 'N' or direction == 'S':
-# 		scan_window = Window(Point(0,0), sl_required_open_width, 1, 'H')
-# 	elif direction == 'E' or direction == 'W':
-# 		scan_window = Window(Point(0,0), 1, sl_required_open_width, 'V')
-	
-# 	# print "				Direction:", direction, ", Rows:", num_rows, ", EP-Y:", scan_window.get_end_pt().y, ", Columns:", num_cols, ", EP-X:", scan_window.get_end_pt().x
-
-# 	while scan_window.get_end_pt().x <= num_cols:
-# 		scan_window.reset_y_position()
-# 		while scan_window.get_end_pt().y <= num_rows:
-# 			if scan_window.get_bitmap_splice(bitmap).any():
-# 				windows_blocked += 1
-# 			windows_scanned += 1	
-# 			scan_window.shift_vertical(1)
-# 		scan_window.shift_horizontal(1)
-
-# 	return windows_scanned, windows_blocked
 
 def check_blockage_constrained(net_segment, layout):
 	num_same_layer_units_checked = 0

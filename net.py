@@ -7,6 +7,7 @@ from polygon import *
 # Other Imports
 import inspect
 import sys
+import copy
 # from multiprocessing import Lock
 
 class Window():
@@ -16,6 +17,10 @@ class Window():
 		self.height           = height
 		self.direction        = direction
 		self.window           = LineSegment(copy.deepcopy(start_pt), Point.from_point_and_offset(start_pt, width, height))
+
+	@classmethod
+	def from_bbox(cls, bbox, direction):
+		return cls(bbox.ll, bbox.get_width(), bbox.get_height(), direction)
 
 	def reset_x_position(self):
 		self.window.p1.x = self.initial_start_pt.x
@@ -134,31 +139,31 @@ class Net_Segment():
 	def get_weighted_blockage_percentage(self):
 		return ((self.get_perimeter_blockage_percentage() * float(4.0/6.0)) + (self.get_top_bottom_blockage_percentage() * float(2.0/6.0)))
 
-	def consolidate_sl_unblocked_windows(self):
-		for direction in ['N', 'S', 'E', 'W']:
-			if   direction == 'N':
-				windows = self.north_unblocked_windows
-			elif direction == 'S':
-				windows = self.south_unblocked_windows
-			elif direction == 'E':
-				windows = self.east_unblocked_windows
-			elif direction == 'W':
-				windows = self.west_unblocked_windows
-			start_ind = 0
-			end_ind   = 1
-			while end_ind < len(windows):
-				current_window      = windows[start_ind]
-				next_window         = windows[end_ind]
-				current_window_line = current_window.get_window_center_line_segment()
-				next_window_line    = next_window.get_window_center_line_segment()
-				if (current_window_line.p1 + end_ind) == next_window_line.p1:
-					if window.direction == 'H':
-						windows[i].increase_width(1)
-					elif window.direction == 'V':
-						windows[i].increase_height(1)
-					windows.pop(end_ind)
-				else:
-					start_ind = end_ind
-					end_ind   = start_ind + 1
+	# def consolidate_sl_unblocked_windows(self):
+	# 	for direction in ['N', 'S', 'E', 'W']:
+	# 		if   direction == 'N':
+	# 			windows = self.north_unblocked_windows
+	# 		elif direction == 'S':
+	# 			windows = self.south_unblocked_windows
+	# 		elif direction == 'E':
+	# 			windows = self.east_unblocked_windows
+	# 		elif direction == 'W':
+	# 			windows = self.west_unblocked_windows
+	# 		start_ind = 0
+	# 		end_ind   = 1
+	# 		while end_ind < len(windows):
+	# 			current_window      = windows[start_ind]
+	# 			next_window         = windows[end_ind]
+	# 			current_window_line = current_window.get_window_center_line_segment()
+	# 			next_window_line    = next_window.get_window_center_line_segment()
+	# 			if (current_window_line.p1 + end_ind) == next_window_line.p1:
+	# 				if window.direction == 'H':
+	# 					windows[i].increase_width(1)
+	# 				elif window.direction == 'V':
+	# 					windows[i].increase_height(1)
+	# 				windows.pop(end_ind)
+	# 			else:
+	# 				start_ind = end_ind
+	# 				end_ind   = start_ind + 1
 
 
