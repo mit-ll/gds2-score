@@ -276,7 +276,10 @@ class Routing_Layer:
 		self.spacing     = spacing
 		self.area        = area
 		self.min_spacing_db = spacing[0][0] * db_units # Database units
-		self.min_width_db   = min_width * db_units     # Database units
+		if min_width:
+			self.min_width_db   = min_width * db_units     # Database units
+		else:
+			self.min_width_db   = width * db_units     # Database units
 		if self.min_spacing_db.is_integer() and self.min_width_db.is_integer():
 			self.min_spacing_db = int(self.min_spacing_db)
 			self.min_width_db   = int(self.min_width_db)
@@ -285,7 +288,7 @@ class Routing_Layer:
 			print "Min Width DB",     self.min_width_db,     self.min_width_db.is_integer()
 			print "ERROR %s: spacing and/or widths not integer multiple of DB units." % (inspect.stack()[0][3])
 			sys.exit(1)
-		self.rogue_wire_width = int((self.min_width + (2 * self.spacing[0][0])) * db_units) - 2 # Database units
+		self.rogue_wire_width = int(self.min_width_db + (2 * self.spacing[0][0] * db_units)) - 2 # Database units
 		# self.min_enclosed_area
 		# self.min_density
 		# self.max_density

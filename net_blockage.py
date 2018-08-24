@@ -287,6 +287,55 @@ def check_blockage_constrained(net_segment, layout):
 			# Create bitmap
 			al_bitmap = numpy.zeros(shape=(nearby_bbox.get_height(), nearby_bbox.get_width()), dtype=bool)
 			print "		Checking (%d) nearby polygons along %s side (GDSII Layer:) ..." % (len(nearby_polys), direction)
+			
+			# if direction == 'B':
+			# 	# counter = 0
+			# 	poly_layers     = {}
+			# 	poly_data_types = {}
+			# 	polys           = {}
+			# 	poly_shapes     = {'path':0, 'boundary':0, 'other':0}
+			# 	for poly in nearby_polys:
+			# 		if poly.gdsii_element.layer in poly_layers:
+			# 			poly_layers[poly.gdsii_element.layer] += 1
+			# 		else:
+			# 			poly_layers[poly.gdsii_element.layer] = 1
+
+			# 		if poly in polys:
+			# 			polys[poly] += 1
+			# 		else:
+			# 			polys[poly] = 1
+
+			# 		if poly.gdsii_element.data_type in poly_data_types:
+			# 			poly_data_types[poly.gdsii_element.data_type] += 1
+			# 		else:
+			# 			poly_data_types[poly.gdsii_element.data_type] = 1
+
+			# 		if isinstance(poly.gdsii_element, Path):
+			# 			poly_shapes['path'] += 1
+			# 		elif isinstance(poly.gdsii_element, Boundary):
+			# 			poly_shapes['boundary'] += 1
+			# 		else:
+			# 			poly_shapes['other'] += 1
+
+			# 	print "Poly Layers:"
+			# 	print poly_layers
+			# 	print
+			# 	print "Num. Unique Polys:", len(polys.keys())
+			# 	print 
+			# 	print "Poly Data Types:", poly_data_types
+			# 	print 
+			# 	print "Poly Shapes:", poly_shapes
+			# 	print
+			# 		# print "Layer:", poly.gdsii_element.layer
+			# 		# if isinstance(poly.gdsii_element, Path):
+			# 			# dbg.debug_print_path_obj(poly.gdsii_element)
+			# 		# elif isinstance(poly.gdsii_element, Boundary):
+			# 			# dbg.debug_print_boundary_obj(poly.gdsii_element)
+			# 		# poly.print_vertices()
+			# 		# print
+			# 		# counter += 1
+			# 		# if counter == 100:
+			# 	sys.exit(0)
 
 			# Color the bitmap
 			for poly in nearby_polys:

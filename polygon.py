@@ -190,6 +190,18 @@ class BBox():
 		self.height = self.ur.y - self.ll.y
 		self.width  = self.ur.x - self.ll.x
 
+	def __eq__(self, other_bbox):
+		if other_bbox != None:
+			return ((self.ll == other_bbox.ll) and (self.ur == other_bbox.ur))
+		else:
+			return False
+
+	def __ne__(self, other_bbox):
+		return not(self == other_bbox)
+
+	def __hash__(self):
+		return hash((self.ll.x, self.ll.y, self.ur.x, self.ur.y))
+
 	@classmethod
 	def from_polygon(cls, poly):
 		x_coords = poly.get_x_coords()
@@ -277,6 +289,24 @@ class Polygon():
 		self.gdsii_element = gdsii_element
 		self.bbox          = BBox.from_polygon(self)
 
+	def __eq__(self, other_poly):
+		if other_poly != None:
+			return ((self.num_coords == other_poly.num_coords) and (set(self.coords) == set(other_poly.coords)) and (self.bbox == other_poly.bbox))
+		else:
+			return False
+
+	def __ne__(self, other_poly):
+		return not(self == other_poly)
+
+	def __hash__(self):
+		poly_info = []
+		poly_info.append(self.num_coords)
+		poly_info.extend(self.coords)
+		poly_info.append(self.bbox.ll)
+		poly_info.append(self.bbox.ur)
+		poly_info = tuple(poly_info)
+		return hash(poly_info)
+
 	@classmethod
 	def from_gdsii_path(cls, path):
 		if is_path_type_supported(path):
@@ -285,17 +315,25 @@ class Polygon():
 			half_width = path.width / 2
 			if point_1.x == point_2.x:
 				# Path is Vertical
+				# # Custom Extensions
+				# if path.path_type == 4:
+				# 	point_1.y += path.bgn_extn 
+				# 	point_2.y += path.end_extn 
 				ll_corner = point_1 if point_1.y < point_2.y else point_2
 				ur_corner = point_2 if point_1.y < point_2.y else point_1
-				if path.path_type == 0:
+				if path.path_type == 0 or path.path_type == None or path.path_type == 4:
 					# Square-ended path that ends flush	
 					ll_corner.x -= half_width
 					ur_corner.x += half_width
 			elif point_1.y == point_2.y:
 				# Path is Horizontal
+				# # Custom Extensions
+				# if path.path_type == 4:
+				# 	point_1.x += path.bgn_extn 
+				# 	point_2.x += path.end_extn 
 				ll_corner = point_1 if point_1.x < point_2.x else point_2
 				ur_corner = point_2 if point_1.x < point_2.x else point_1
-				if path.path_type == 0:
+				if path.path_type == 0 or path.path_type == None or path.path_type == 4:
 					# Square-ended path that ends flush
 					ll_corner.y -= half_width
 					ur_corner.y += half_width
@@ -718,20 +756,6 @@ class Polygon():
 
 		return ordered_poly_vertices, ordered_clip_vertices, incoming, intersections
 
-
-	def __eq__(self, other_poly):
-		sorted
-		if other_point != None:
-			return (self.x == other_point.x and self.y == other_point.y)
-		else:
-			return False
-
-	def __ne__(self, other_point):
-		return not(self == other_point)
-
-	def __hash__(self):
-		return hash((self.x, self.y))
-
 	# Generator that yields edges of the polygon
 	# as LineSegment objects.
 	def edges(self):
@@ -811,7 +835,7 @@ class Polygon():
 		# listed in CCW order. This is necessary for the WA algorithm.
 		for i in range(self.num_coords):
 			self.coords[i].y *= -1
-		# Reverser coords list
+		# Reverse coords list
 		self.coords.reverse()
 
 	def shift_x_y(self, offset_x, offset_y):

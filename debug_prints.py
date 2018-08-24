@@ -152,6 +152,7 @@ def debug_print_gdsii_stats(gdsii_lib):
 	num_structures   = 0
 	# Elements
 	num_paths 	     = 0
+	path_types       = {}
 	num_boundaries   = 0
  	num_nodes 	     = 0
 	num_boxes 	     = 0
@@ -169,6 +170,11 @@ def debug_print_gdsii_stats(gdsii_lib):
 		for element in structure:
 			if isinstance(element, Path):
 				num_paths += 1
+				if element.path_type in path_types:
+					path_types[element.path_type] += 1
+				else:
+					path_types[element.path_type] = 1
+
 				# coord_type_counts = get_num_element_coords_floats(element)
 				# num_int_coords    += coord_type_counts[0]
 				# num_float_coords  += coord_type_counts[1]
@@ -221,6 +227,7 @@ def debug_print_gdsii_stats(gdsii_lib):
 	print " Structures: ", num_structures
 	print "---------------------"
 	print " Paths:      ", num_paths
+	print " 	Path-Types:      ", path_types
 	print " Boundaries: ", num_boundaries
 	print " Boxes:      ", num_boxes
 	print " Nodes:      ", num_nodes

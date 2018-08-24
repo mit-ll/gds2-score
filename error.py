@@ -22,12 +22,12 @@ REFLECTION_ABOUT_X_AXIS = 32768
 # @TODO: Handle more than two coordinate pairs
 # @TODO: Handle more path_types than just type 2 and 0
 def is_path_type_supported(path):
-	if len(path.xy) == 2 and path.path_type == 0 or path.path_type == 2:
+	if len(path.xy) == 2 and path.path_type == 0 or path.path_type == 2 or path.path_type == None or path.path_type == 4:
 		return True
 	else:
 		if len(path.xy) != 2:
 			print "UNSUPPORTED %s: number of coordinates (%d) for path object not supported." % (inspect.stack()[1][3], len(path.xy))
-		if path.path_type != 0 and path.path_type != 2:
+		if path.path_type != 0 and path.path_type != 2 and path.path_type != 4:
 			print "UNSUPPORTED %s: path type (%d) not supported" % (inspect.stack()[1][3], path.path_type)
 		sys.exit(3)
 

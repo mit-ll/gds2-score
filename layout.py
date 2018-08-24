@@ -410,7 +410,12 @@ class Layout():
 		    lib = Library.load(stream)
 
 		# Close GDSII File
-		stream.close()  
+		stream.close()
+
+		# Show GDSII Stats
+		print
+		dbg.debug_print_gdsii_stats(lib)
+		print
 
 		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
 		print "----------------------------------------------"
@@ -429,10 +434,9 @@ class Layout():
 		with open(map_fname, 'rb') as stream:
 			for line in stream:
 				# Do not process comment lines
+				line = line.rstrip()
 				if (len(line) > 0) and (line[0] != "#"):
-					line = line.rstrip()
-					line_list = line.split(' ')
-
+					line_list = line.split()
 					# Check if layer map file is the correct format
 					# Correct Line Format: <Cadence Layer Name> | <layer purpose> | <layer number> | <data type>
 					if len(line_list) != 4:
