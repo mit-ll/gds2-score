@@ -353,7 +353,7 @@ class Polygon():
 			ul_corner = Point.from_point_and_offset(ur_corner, (ll_corner.x - ur_corner.x), 0)
 			
 			# List of Coords -- 5 coords total -- first and last are the same
-			coords = [ll_corner, lr_corner, ur_corner, ul_corner, ll_corner]
+			coords = [ll_corner, lr_corner, ur_corner, ul_corner, copy.deepcopy(ll_corner)]
 
 			return cls(coords, path)
 
@@ -376,7 +376,7 @@ class Polygon():
 		lr_corner = Point(rect_poly.bbox.ur.x + width_extension, rect_poly.bbox.ll.y - height_extension)
 		ur_corner = Point(rect_poly.bbox.ur.x + width_extension, rect_poly.bbox.ur.y + height_extension)
 		ul_corner = Point(rect_poly.bbox.ll.x - width_extension, rect_poly.bbox.ur.y + height_extension)
-		coords    = [ll_corner, lr_corner, ur_corner, ul_corner, ll_corner] 
+		coords    = [ll_corner, lr_corner, ur_corner, ul_corner, copy.deepcopy(ll_corner)] 
 		
 		return cls(coords)
 
@@ -802,7 +802,7 @@ class Polygon():
 	def print_vertices(self):
 		print "	Num. Vertices:", self.num_coords
 		for coord in self.coords:
-			print "	", 
+			print "	", coord, "-",
 			coord.print_coords()
 			print
 		print
@@ -843,7 +843,7 @@ class Polygon():
 			self.coords[i].x += offset_x
 			self.coords[i].y += offset_y
 
-	def compute_translations(self, offset_x, offset_y, x_reflection, degrees_rotation):
+	def compute_translations(self, offset_x, offset_y, x_reflection, degrees_rotation, verbose=False):
 		translation_computed = False
 		# Reflections are computed FIRST
 		if x_reflection == REFLECTION_ABOUT_X_AXIS:

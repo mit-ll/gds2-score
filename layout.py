@@ -197,7 +197,7 @@ class Layout():
 	def extract_nearby_polygons(self):
 		start_time = time.time()
 		print "Extracting polygons near critical nets ..."
-		
+
 		for element in self.top_gdsii_structure:
 			polys = self.generate_polys_from_element(element)
 			for net in self.critical_nets:
