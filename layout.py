@@ -17,10 +17,12 @@ import sys
 import inspect
 import pdb
 import os
-from multiprocessing import Pool, Queue, Manager
+import itertools
+import multiprocessing as mp
+import functools as ft
 
 class Layout():
-	def __init__(self, top_name, metal_stack_lef_fname, std_cell_lef_name, def_fname, layer_map_fname, gdsii_fname, dot_fname, wire_rpt_fname, fill_cell_names, pg_filename, nb_step, nb_type):
+	def __init__(self, top_name, metal_stack_lef_fname, std_cell_lef_name, def_fname, layer_map_fname, gdsii_fname, dot_fname, wire_rpt_fname, fill_cell_names, pg_filename, nb_step, nb_type, num_processes):
 		self.top_level_name      = top_name 
 		self.fill_cell_names     = fill_cell_names
 		self.device_layer_nums   = {}
@@ -34,6 +36,7 @@ class Layout():
 		self.def_info            = DEF(def_fname, self.lef, fill_cell_names, pg_filename, self.critical_nets, self.lef)
 		self.net_blockage_step   = nb_step # in database units
 		self.net_blockage_type   = nb_type # 0 for un-constrained; 1 for LEF constrained
+		self.num_processes       = num_processes
 		self.net_blockage_done   = False
 		self.trigger_space_done  = False
 		self.trigger_spaces      = None
@@ -167,7 +170,7 @@ class Layout():
 	# Checks if a polygon is nearby a net_segment,
 	# i.e. the polygon intersects the net_segments 
 	# "nearby" bounding box.
-	def is_polygon_nearby(self, poly, net_segment):
+	def is_polygon_nearby(self, net_segment, poly):
 		if net_segment.polygon.gdsii_element.layer == poly.gdsii_element.layer:
 			
 			# Element on the same layer as net_segment
@@ -190,6 +193,7 @@ class Layout():
 			if poly.overlaps_bbox(net_segment.nearby_bl_bbox):
 				net_segment.nearby_bl_polygons.append(poly)
 
+
 	# Extracts a list of GDSII elements (converted to polygon objects) that are in close
 	# proimity to a given security-critical net segement. This is doen by finding all 
 	# polygons that overlap the nearby-bounding-box of the critical net_segment object.
@@ -203,61 +207,7 @@ class Layout():
 			for net in self.critical_nets:
 				for net_segment in net.segments:
 					for poly in polys:
-						self.is_polygon_nearby(poly, net_segment)
-
-		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
-		print "----------------------------------------------"
-
-	# @TODO: This function does not work yet....
-	def extract_nearby_polygons_parallel(self):
-		start_time = time.time()
-		print "Extracting polygons near critical nets (spawning sub-processes)..."
-		print
-
-		manager             = Manager() 
-		updated_nets_q      = manager.Queue()
-		done_q 				= manager.Queue()
-		polys_q             = manager.Queue()
-		process_polys_pool  = Pool(processes=1)
-		generate_polys_pool = Pool(processes=2)
-
-		print "Number of Top-Level GDSII Elements: %d" % (len(self.top_gdsii_structure))
-		print 
-
-		# Launch polygon generating sub-processes
-		print "Launching all poly-gen sub-processes..."
-		launch_start_time = time.time()
-		for element in self.top_gdsii_structure:
-			generate_polys_pool.apply_async(add_polys_to_queue, (element, self.gdsii_structures, polys_q))
-		print "Launched all sub-processes - Time Elapsed:", (time.time() - launch_start_time), "seconds."
-		print 
-
-		# Launch polygon processing sub-processes
-		print "Launching all poly-proc sub-processes..."
-		launch_start_time = time.time()
-		process_polys_pool.apply_async(process_nearby_polys, (polys_q, done_q, self.critical_nets, self.lef, self.layer_map, updated_nets_q))
-		print "Launched all sub-processes - Time Elapsed:", (time.time() - launch_start_time), "seconds."
-		print 
-
-		# Close and join all poly-gen sub-processes
-		generate_polys_pool.close()
-		generate_polys_pool.join()
-		done_q.put('done')
-		print "Closed all poly-gen sub-processes."
-		
-		# Close and join all poly-proc sub-processes
-		process_polys_pool.close()
-		process_polys_pool.join()
-		print "Closed all poly-proc sub-processes."
-		print
-
-		# Update net-objects
-		print "Number of critical nets before:", len(self.critical_nets)
-		self.critical_nets = []
-		while not updated_nets_q.empty():
-			self.critical_nets.append(updated_nets_q.get())
-		print "Number of critical nets after:", len(self.critical_nets)
-		print
+						self.is_polygon_nearby(net_segment, poly)
 
 		print "Done - Time Elapsed:", (time.time() - start_time), "seconds."
 		print "----------------------------------------------"
@@ -295,15 +245,17 @@ class Layout():
 		for structure in self.gdsii_lib:
 			if structure.name == self.top_level_name:
 				for element in structure:
-					if element.properties:
+					if element.properties and isinstance(element, Path): # <-- for only analyzing PATHS not BOUNDARIES (vias)
 						net_name = element.properties[0][1] # property 1 of Path element is the net name
 						if net_name in critical_paths:
-							critical_paths[net_name].extend(self.generate_polys_from_element(element))
+							critical_polys = self.generate_polys_from_element(element)
+							critical_paths[net_name].extend(critical_polys)
 						else:
 							# Check if path is critical or not
-							path_basename = net_name.split('/')[-1]
+							path_basename = net_name.split('/')[-1].split('[')[0]
 							if path_basename in critical_net_names.values():
-								critical_paths[net_name] = self.generate_polys_from_element(element)
+								critical_polys = self.generate_polys_from_element(element)
+								critical_paths[net_name] = critical_polys
 				break
 
 		# Initialize Net Objects
@@ -513,117 +465,3 @@ class TriggerSpace():
 		self.edit_distances     = []
 		self.manhattan_distance = md
 
-# ------------------------------------------------------------------
-# Multiprocessing Support Functions
-# ------------------------------------------------------------------
-def generate_polys_from_element_paralell(element, gdsii_structures, srefs_to_ignore={}):
-	polys = []
-	if isinstance(element, SRef):
-		# Check if SRef is to be ignored (i.e. fill cells)
-		if element.struct_name not in srefs_to_ignore:
-			# Check if SRef properties are supported by this tool
-			# and that the structure pointed to exists.
-			if element.struct_name in gdsii_structures:
-				is_sref_type_supported(element, gdsii_structures[element.struct_name])
-			else:
-				print "ERROR %s: SRef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
-				sys.exit(1)
-
-			# Iterate over elements of referenced structure
-			for sub_element in gdsii_structures[element.struct_name]:
-				sub_polys = generate_polys_from_element_paralell(sub_element, gdsii_structures)
-				# Compute translations of sub elements
-				for poly in sub_polys:
-					poly.compute_translations(element.xy[0][0], element.xy[0][1], element.strans, element.angle)
-					polys.append(copy.copy(poly))
-	elif isinstance(element, ARef):
-		# Check if ARef properties are supported by this tool
-		# and that the structure pointed to exists.
-		if element.struct_name in gdsii_structures:
-			is_aref_type_supported(element, gdsii_structures[element.struct_name])
-		else:
-			print "ERROR %s: ARef points to unkown structure %s." % (inspect.stack()[1][3], element.struct_name)
-			sys.exit(1)
-
-		# Retrieve row and column spacing
-		row_spacing_vector_length = Point.from_tuple(element.xy[0]).distance_from(Point.from_tuple(element.xy[2]))
-		col_spacing_vector_length = Point.from_tuple(element.xy[0]).distance_from(Point.from_tuple(element.xy[1]))
-		curr_x_offset = 0.0
-		col_spacing   = col_spacing_vector_length / element.cols
-		curr_y_offset = 0.0
-		row_spacing   = row_spacing_vector_length / element.rows
-
-		# Iterate over elements of referenced structures
-		for row_index in range(element.rows):
-			for col_index in range(element.cols):
-				for sub_element in gdsii_structures[element.struct_name]:
-					# Generate polygons from all sub elements
-					sub_polys = generate_polys_from_element_paralell(sub_element, gdsii_structures)
-
-					# Compute translations of newly generated polygons
-					for poly in sub_polys:
-						poly.compute_translations(curr_x_offset, curr_y_offset, None, None)
-						polys.append(copy.copy(poly))
-				curr_x_offset += col_spacing
-			curr_x_offset = 0.0
-			curr_y_offset += row_spacing
-		# Compute overall translation of ARef element polygons
-		for poly in polys:				
-			poly.compute_translations(element.xy[0][0], element.xy[0][1], element.strans, element.angle)
-	elif isinstance(element, Path) or isinstance(element, Boundary):
-		# BASE CASE
-		# Compute polygon from element
-		if isinstance(element, Path):
-			# Element is a Path object
-			polys.append(Polygon.from_gdsii_path(element))
-		else:
-			# Element is a Boundary object
-			polys.append(Polygon.from_gdsii_boundary(element))
-	# Ignore GDSII Text elements
-	# elif isinstance(element, Text):
-	elif isinstance(element, Box):
-		print "UNSUPPORTED %s: GDSII Box elements are not supported." % (inspect.stack()[1][3])
-		sys.exit(3)
-	elif isinstance(element, Node):
-		print "UNSUPPORTED %s: GDSII Node elements are not supported." % (inspect.stack()[1][3])
-		sys.exit(3)
-	return polys
-
-def add_polys_to_queue(element, gdsii_structures, polys_q):
-	polys = generate_polys_from_element_paralell(element, gdsii_structures)
-	for poly in polys:
-		polys_q.put(copy.copy(poly))
-
-def process_nearby_polys(polys_q, done_q, nets, lef, layer_map, modified_nets_q):
-	print "About to process polys..."
-	while True:
-		if not polys.empty():
-			poly = polys_q.get()
-			print "Processing a polygon..."
-			for net in nets:
-				for net_segment in net:	
-					if net_segment.gdsii_path.layer == poly.gdsii_element.layer:
-						
-						# Element on the same layer as net_segment
-						if poly.overlaps_bbox(net_segment.nearby_bbox):
-							net_segment.nearby_sl_polygons.append(copy.copy(poly))
-					elif lef.is_gdsii_layer_above(net_segment.gdsii_path, poly.gdsii_element, layer_map):
-						
-						# Element is one layer above the net_segment.
-						# Element is only considered "nearby" if it insects with the
-						# bounding box of the path object projected one layer above.
-						if poly.overlaps_bbox(net_segment.bbox):
-							net_segment.nearby_al_polygons.append(copy.copy(poly))
-
-					elif lef.is_gdsii_layer_below(net_segment.gdsii_path, poly.gdsii_element, layer_map):
-						
-						# Element is either one layer below the net_segment.
-						# Element is only considered "nearby" if it insects with the
-						# bounding box of the path object projected one layer below.
-						if poly.overlaps_bbox(net_segment.bbox):
-							net_segment.nearby_bl_polygons.append(copy.copy(poly))
-		elif not done_q.empty():
-			# Update queue of modified net objects and return
-			for net in nets:
-				modified_nets_q.put(copy.copy(net))
-			return

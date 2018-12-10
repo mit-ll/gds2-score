@@ -8,7 +8,6 @@ from polygon import *
 import inspect
 import sys
 import copy
-# from multiprocessing import Lock
 
 class Window():
 	def __init__(self, start_pt, width, height, direction):
@@ -102,7 +101,7 @@ class Net():
 			layer_name = lef.get_layer_name(net_element_polygon.gdsii_element.layer, net_element_polygon.gdsii_element.data_type, layer_map)
 			# Only analyze metal ROUTING layers
 			if layer_num != -1:
-				self.segments.append(Net_Segment(i, self.basename, net_element_polygon, lef, layer_num, layer_name))
+				self.segments.append(Net_Segment(i + 1, self.basename, net_element_polygon, lef, layer_num, layer_name))
 
 class Net_Segment():
 	def __init__(self, num, net_basename, poly, lef, layer_num, layer_name):
@@ -129,14 +128,28 @@ class Net_Segment():
 		self.diff_layer_units_blocked = 0 # top/bottom area units blocked
 		self.same_layer_units_checked = 0 # locations valid rogue wires can be attached around wire perimeter
 		self.diff_layer_units_checked = 0 # locations valid rogue wires can be attached along wire top/bottom
+		self.nb_compute_time          = 0
 	
+	def get_perimeter_blockage(self):
+		return (float(self.same_layer_units_blocked) / float(self.same_layer_units_checked))
+
+	def get_top_bottom_blockage(self):
+		return (float(self.diff_layer_units_blocked) / float(self.diff_layer_units_checked))
+
 	def get_perimeter_blockage_percentage(self):
-		return ((float(self.same_layer_units_blocked) / float(self.same_layer_units_checked)) * 100.0)
+		return (self.get_perimeter_blockage() * 100.0)
 
 	def get_top_bottom_blockage_percentage(self):
-		return ((float(self.diff_layer_units_blocked) / float(self.diff_layer_units_checked)) * 100.0)
+		return (self.get_top_bottom_blockage() * 100.0)
+
+	def get_weighted_blockage(self):
+		perimeter_blockage  = self.get_perimeter_blockage()
+		top_bottom_blockage = self.get_top_bottom_blockage()
+		if perimeter_blockage == 1.0 and top_bottom_blockage == 1.0:
+			return 1.0
+		else:
+			return ((perimeter_blockage * (2.0/3.0)) + (top_bottom_blockage * (1.0/3.0)))
 
 	def get_weighted_blockage_percentage(self):
-		return ((self.get_perimeter_blockage_percentage() * float(4.0/6.0)) + (self.get_top_bottom_blockage_percentage() * float(2.0/6.0)))
-
+		return (self.get_weighted_blockage() * 100.0)
 

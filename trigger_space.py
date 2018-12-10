@@ -100,7 +100,7 @@ def find_4_connected_regions(device_layer_bitmap):
 
 	return num_open_sites, trigger_spaces
 
-def analyze_open_space_for_triggers(layout, print_to_stdio=False):
+def analyze_open_space_for_triggers(layout, print_to_stdio=False, print_histogram=False):
 	# Find open placement sites in the placement grid
 	num_open_sites, trigger_spaces = find_4_connected_regions(layout.def_info.placement_grid)
 
@@ -112,17 +112,22 @@ def analyze_open_space_for_triggers(layout, print_to_stdio=False):
 
 	# Print calculations
 	print "Open/Total Placement Sites: %d / %d" % (num_open_sites, (layout.def_info.num_placement_rows * layout.def_info.num_placement_cols))
+	print "Total Trigger Spaces:       %d" % (sum(ts.freq for ts in trigger_spaces.values()))
 	print "Summary of Adjacent Placement Sites:"
 	print "size  : freq"
 	for space_size in sorted(trigger_spaces):
 		# Create histogram bar from ASCII characters
-		if trigger_spaces[space_size] > (terminal_columns - 16):
-			histogram_bar = ((unichr(0x2588) * (terminal_columns - 16)) + '*').encode('utf-8')
-		else:
-			histogram_bar = (unichr(0x2588) * trigger_spaces[space_size].freq).encode('utf-8')
+		if print_histogram:
+			if trigger_spaces[space_size].freq > (terminal_columns - 16):
+				histogram_bar = ((unichr(0x2588) * (terminal_columns - 16)) + '*').encode('utf-8')
+			else:
+				histogram_bar = (unichr(0x2588) * trigger_spaces[space_size].freq).encode('utf-8')
 
 		# Print histogram row
-		print "%6d:%5d |%s" % (space_size, trigger_spaces[space_size].freq, histogram_bar)
+		if print_histogram:
+			print "%6d:%5d |%s" % (space_size, trigger_spaces[space_size].freq, histogram_bar)
+		else:
+			print "%6d:%5d" % (space_size, trigger_spaces[space_size].freq)
 	print "----------------------------------------------"
 
 	# Set completed flag and save histogram

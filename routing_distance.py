@@ -76,7 +76,7 @@ def route_distance(layout, trigger_spaces, net_segment):
 
 	return tspaces
 
-def analyze_routing_distance(layout, target_trigger_size=0, max_blockage=90.0):
+def analyze_routing_distance(layout, target_trigger_size=4, max_blockage=100.0):
 	# Verify net blockage and trigger space metrics have been computed
 	if not layout.net_blockage_done or not layout.trigger_space_done:
 		print "ERROR %s: net blockage and trigger space metrics not computed." % (inspect.stack()[0][3])
@@ -86,7 +86,8 @@ def analyze_routing_distance(layout, target_trigger_size=0, max_blockage=90.0):
 	sorted_net_segments = []
 	for net in layout.critical_nets:
 		for net_segment in net.segments:
-			if net_segment.get_weighted_blockage_percentage() < max_blockage:
+			weighted_blockage = net_segment.get_weighted_blockage_percentage()
+			if weighted_blockage < max_blockage:
 				sorted_net_segments.append(net_segment)
 
 	# Filter/Map trigger spaces to critical net segments based on size and 3D manhattan distance

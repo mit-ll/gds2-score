@@ -14,6 +14,8 @@ import sys
 import inspect
 import copy
 import numpy
+import multiprocessing as mp
+import functools as ft
 
 # Import matplotlib
 # import matplotlib.pyplot as plt
@@ -101,17 +103,33 @@ def compute_windows_blocked(bitmap, layout, net_segment, offset, side, num_nearb
 				scan_window                = Window(Point(0, 0), required_open_width, num_rows, 'H')
 				windows_scanned_precompute = num_cols - required_open_width + 1
 			else:
-				print "UNSUPPORTED %s: constrained HORIZONTAL adjacent layer net blockage." % (inspect.stack()[0][3])
-				sys.exit(3)
+				# Width of entire path segment --> TODO: constrain with via enclosure rules
+				scan_window                = Window(Point(0, 0), num_cols, num_rows, 'H')
+				windows_scanned_precompute = 1
 		elif net_segment.polygon.bbox.get_width() < net_segment.polygon.bbox.get_height():
 			# Vertical Path or Boundary
 			if net_segment.polygon.bbox.get_height() > min_wire_width:
-				# Wide enough for 1 width of AL wire
+				# Tall enough for 1 width of AL wire
 				scan_window                = Window(Point(0, 0), num_cols, required_open_width, 'V')
 				windows_scanned_precompute = num_rows - required_open_width + 1
 			else:
-				print "UNSUPPORTED %s: constrained VERTICAL adjacent layer net blockage." % (inspect.stack()[0][3])
-				sys.exit(3)
+				# Height of entire path segment --> TODO: constrain with via enclosure rules
+				scan_window                = Window(Point(0, 0), num_cols, num_rows, 'V')
+				windows_scanned_precompute = 1
+		else:
+			# Path or Boundary is a Square --> get direction from LEF file
+			routing_direction = layout.lef.layers[net_segment.layer_name].direction
+			if routing_direction == "H":
+				# Routing Direction is HORIZONTAL
+				scan_window                = Window(Point(0, 0), required_open_width, num_rows, 'H')
+				windows_scanned_precompute = num_cols - required_open_width + 1
+			elif routing_direction == "V":
+				# Routing Direction is VERTICAL
+				scan_window                = Window(Point(0, 0), num_cols, required_open_width, 'V')
+				windows_scanned_precompute = num_rows - required_open_width + 1
+			else:
+				print "UNSUPPORTED %s: routing direction is not H or V." % (inspect.stack()[0][3])
+				sys.exit(3)	
 	
 	# ---------------------------------------
 	# Eearly Termination Optimizations
@@ -190,7 +208,7 @@ def compute_windows_blocked(bitmap, layout, net_segment, offset, side, num_nearb
 
 	return windows_scanned, windows_blocked
 
-def check_blockage_constrained(net_segment, layout):
+def check_blockage_constrained(layout, net_segment):
 	num_same_layer_units_checked = 0
 	same_layer_units_blocked     = 0
 	num_diff_layer_units_checked = 0
@@ -198,7 +216,7 @@ def check_blockage_constrained(net_segment, layout):
 	sides_unblocked 			 = []
 	sl_min_wire_spacing          = layout.lef.layers[net_segment.layer_name].min_spacing_db - 1
 	check_distance               = (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width)) * layout.lef.database_units
-	print "		Check Distance (uM):", (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width))
+	# print "		Check Distance (uM):", (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width))
 
 	# Scan all 4 perimeter sides to check for blockages
 	for direction in ['N', 'E', 'S', 'W', 'T', 'B']:
@@ -246,7 +264,7 @@ def check_blockage_constrained(net_segment, layout):
 		if direction != 'T' and direction != 'B':
 			curr_scan_coord    = start_scan_coord
 			num_points_to_scan = (float(end_scan_coord - curr_scan_coord) / float(layout.net_blockage_step))
-			print "		Checking %.2f units along %s edge (%d/%f units/microns away)..." % (num_points_to_scan, direction, check_distance, float(check_distance / layout.lef.database_units))
+			# print "		Checking %.2f units along %s edge (%d/%f units/microns away)..." % (num_points_to_scan, direction, check_distance, float(check_distance / layout.lef.database_units))
 			# print "		Start Scan Coord = %d; End Scan Coord = %d; Num Points to Scan = %d" % (curr_scan_coord, end_scan_coord, num_points_to_scan)
 			
 			# Create Bitmap 
@@ -287,7 +305,7 @@ def check_blockage_constrained(net_segment, layout):
 			
 			# Create bitmap
 			al_bitmap = numpy.zeros(shape=(nearby_bbox.get_height(), nearby_bbox.get_width()), dtype=bool)
-			print "		Checking (%d) nearby polygons along %s side (GDSII Layer:) ..." % (len(nearby_polys), direction)
+			# print "		Checking (%d) nearby polygons along %s side (GDSII Layer:) ..." % (len(nearby_polys), direction)
 
 			# Color the bitmap
 			for poly in nearby_polys:
@@ -309,14 +327,14 @@ def check_blockage_constrained(net_segment, layout):
 
 	return num_same_layer_units_checked, same_layer_units_blocked, sides_unblocked, num_diff_layer_units_checked, diff_layer_units_blocked
 
-def check_blockage(net_segment, layout):
+def check_blockage(layout, net_segment):
 	num_same_layer_units_checked = 0
 	same_layer_units_blocked     = 0
 	num_diff_layer_units_checked = 0
 	diff_layer_units_blocked     = 0
 	sides_unblocked 			 = []
 	check_distance               = (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width)) * layout.lef.database_units
-	print "		Check Distance (uM):", (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width))
+	# print "		Check Distance (uM):", (layout.lef.layers[net_segment.layer_name].pitch - (0.5 * layout.lef.layers[net_segment.layer_name].width))
 
 	# Scan all 4 perimeter sides to check for blockages
 	for direction in ['N', 'E', 'S', 'W', 'T', 'B']:
@@ -348,7 +366,7 @@ def check_blockage(net_segment, layout):
 		if direction != 'T' and direction != 'B':
 			num_points_to_scan      = (float(end_scan_coord - curr_scan_coord) / float(layout.net_blockage_step))
 			same_side_units_blocked = 0
-			print "		Checking %.2f units along %s edge (%d/%f units/microns away)..." % (num_points_to_scan, direction, check_distance, float(check_distance / layout.lef.database_units))
+			# print "		Checking %.2f units along %s edge (%d/%f units/microns away)..." % (num_points_to_scan, direction, check_distance, float(check_distance / layout.lef.database_units))
 			# print "		Start Scan Coord = %d; End Scan Coord = %d; Num Points to Scan = %d" % (curr_scan_coord, end_scan_coord, num_points_to_scan)
 			while curr_scan_coord < end_scan_coord:
 				for poly in net_segment.polygon.nearby_sl_polygons:
@@ -375,10 +393,10 @@ def check_blockage(net_segment, layout):
 			# Choose nearby polygons to analyze
 			if direction == 'T' and (net_segment.layer_num < layout.lef.top_routing_layer_num):
 				nearby_polys = net_segment.nearby_al_polygons
-				print "		Checking (%d) nearby polygons along %s side (Layer: %d) ..." % (len(nearby_polys), direction, net_segment.layer_num + 1)
+				# print "		Checking (%d) nearby polygons along %s side (Layer: %d) ..." % (len(nearby_polys), direction, net_segment.layer_num + 1)
 			elif direction == 'B' and (net_segment.layer_num > layout.lef.bottom_routing_layer_num):
 				nearby_polys = net_segment.nearby_bl_polygons
-				print "		Checking (%d) nearby polygons along %s side (Layer: %d) ..." % (len(nearby_polys), direction, net_segment.layer_num - 1)
+				# print "		Checking (%d) nearby polygons along %s side (Layer: %d) ..." % (len(nearby_polys), direction, net_segment.layer_num - 1)
 			else:
 				continue
 
@@ -397,6 +415,89 @@ def check_blockage(net_segment, layout):
 
 	return num_same_layer_units_checked, same_layer_units_blocked, sides_unblocked, num_diff_layer_units_checked, diff_layer_units_blocked
 	
+def launch_net_blockage(layout, net):
+	for net_segment in net.segments:
+		# Start Computation Timer
+		net_segment.nb_compute_time = time.time()
+
+		# Compute Net Blockage for each Net Segment
+		if layout.net_blockage_type == 1:
+			num_same_layer_units_checked, \
+			same_layer_units_blocked, \
+			sides_unblocked, \
+			num_diff_layer_units_checked, \
+			diff_layer_units_blocked = check_blockage_constrained(layout, net_segment)
+		else:
+			num_same_layer_units_checked, \
+			same_layer_units_blocked, \
+			sides_unblocked, \
+			num_diff_layer_units_checked, \
+			diff_layer_units_blocked = check_blockage(layout, net_segment)
+
+		# Update Net Segment Properties
+		net_segment.same_layer_units_blocked = same_layer_units_blocked
+		net_segment.diff_layer_units_blocked = diff_layer_units_blocked 
+		net_segment.same_layer_units_checked = num_same_layer_units_checked
+		net_segment.diff_layer_units_checked = num_diff_layer_units_checked 
+		net_segment.sides_unblocked          = sides_unblocked
+
+		# End Computation Timer
+		net_segment.nb_compute_time = time.time() - net_segment.nb_compute_time
+
+	return net
+
+def print_net_segment_blockage_info(net_segment, segment_num, verbose, layout):
+	# Get GDSII element type
+	if isinstance(net_segment.polygon.gdsii_element, Path):
+		gdsii_element_type = "Path"
+	elif isinstance(net_segment.polygon.gdsii_element, Boundary):
+		gdsii_element_type = "Boundary"
+	else:
+		gdsii_element_type = "Unknown"
+	# Report Path Segment Condition
+	if verbose:
+		print "	Analyzing Net Segment", segment_num
+		print "		Layer:                    ", net_segment.layer_num
+		print "		GDSII Element:            ", gdsii_element_type
+		print "		Perimeter (dbu):          ", net_segment.polygon.bbox.get_perimeter()
+		print "		Step Size (dbu):          ", layout.net_blockage_step
+		print "		Pitch (uM):               ", layout.lef.layers[net_segment.layer_name].pitch 
+		print "		Default Width (uM):       ", layout.lef.layers[net_segment.layer_name].width 
+		print "		Min SL Width (uM):        ", layout.lef.layers[net_segment.layer_num].min_width
+		if net_segment.layer_num < layout.lef.top_routing_layer_num:
+			print "		Min TL Width (uM):        ", layout.lef.layers[net_segment.layer_num + 1].min_width 
+		if net_segment.layer_num > layout.lef.bottom_routing_layer_num:
+			print "		Min BL Width (uM):        ", layout.lef.layers[net_segment.layer_num - 1].min_width 
+		print "		Top and Bottom Area (dbu):", (net_segment.polygon.get_area() * 2)
+		print "		BBox (M-Units):           ", net_segment.polygon.bbox.get_bbox_as_list()
+		print "		Nearby SL BBox (M-Units): ", net_segment.nearby_sl_bbox.get_bbox_as_list()
+		if net_segment.layer_num < layout.lef.top_routing_layer_num:
+			print "		Nearby TL BBox (M-Units): ", net_segment.nearby_al_bbox.get_bbox_as_list()
+		if net_segment.layer_num > layout.lef.bottom_routing_layer_num:
+			print "		Nearby BL BBox (M-Units): ", net_segment.nearby_bl_bbox.get_bbox_as_list()
+		print "		Num. Nearby Polygons:     ", len(net_segment.nearby_al_polygons) + len(net_segment.nearby_bl_polygons) + len(net_segment.nearby_sl_polygons)
+		if gdsii_element_type == "Path":
+			print "		Klayout Query:       " 
+			print "			paths on layer %d/%d of cell MAL_TOP where" % (net_segment.polygon.gdsii_element.layer, net_segment.polygon.gdsii_element.data_type)
+			print "			shape.path.bbox.left==%d &&"  % (net_segment.polygon.bbox.ll.x)
+			print "			shape.path.bbox.right==%d &&" % (net_segment.polygon.bbox.ur.x)
+			print "			shape.path.bbox.top==%d &&"   % (net_segment.polygon.bbox.ur.y)
+			print "			shape.path.bbox.bottom==%d"   % (net_segment.polygon.bbox.ll.y)
+		elif gdsii_element_type == "Boundary":
+			print "		Klayout Query:       " 
+			print "			boxes on layer %d/%d of cell MAL_TOP where" % (net_segment.polygon.gdsii_element.layer, net_segment.polygon.gdsii_element.data_type)
+			print "			shape.box.left==%d &&"  % (net_segment.polygon.bbox.ll.x)
+			print "			shape.box.right==%d &&" % (net_segment.polygon.bbox.ur.x)
+			print "			shape.box.top==%d &&"   % (net_segment.polygon.bbox.ur.y)
+			print "			shape.box.bottom==%d"   % (net_segment.polygon.bbox.ll.y)
+		
+		if net_segment.sides_unblocked:
+			print "		Sides Unblocked:", net_segment.sides_unblocked
+		print "		Perimeter Units Blocked:  %d / %d" % (net_segment.same_layer_units_blocked, net_segment.same_layer_units_checked)
+		print "		Top/Bottom Units Blocked: %d / %d" % (net_segment.diff_layer_units_blocked, net_segment.diff_layer_units_checked)
+		print "		Done - Time Elapsed:", net_segment.nb_compute_time, "seconds."
+		print "		----------------------------------------------"
+
 def analyze_critical_net_blockage(layout, verbose):
 	total_perimeter_units     = 0
 	total_top_bottom_area     = 0
@@ -407,78 +508,27 @@ def analyze_critical_net_blockage(layout, verbose):
 	layout.extract_nearby_polygons()
 	# layout.extract_nearby_polygons_parallel()
 
+	# Distribute Workload Among Multiple Processes
+	worker_pool                   = mp.Pool(processes=layout.num_processes)
+	analyze_critical_nets_partial = ft.partial(launch_net_blockage, layout)
+	layout.critical_nets          = worker_pool.map(analyze_critical_nets_partial, layout.critical_nets)
+
+	# Print/Aggregate Detailed Results
 	for net in layout.critical_nets:
 		print "Analyzing Net: ", net.fullname
-		path_segment_counter = 1
+		segment_num = 1
+
 		for net_segment in net.segments:
-			# Get GDSII element type
-			if isinstance(net_segment.polygon.gdsii_element, Path):
-				gdsii_element_type = "Path"
-			elif isinstance(net_segment.polygon.gdsii_element, Boundary):
-				gdsii_element_type = "Boundary"
-			else:
-				gdsii_element_type = "Unknown"
-			# Report Path Segment Condition
-			if verbose:
-				print "	Analyzing Net Segment", path_segment_counter
-				print "		Layer:                    ", net_segment.layer_num
-				print "		GDSII Element:            ", gdsii_element_type
-				print "		Perimeter (dbu):          ", net_segment.polygon.bbox.get_perimeter()
-				print "		Step Size (dbu):          ", layout.net_blockage_step
-				print "		Pitch (uM):               ", layout.lef.layers[net_segment.layer_name].pitch 
-				print "		Default Width (uM):       ", layout.lef.layers[net_segment.layer_name].width 
-				print "		Min SL Width (uM):        ", layout.lef.layers[net_segment.layer_num].min_width
-				if net_segment.layer_num < layout.lef.top_routing_layer_num:
-					print "		Min TL Width (uM):        ", layout.lef.layers[net_segment.layer_num + 1].min_width 
-				if net_segment.layer_num > layout.lef.bottom_routing_layer_num:
-					print "		Min BL Width (uM):        ", layout.lef.layers[net_segment.layer_num - 1].min_width 
-				print "		Top and Bottom Area (dbu):", (net_segment.polygon.get_area() * 2)
-				print "		BBox (M-Units):           ", net_segment.polygon.bbox.get_bbox_as_list()
-				print "		Nearby SL BBox (M-Units): ", net_segment.nearby_sl_bbox.get_bbox_as_list()
-				if net_segment.layer_num < layout.lef.top_routing_layer_num:
-					print "		Nearby TL BBox (M-Units): ", net_segment.nearby_al_bbox.get_bbox_as_list()
-				if net_segment.layer_num > layout.lef.bottom_routing_layer_num:
-					print "		Nearby BL BBox (M-Units): ", net_segment.nearby_bl_bbox.get_bbox_as_list()
-				print "		Num. Nearby Polygons:     ", len(net_segment.nearby_al_polygons) + len(net_segment.nearby_bl_polygons) + len(net_segment.nearby_sl_polygons)
-				if gdsii_element_type == "Path":
-					print "		Klayout Query:       " 
-					print "			paths on layer %d/%d of cell MAL_TOP where" % (net_segment.polygon.gdsii_element.layer, net_segment.polygon.gdsii_element.data_type)
-					print "			shape.path.bbox.left==%d &&"  % (net_segment.polygon.bbox.ll.x)
-					print "			shape.path.bbox.right==%d &&" % (net_segment.polygon.bbox.ur.x)
-					print "			shape.path.bbox.top==%d &&"   % (net_segment.polygon.bbox.ur.y)
-					print "			shape.path.bbox.bottom==%d"   % (net_segment.polygon.bbox.ll.y)
-				elif gdsii_element_type == "Boundary":
-					print "		Klayout Query:       " 
-					print "			boxes on layer %d/%d of cell MAL_TOP where" % (net_segment.polygon.gdsii_element.layer, net_segment.polygon.gdsii_element.data_type)
-					print "			shape.box.left==%d &&"  % (net_segment.polygon.bbox.ll.x)
-					print "			shape.box.right==%d &&" % (net_segment.polygon.bbox.ur.x)
-					print "			shape.box.top==%d &&"   % (net_segment.polygon.bbox.ur.y)
-					print "			shape.box.bottom==%d"   % (net_segment.polygon.bbox.ll.y)
-
-			# Check N, E, S, W, T, B
-			start_time = time.time()
-			if layout.net_blockage_type == 1:
-				num_same_layer_units_checked, same_layer_blockage, sides_unblocked, num_diff_layer_units_checked, diff_layer_blockage = check_blockage_constrained(net_segment, layout)
-			else:
-				num_same_layer_units_checked, same_layer_blockage, sides_unblocked, num_diff_layer_units_checked, diff_layer_blockage = check_blockage(net_segment, layout)
-			net_segment.same_layer_units_blocked = same_layer_blockage
-			net_segment.diff_layer_units_blocked = diff_layer_blockage 
-			net_segment.same_layer_units_checked = num_same_layer_units_checked
-			net_segment.diff_layer_units_checked = num_diff_layer_units_checked 
-			net_segment.sides_unblocked          = sides_unblocked
-			total_same_layer_blockage            += same_layer_blockage
-			total_diff_layer_blockage            += diff_layer_blockage
-			total_perimeter_units                += num_same_layer_units_checked
-			total_top_bottom_area                += num_diff_layer_units_checked
-
-			if sides_unblocked:
-				print "		Sides Unblocked:", sides_unblocked
-			print "		Perimeter Units Blocked:  %d / %d" % (same_layer_blockage, num_same_layer_units_checked)
-			print "		Top/Bottom Units Blocked: %d / %d" % (diff_layer_blockage, num_diff_layer_units_checked)
-			print "		Done - Time Elapsed:", (time.time() - start_time), "seconds."
-			print "		----------------------------------------------"
+			# Print Blockage Results
+			print_net_segment_blockage_info(net_segment, segment_num, verbose, layout)
 			
-			path_segment_counter += 1
+			# Aggregate Blockage Results
+			total_same_layer_blockage += net_segment.same_layer_units_blocked
+			total_diff_layer_blockage += net_segment.diff_layer_units_blocked
+			total_perimeter_units     += net_segment.same_layer_units_checked
+			total_top_bottom_area     += net_segment.diff_layer_units_checked
+
+			segment_num += 1
 
 	# Calculate raw and weighted blockage percentages.
 	# Weighted accounts for area vs. perimeter blockage
