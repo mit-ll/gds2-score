@@ -92,8 +92,10 @@ def compute_windows_blocked(bitmap, layout, net_segment, offset, side, num_nearb
 	# Configure Scan Window
 	if side == 'N' or side == 'S':
 		scan_window = Window(Point(0,0), sl_required_open_width, 1, 'H')
+		windows_scanned_precompute = num_cols - sl_required_open_width + 1
 	elif side == 'E' or side == 'W':
 		scan_window = Window(Point(0,0), 1, sl_required_open_width, 'V')
+		windows_scanned_precompute = num_rows - sl_required_open_width + 1
 	elif side == 'T' or side == 'B':
 		# Get direction of wire (horizontal or vertical)
 		if net_segment.polygon.bbox.get_width() > net_segment.polygon.bbox.get_height():
@@ -139,10 +141,16 @@ def compute_windows_blocked(bitmap, layout, net_segment, offset, side, num_nearb
 	if num_nearby_polys == 0:
 		if side == 'T':
 			net_segment.unblocked_windows[side].append(Window.from_bbox(net_segment.nearby_al_bbox, scan_window.direction))
-			return windows_scanned_precompute, 0
 		elif side == 'B':
 			net_segment.unblocked_windows[side].append(Window.from_bbox(net_segment.nearby_bl_bbox, scan_window.direction))
-			return windows_scanned_precompute, 0
+		elif side == 'N' or side == 'S':
+			net_segment.unblocked_windows[side].append(Window(copy.deepcopy(offset), num_cols, 1, 'H'))
+		elif side == 'E' or side == 'W':
+			net_segment.unblocked_windows[side].append(Window(copy.deepcopy(offset), 1, num_rows, 'V'))
+		else:
+			print "UNSUPPORTED %s: side to scan is invalid." % (inspect.stack()[0][3])
+			sys.exit(3)	
+		return windows_scanned_precompute, 0
 	# ---------------------------------------
 
 	# Keep track of patching points
@@ -269,15 +277,16 @@ def check_blockage_constrained(layout, net_segment):
 			
 			# Create Bitmap 
 			if direction == 'N' or direction == 'S':
-				sl_bitmap = numpy.zeros(shape=(1, end_scan_coord - start_scan_coord))
+				sl_bitmap = numpy.zeros(shape=(1, end_scan_coord - start_scan_coord), dtype=bool)
 			elif direction == 'E' or direction == 'W':
-				sl_bitmap = numpy.zeros(shape=(end_scan_coord - start_scan_coord, 1))
+				sl_bitmap = numpy.zeros(shape=(end_scan_coord - start_scan_coord, 1), dtype=bool)
 			
 			# Color Bitmap
-			sl_bitmap = color_bitmap_sl(sl_bitmap, curr_pitch_pt, curr_overlap_pt, end_pitch_pt, net_segment.nearby_sl_polygons, layout, direction)			
+			sl_bitmap = color_bitmap_sl(sl_bitmap, curr_pitch_pt, curr_overlap_pt, end_pitch_pt, net_segment.nearby_sl_polygons, layout, direction)
 
 			# Calculate windows blocked
-			windows_scanned, windows_blocked = compute_windows_blocked(sl_bitmap, layout, net_segment, start_pitch_pt, direction, 1)
+			windows_scanned, windows_blocked = compute_windows_blocked(sl_bitmap, layout, net_segment, start_pitch_pt, direction, len(net_segment.nearby_sl_polygons))
+			# windows_scanned, windows_blocked = compute_windows_blocked(sl_bitmap, layout, net_segment, start_pitch_pt, direction, 0)
 			num_same_layer_units_checked     += windows_scanned
 			same_layer_units_blocked         += windows_blocked
 
@@ -313,6 +322,7 @@ def check_blockage_constrained(layout, net_segment):
 			
 			# Calculate windows blocked
 			windows_scanned, windows_blocked = compute_windows_blocked(al_bitmap, layout, net_segment, nearby_bbox.ll, direction, len(nearby_polys))
+			# windows_scanned, windows_blocked = compute_windows_blocked(al_bitmap, layout, net_segment, nearby_bbox.ll, direction, 0)
 			
 			# Updated sides unblocked
 			if windows_blocked < windows_scanned:
@@ -478,14 +488,14 @@ def print_net_segment_blockage_info(net_segment, segment_num, verbose, layout):
 		print "		Num. Nearby Polygons:     ", len(net_segment.nearby_al_polygons) + len(net_segment.nearby_bl_polygons) + len(net_segment.nearby_sl_polygons)
 		if gdsii_element_type == "Path":
 			print "		Klayout Query:       " 
-			print "			paths on layer %d/%d of cell MAL_TOP where" % (net_segment.polygon.gdsii_element.layer, net_segment.polygon.gdsii_element.data_type)
+			print "			paths on layer %d/%d of cell %s where" % (net_segment.polygon.gdsii_element.layer, net_segment.polygon.gdsii_element.data_type, layout.top_level_name)
 			print "			shape.path.bbox.left==%d &&"  % (net_segment.polygon.bbox.ll.x)
 			print "			shape.path.bbox.right==%d &&" % (net_segment.polygon.bbox.ur.x)
 			print "			shape.path.bbox.top==%d &&"   % (net_segment.polygon.bbox.ur.y)
 			print "			shape.path.bbox.bottom==%d"   % (net_segment.polygon.bbox.ll.y)
 		elif gdsii_element_type == "Boundary":
 			print "		Klayout Query:       " 
-			print "			boxes on layer %d/%d of cell MAL_TOP where" % (net_segment.polygon.gdsii_element.layer, net_segment.polygon.gdsii_element.data_type)
+			print "			boxes on layer %d/%d of cell %s where" % (net_segment.polygon.gdsii_element.layer, net_segment.polygon.gdsii_element.data_type, layout.top_level_name)
 			print "			shape.box.left==%d &&"  % (net_segment.polygon.bbox.ll.x)
 			print "			shape.box.right==%d &&" % (net_segment.polygon.bbox.ur.x)
 			print "			shape.box.top==%d &&"   % (net_segment.polygon.bbox.ur.y)

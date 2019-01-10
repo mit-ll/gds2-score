@@ -2,8 +2,8 @@
 import debug_prints as dbg
 
 # Import Example Metric Modules
-from net_blockage  import *
-from trigger_space import *
+from net_blockage     import *
+from trigger_space    import *
 from routing_distance import *
 
 # Other Imports
@@ -36,21 +36,21 @@ def calculate_and_print_time(start_time, end_time):
 # ------------------------------------------------------------------
 # Print program usage statement
 def usage():
-	print "Usage: python score.py \
-			{-a|-b|-t|-e} \
-			[-hv] \
-			-g <gdsii> \
-			-m <top module> \
-			-r <metal stack LEF> \
-			-p <std cell LEF> \
-			-l <layer map> \
-			-d <DEF> \
-			-n <Nemo .dot> \
-			-w <wire report> \
-			--nb_step=<nb step size> \
-			--nb_type=<0 or 1> \
-			[-s <placement grid .npy> \
-			--mod=<full path> ]"
+	print """Usage: python score.py \
+{-a|-b|-t|-e} \
+[-hv] \
+-g <gdsii> \
+-m <top module> \
+-r <metal stack LEF> \
+-p <std cell LEF> \
+-l <layer map> \
+-d <DEF> \
+-n <Nemo .dot> \
+-w <wire report> \
+--nb_step=<nb step size> \
+--nb_type=<0 or 1> \
+[-s <placement grid .npy> \
+--mod=<full path> ]"""
 	print "Options:"
 	print "	-h, --help	Show this message."
 	print "	-b, --blockage	Calculate critical net blockage metric."

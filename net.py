@@ -68,12 +68,12 @@ class Window():
 	def get_window_center_line_segment(self):
 		if self.direction == 'H':
 			y_pt = self.window.p1.y + (self.height / 2)
-			p1 = Point(self.window.p1.x, y_pt)
-			p2 = Point(self.window.p2.x, y_pt)
+			p1   = Point(self.window.p1.x, y_pt)
+			p2   = Point(self.window.p2.x, y_pt)
 		elif self.direction == 'V':
 			x_pt = self.window.p1.x + (self.width / 2)
-			p1 = Point(x_pt, self.window.p1.y)
-			p2 = Point(x_pt, self.window.p2.y)
+			p1   = Point(x_pt, self.window.p1.y)
+			p2   = Point(x_pt, self.window.p2.y)
 		else:
 			print "UNSUPPORTED %s: window direction." % (inspect.stack()[0][3], token)
 			sys.exit(3)
@@ -130,6 +130,49 @@ class Net_Segment():
 		self.diff_layer_units_checked = 0 # locations valid rogue wires can be attached along wire top/bottom
 		self.nb_compute_time          = 0
 	
+	def compute_center_line(self, routing_direction): 
+		p1 = copy.deepcopy(self.polygon.bbox.ll)
+		p2 = copy.deepcopy(self.polygon.bbox.ur)
+
+		if routing_direction == "H":
+			# Routing Direction is HORIZONTAL
+			p1.y += (float(self.polygon.bbox.get_height()) / 2.0)
+			p2.y -= (float(self.polygon.bbox.get_height()) / 2.0) 
+		elif routing_direction == "V":
+			# Routing Direction is VERTICAL
+			p1.x += (float(self.polygon.bbox.get_width()) / 2.0)
+			p2.x -= (float(self.polygon.bbox.get_width()) / 2.0) 
+		else:
+			print "UNSUPPORTED %s: routing direction must be H or V." % (inspect.stack()[0][3])
+			sys.exit(3)
+
+		return LineSegment(p1, p2)
+
+	def get_center_line(self):
+		if self.polygon.num_coords == 5:
+			if   self.polygon.bbox.get_width() > self.polygon.bbox.get_height():
+				# Routing Direction is HORIZONTAL
+				center_line = self.compute_center_line("H")
+			elif self.polygon.bbox.get_width() < self.polygon.bbox.get_height():
+				# Routing Direction is VERTICAL
+				center_line = self.compute_center_line("V")
+			else:
+				# Net Segment is a Square --> get direction from LEF file
+				routing_direction = layout.lef.layers[net_segment.layer_name].direction
+				if routing_direction == "H":
+					# Routing Direction is HORIZONTAL
+					center_line = self.compute_center_line("H")
+				elif routing_direction == "V":
+					# Routing Direction is VERTICAL
+					center_line = self.compute_center_line("V")
+				else:
+					print "UNSUPPORTED %s: routing direction must be H or V." % (inspect.stack()[0][3])
+					sys.exit(3)
+			return center_line
+		else:
+			print "ERROR %s: net segment is not a rectangle." % (inspect.stack()[0][3])
+			sys.exit(3)
+
 	def get_perimeter_blockage(self):
 		return (float(self.same_layer_units_blocked) / float(self.same_layer_units_checked))
 

@@ -102,7 +102,7 @@ def find_4_connected_regions(device_layer_bitmap):
 
 def analyze_open_space_for_triggers(layout, print_to_stdio=False, print_histogram=False):
 	# Find open placement sites in the placement grid
-	num_open_sites, trigger_spaces = find_4_connected_regions(layout.def_info.placement_grid)
+	num_open_sites, trigger_spaces = find_4_connected_regions(copy.deepcopy(layout.def_info.placement_grid))
 
 	# Get width of terminal for printing of the histogram
 	if print_to_stdio:

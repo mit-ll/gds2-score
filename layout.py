@@ -39,6 +39,7 @@ class Layout():
 		self.num_processes       = num_processes
 		self.net_blockage_done   = False
 		self.trigger_space_done  = False
+		self.route_distance_done = False
 		self.trigger_spaces      = None
 
 	def generate_polys_from_element(self, element, srefs_to_ignore={}):
@@ -192,7 +193,6 @@ class Layout():
 			# bounding box of the path object projected one layer below.
 			if poly.overlaps_bbox(net_segment.nearby_bl_bbox):
 				net_segment.nearby_bl_polygons.append(poly)
-
 
 	# Extracts a list of GDSII elements (converted to polygon objects) that are in close
 	# proimity to a given security-critical net segement. This is doen by finding all 

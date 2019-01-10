@@ -162,6 +162,46 @@ class LineSegment():
 				return Point(x, y)
 		return None
 
+	def get_south_endpoint(self):
+		if not self.is_horizontal():
+			if self.p1.y < self.p2.y:
+				return self.p1
+			else:
+				return self.p2
+		return None
+
+	def get_north_endpoint(self):
+		if not self.is_horizontal():
+			if self.p2.y > self.p1.y:
+				return self.p2
+			else:
+				return self.p1
+		return None
+
+	def get_east_endpoint(self):
+		if not self.is_vertical():
+			if self.p2.x > self.p1.x:
+				return self.p2
+			else:
+				return self.p1
+		return None
+
+	def get_west_endpoint(self):
+		if not self.is_vertical():
+			if self.p1.x < self.p2.x:
+				return self.p1
+			else:
+				return self.p2
+		return None
+
+	def get_length(self):
+		if   self.is_vertical():
+			return (self.get_north_endpoint().y - self.get_south_endpoint().y)
+		elif self.is_horizontal():
+			return (self.get_east_endpoint().x - self.get_west_endpoint().x)
+		else:
+			return self.p1.distance_from(self.p2)
+
 	def is_endpoint(self, P):
 		if (self.p1 == P) or (self.p2 == P):
 			return True
@@ -176,7 +216,7 @@ class LineSegment():
 		if self.p1.y == self.p2.y:
 			return True
 		return False
-		
+	
 	def print_segment(self, convert_to_microns=False, scale_factor=1):
 		if convert_to_microns:
 			print "P1(x: %.3f; y: %.3f) --- P2(x: %.3f; y: %.3f)" % (self.p1.x * scale_factor, self.p1.y * scale_factor, self.p2.x * scale_factor, self.p2.y * scale_factor)
