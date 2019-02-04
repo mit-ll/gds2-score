@@ -146,23 +146,27 @@ def create_ns_bitmap(layout, net_segment):
 				print "UNSUPPORTED %s: wire segment bitmap size (W/E side)." % (inspect.stack()[0][3])
 				sys.exit(3)
 		elif side == 'T':
-			# Parallel Side
-			min_spacing = layout.lef.layers[net_segment.layer_num + 1].min_spacing_db
-			ns_bitmap   = color_ns_bitmap_parallel_window(\
-							ns_bitmap, \
-							ns_line_anchor_pt, \
-							net_segment.unblocked_windows[side], \
-							min_spacing)
+			# Check if valid routing layer
+			if net_segment.layer_num < layout.lef.top_routing_layer_num:
+				# Parallel Side
+				min_spacing = layout.lef.layers[net_segment.layer_num + 1].min_spacing_db
+				ns_bitmap   = color_ns_bitmap_parallel_window(\
+								ns_bitmap, \
+								ns_line_anchor_pt, \
+								net_segment.unblocked_windows[side], \
+								min_spacing)
 		elif side == 'B':
-			# Parallel Side
-			min_spacing = layout.lef.layers[net_segment.layer_num - 1].min_spacing_db
-			ns_bitmap   = color_ns_bitmap_parallel_window(\
-							ns_bitmap, \
-							ns_line_anchor_pt, \
-							net_segment.unblocked_windows[side], \
-							min_spacing)
+			# Check if valid routing layer
+			if net_segment.layer_num > layout.lef.bottom_routing_layer_num:
+				# Parallel Side
+				min_spacing = layout.lef.layers[net_segment.layer_num - 1].min_spacing_db
+				ns_bitmap   = color_ns_bitmap_parallel_window(\
+								ns_bitmap, \
+								ns_line_anchor_pt, \
+								net_segment.unblocked_windows[side], \
+								min_spacing)
 		else:
-			print "UNSUPPORTED %s: wire segment unblocked window side." % (inspect.stack()[0][3])
+			print "UNSUPPORTED %s: wire segment (%d) unblocked window side (%s)." % (inspect.stack()[0][3], net_segment.num, side)
 			sys.exit(3)
 
 	return ns_line, ns_line_anchor_pt, ns_bitmap
