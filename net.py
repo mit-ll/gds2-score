@@ -109,6 +109,7 @@ class Net_Segment():
 		self.net_basename        = net_basename
 		self.layer_num           = layer_num
 		self.layer_name          = layer_name
+		self.layer_direction     = lef.layers[self.layer_name].direction
 		self.polygon             = poly
 		self.nearby_sl_bbox      = BBox.from_bbox_and_extension(self.polygon.bbox, (lef.layers[layer_num].pitch * lef.database_units))
 		if layer_num < lef.top_routing_layer_num:
@@ -158,11 +159,10 @@ class Net_Segment():
 				center_line = self.compute_center_line("V")
 			else:
 				# Net Segment is a Square --> get direction from LEF file
-				routing_direction = layout.lef.layers[net_segment.layer_name].direction
-				if routing_direction == "H":
+				if self.layer_direction == "H":
 					# Routing Direction is HORIZONTAL
 					center_line = self.compute_center_line("H")
-				elif routing_direction == "V":
+				elif self.layer_direction == "V":
 					# Routing Direction is VERTICAL
 					center_line = self.compute_center_line("V")
 				else:
