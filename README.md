@@ -85,26 +85,26 @@ Unfortunately, the `python-gdsii` package is somewhat outdated and has a bug tha
 
 ```
 python score.py (-b|-t|-r|-a) [-v] [-h]
-		-m    <top module>
-		--gds=<gds2 file>
-		--ms_lef=<metal stack LEF file>
-		--sc_lef=<std cell LEF file>
-		--layer_map=<layer map file>
-		--def=<DEF file>
-		--nemo_dot=<Nemo .dot file>
-		--wire_rpt=<wire report file>
-		[--nb_type=<0 or 1>]
-		[--nb_step=<nb step size>]
-		[--num_processes=<number of processes>]
-		[--place_grid=<filename.npy>]
-		[--mod=<custom module name>]
+	-m    <top module>
+	--gds=<gds2 file>
+	--ms_lef=<metal stack LEF file>
+	--sc_lef=<std cell LEF file>
+	--layer_map=<layer map file>
+	--def=<DEF file>
+	--nemo_dot=<Nemo .dot file>
+	--wire_rpt=<wire report file>
+	[--nb_type=<0 or 1>]
+	[--nb_step=<nb step size>]
+	[--num_processes=<number of processes>]
+	[--place_grid=<filename.npy>]
+	[--mod=<custom module name>]
 ```
 
-## Developing a Custom Module (Metric)
+## Developing a Custom (Metric) Module
 
 Custom modules (metrics) can be developed and executed by GDS2-Score. A single module, `layout.py`, contains a reference to all data structures contained within the GDS2-Score framework. A custom module can query and of the data structures present, or imported, in the `layout.py` module. See `net_blockage.py`, `trigger_space.py`, or `route_distance.py` for examples on how to develop a custom GDS2-Score module.
 
-## Executing a Custom Module (Metric)
+## Executing a Custom (Metric) Module
 
 To execute a custom module, simply include the `--mod=<custom module name>` flag when invoking GDS2-Score. Note that GDS2-Score must invoke any single, or all three, base metrics (net blockage, trigger space, and/or route distance) prior to invoking any custom modules so be sure to include the `(-b|-t|-r|-a)` flag when executing the GDS2-Score framework.
 
