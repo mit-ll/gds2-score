@@ -10,38 +10,42 @@ GDS2-Score is a framework that enables IC designers to quantify the resiliency o
 
 GDS2-Score takes as input the following:
 
-|    | Input                         | Command Line Flag             | Type/Description                                                                                                                     | Required? | Default |
-|----|-------------------------------|-------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|-----------|---------|
-| 1  | Analysis Type                 | `(-a\|-b\|-t\|-e)`               | -a = all metrics<br> -b = net blockage only<br> -t = trigger space only<br> -r = route distance only | yes       | none    |
-| 2  | Top Module Name               | `-m <top module name>`        | string                                                                                                                               | yes       | none    |
-| 3  | GDS2 File                     | `--gds=<filename>`            | filename                                                                                                                             | yes       | none    |
-| 4  | Metal Stack<br>(BEOL) LEF File   | `--ms_lef=<filename>`         | filename                                                                                                                             | yes       | none    |
-| 5  | Standard Cell<br>(FEOL) LEF File | `--sc_lef=<filename>`         | filename                                                                                                                             | yes       | none    |
-| 6  | Cadence Layer Map File        | `--layer_map=<filename>`      | filename                                                                                                                             | yes       | none    |
-| 7  | DEF File                      | `--def=<filename>`            | filename                                                                                                                             | yes       | none    |
-| 8  | Nemo Dot File                 | `--nemo_dot=<filename>`       | filename                                                                                                                             | yes       | none    |
-| 9  | Cadence Wire Report           | `--wire_rpt=<filename>`       | filename                                                                                                                             | yes       | none    |
-| 10 | Net Blockage<br>Algorithm Type   | `--nb_type=<0 or 1>`          | 0 = Fast Coarse Analysis<br> 1 = Slow Detailed Analysis                                                                              | no        | 1       |
-| 11 | Net Blockage<br>Step Size        | `--nb_step=<number>`          | unsigned int;<br> Net Blockage resolution<br> in GDS2 database units                                                                 | no        | 1       |
-| 12 | Number of Processes           | `--num_processes=<number>`    | unsigned int > 0;<br> Number of parallel<br>  proccesses to spawn                                                                    | no        | 1       |
-| 13 | Placement Grid<br>(.npy) Output File    | `--place_grid=<filename>` | filename                                                                                                             | no        | NULL    |
-| 14 | Custom Module                 | `--mod=<module>`  | Python module name<br> (without .py extension)                                                                                       | no        | NULL    |
-
+|    | Input                             | Command Line Flag             | Type/Description                                                                                                                     | Required? | Default |
+|----|-----------------------------------|-------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|-----------|---------|
+| 1  | Analysis Type                     | `(-a\|-b\|-t\|-e)`            | -a = compute all metrics<br> -b = compute net blockage only<br> -t = compute trigger space only<br> -r = compute route distance only | yes       | none    |
+| 2  | Top Module Name                   | `-m <top module name>`        | string                                                                                                                               | yes       | none    |
+| 3  | GDS2 File                         | `--gds=<filename>`            | filename                                                                                                                             | yes       | none    |
+| 4  | Metal Stack<br> (BEOL) LEF File   | `--ms_lef=<filename>`         | filename                                                                                                                             | yes       | none    |
+| 5  | Standard Cell<br> (FEOL) LEF File | `--sc_lef=<filename>`         | filename                                                                                                                             | yes       | none    |
+| 6  | Cadence Layer Map File            | `--layer_map=<filename>`      | filename                                                                                                                             | yes       | none    |
+| 7  | DEF File                          | `--def=<filename>`            | filename                                                                                                                             | yes       | none    |
+| 8  | Nemo Dot File                     | `--nemo_dot=<filename>`       | filename                                                                                                                             | yes       | none    |
+| 9  | Cadence Wire Report               | `--wire_rpt=<filename>`       | filename                                                                                                                             | yes       | none    |
+| 10 | Verbose Printing                  | `-v`                          | n/a                                                                                                                                  | no        | False   |
+| 11 | Net Blockage<br> Algorithm Type   | `--nb_type=<0 or 1>`          | 0 = Fast Coarse Analysis<br> 1 = Slow Detailed Analysis                                                                              | no        | 1       |
+| 12 | Net Blockage<br> Step Size        | `--nb_step=<number>`          | unsigned int;<br> Net Blockage resolution<br> in GDS2 database units                                                                 | no        | 1       |
+| 13 | Number of Processes               | `--num_processes=<number>`    | unsigned int > 0;<br> Number of parallel<br>  proccesses to spawn                                                                    | no        | 1       |
+| 14 | Placement Grid Output File        | `--place_grid=<filename>.npy` | filename (numpy bitmap)                                                                                                              | no        | NULL    |
+| 15 | Custom Module                     | `--mod=<module>`              | Python module name<br> (without .py extension)                                                                                       | no        | NULL    |
+| 16 | Print Help/Usage Info             | `-h`                          | n/a                                                                                                                                  | no        | n/a     |
 \**Graphviz .dot file describing specific nets to be analyzed (this file can be generated by the Nemo tool: https://llcad-github.llan.ll.mit.edu/HSS/nemo)*
+
+The output of the GDS2-Score framework is an ASCII report detailing results of each of the three metrics (net blockage, trigger space, and route distance).
 
 ## Compatability
 Currently, GDS2-Score (v1.2) only supports physical design files generated by Cadence VLSI layout CAD tools, specifically Cadence Innovus and Virtuoso software suites.  
 
-T These example metrics include "net blockage", "trigger space" and "routing distance". The "net blockage" metric is computed by invoking the "blockage_metric" function in the "main" function of the Python module "score.py". This metric calculates the percentage of the total surface area of the critical nets (in the .dot file input) that is blocked by other nets or components described in the IC layout. The "trigger space" metric is computed by invoking the "trigger_space_metric" function in the "main" function of the Python module "score.py". This metric calculates a histogram detailing the size and frequencies of open contiguous (4-connected) regions on the device layer placement grid of an IC layout. The "routing distance" metric is computed by invoking the "routing_distance_metric" function in the "main" function of the Python module "score.py". This metric computes Manhattan distance estimates between open spaces on the device layer placement grid and critical nets (in the .dot file input) and compares these estimates to the overall mean net length of the entire IC design.
-
 ## Metrics
 
-### Net Blockage
+### 1. Net Blockage
 
 The net blockage metric quantifies the percentage of surface area of security-critical nets (defined in the input Nemo .dot file) that are blocked by surrouding circuit components. Thus, the net blockage metric quantifies how *accessible* a given net is within an IC layout. Nets that are more accessible, i.e. less blocked, are easy targets for fabrication-time attacks. There are three types of net blockage that are calculated for each security-critical net: *same-layer*, *adjacent-layer*, and *overall*. Same-layer net blockage only analyzes the north, south, east, and west faces of a net. Adjacent-layer net blockage only analyzes the top and bottom sides of a net. Lastly, the overall net blockage is a weighted average of the same-layer (\~66%, for 4/6 sides) and adjacent-layer (\~33%, for 2/6 sides) net blockages.
 
-### Trigger Space
-### Route Distance
+### 2. Trigger Space
+
+The trigger space metric computes a histogram of open 4-connected regions of all sizes on an IC's placement grid (trigger space histogram). The more large 4-connected open placement regions available, the easier it is for an attacker to locate a space to insert hardware Trojan circuit components at fabrication time. A placement site is considered to be *open* if the site is empty, or if it is occupied by a filler cell. Filler cells, or capacitor cells, are inserted into empty spaces during the last phase of layout by VLSI CAD tools. They can be removed by an attacker without altering the functionality or timing characteristics of the victim IC. Hence, these components are ignored by the trigger space metric.
+
+### 3. Route Distance
 
 # Development History
 
