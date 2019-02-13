@@ -36,41 +36,44 @@ def calculate_and_print_time(start_time, end_time):
 # ------------------------------------------------------------------
 # Print program usage statement
 def usage():
-	print """Usage: python score.py \
-{-a|-b|-t|-e} \
-[-hv] \
--g <gdsii> \
--m <top module> \
--r <metal stack LEF> \
--p <std cell LEF> \
--l <layer map> \
--d <DEF> \
--n <Nemo .dot> \
--w <wire report> \
---nb_step=<nb step size> \
---nb_type=<0 or 1> \
-[-s <placement grid .npy> \
---mod=<full path> ]"""
+	print "Usage: python score.py"
+	print "	(-b|-t|-r|-a)"
+	print "	[-v]"
+	print "	[-h]"
+	print "	-m <top module>"
+	print "	--gds=<gdsii>"
+	print "	--ms_lef=<metal stack LEF>"
+	print "	--sc_lef=<std cell LEF>"
+	print "	--layer_map=<layer map>"
+	print "	--def=<DEF>"
+	print "	--nemo_dot=<Nemo .dot>"
+	print "	--wire_rpt=<wire report>"
+	print "	[--nb_type=<0 or 1>]"
+	print "	[--nb_step=<nb step size>]"
+	print "	[--num_processes=<number of processes>]"
+	print "	[--place_grid=<placement grid.npy>]"
+	print "	[--mod=<custom module name>]"
+	print 
 	print "Options:"
-	print "	-h, --help		Show this message."
 	print "	-b, --blockage		Calculate critical net blockage metric."
 	print "	-t, --trigger		Calculate open trigger space metric."
 	print "	-e, --routing_distance	Calculate routing distance."
 	print "	-a, --all		Calculate all metrics."
 	print "	-v, --verbose 		Verbose prints."
+	print "	-h, --help		Show this message."
 	print "	-m, --top_level_module	Top level module name."
 	print "	--nemo_dot		Nemo .dot file."
-	print "	--gds		GDSII input file."
+	print "	--gds			GDSII input file."
 	print "	--ms_lef		Metal Stack LEF input file."
 	print "	--sc_lef		STD Cell LEF input file."
-	print "	--def		DEF input file."
+	print "	--def			DEF input file."
 	print "	--layer_map		Layer map input file."
 	print "	--wire_rpt		Wire statistics report input file."
-	print "	--nb_step		Step size for same layer net blockage calculation."
 	print "	--nb_type		Type of net blockage calculation (0 for unconstrained; 1 for LEF constrained)."
-	print "	--num_processes	Number of (parallel) processes to spawn."
-	print "	--place_grid	Placement output file (include .npy extension)."
-	print "	--mod	Running a custom ICAD module (module name without .py extension)."
+	print "	--nb_step		Step size for same layer net blockage calculation."
+	print "	--num_processes		Number of (parallel) processes to spawn."
+	print "	--place_grid		Placement output file (include .npy extension)."
+	print "	--mod			Running a custom ICAD module (module name without .py extension)."
 
 # Analyze blockage of security critical nets in GDSII
 def blockage_metric(layout):
@@ -118,10 +121,10 @@ def main(argv):
 	global MOD
 
 	# Input Defaults
-	OUTPUT_PGRID    =  None
-	FILL_CELL_NAMES = ["FILLDGCAP8_A12TR", "FILLDGCAP16_A12TR", "FILLDGCAP32_A12TR", "FILLDGCAP64_A12TR"]
-	NB_STEP         = 1
-	NB_TYPE         = 1
+	OUTPUT_PGRID  =  None
+	NB_STEP       = 1
+	NB_TYPE       = 1
+	NUM_PROCESSES = 1
 
 	# Load command line arguments
 	try:
@@ -162,10 +165,7 @@ def main(argv):
 		("--layer_map"     not in opt_flags) or \
 		("--def"           not in opt_flags) or \
 		("--nemo_dot"      not in opt_flags) or \
-		("--wire_rpt"      not in opt_flags) or \
-		("--nb_step"       not in opt_flags) or \
-		("--nb_type"       not in opt_flags) or \
-		("--num_processes" not in opt_flags):
+		("--wire_rpt"      not in opt_flags):
 		usage()
 		sys.exit(4)
 	
@@ -230,7 +230,6 @@ def main(argv):
 		INPUT_GDSII_FILE_PATH, \
 		INPUT_DOT_FILE_PATH, \
 		INPUT_WIRE_RPT_PATH, \
-		FILL_CELL_NAMES, \
 		OUTPUT_PGRID, \
 		NB_STEP, \
 		NB_TYPE, \

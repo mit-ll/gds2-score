@@ -50,6 +50,11 @@ The trigger space metric computes a histogram of open 4-connected regions of all
 
 The routing distance metric combines the net blockage and trigger space metrics to comprehensively quantify the fabrication-time attack surface an IC layout. It computes a conservative estimate, i.e., Manhattan distance, for the minimal routing distance between open trigger spaces and all unblocked security critical nets (defined as a overall net blockage < 100%). It cross-references each Manhattan distance with the distribution of net lengths within the entire IC layout. Net length can impact whether or not the Trojan circuit will meet timing constraints and function properly. Understanding where in the distribution of net lengths the Trojan routing falls provides insights into the ability of the Trojan circuit(s) to meet any timing requirements and is an opportunity for outlier-based defenses.
 
+# Installation
+
+## 1. Cloning Git Repository
+
+
 # Development History
 
 ## Update 1.1 - 12/7/17

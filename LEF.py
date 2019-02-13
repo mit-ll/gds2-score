@@ -15,6 +15,7 @@ class LEF:
 		self.layers             = {} # Maps layer name to layer object (only Routing_Layer)
 		self.placement_sites    = {} # Maps placement site name to placement site object
 		self.standard_cells     = {} # Maps standard cell name to standard cell object
+		self.fill_cells         = {} # Maps fill cell name to standard cell object
 		self.top_routing_layer_num    = 0
 		self.bottom_routing_layer_num = 1
 		
@@ -165,12 +166,22 @@ class LEF:
 					# Ignore PROPERTYDEFINITIONS ... for now
 					if "MACRO" in line_list:
 						std_cell_name = line_list[-1]
+						is_fill_cell  = False
 						line = stream.next().rstrip(' ;\n').lstrip()
 						while not ("END" in line and std_cell_name in line):
+							if "CLASS" in line:
+								# Check if Fill Cell or Not
+								if "SPACER" in line:
+									is_fill_cell = True
+								else:
+									is_fill_cell = False
 							if "SIZE" in line:
 								size_line_list = line.split(' ')
-								if std_cell_name not in self.standard_cells:
-									self.standard_cells[std_cell_name] = StandardCell(std_cell_name, float(size_line_list[1]) * self.database_units, float(size_line_list[-1]) * self.database_units)
+								if std_cell_name not in self.standard_cells and CLASS:
+									if is_fill_cell:
+										self.fill_cells[std_cell_name] = StandardCell(std_cell_name, float(size_line_list[1]) * self.database_units, float(size_line_list[-1]) * self.database_units)
+									else:
+										self.standard_cells[std_cell_name] = StandardCell(std_cell_name, float(size_line_list[1]) * self.database_units, float(size_line_list[-1]) * self.database_units)
 							line = stream.next().rstrip(' ;\n').lstrip()
 		
 		# Close LEF File
@@ -341,9 +352,9 @@ class PlacementSite():
 # Standard cell site as defined in the standard cell LEF file.
 class StandardCell():
 	def __init__(self, name, width, height):
-		self.name   = name
-		self.width  = width  # in database units
-		self.height = height # in database units
+		self.name         = name
+		self.width        = width  # in database units
+		self.height       = height # in database units
 
 	def debug_print_attrs(self):
 		print "	NAME:", self.name
