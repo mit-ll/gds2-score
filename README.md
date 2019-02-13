@@ -12,7 +12,7 @@ GDS2-Score takes as input the following:
 
 |    | Input                         | Command Line Flag             | Type/Description                                                                                                                     | Required? | Default |
 |----|-------------------------------|-------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|-----------|---------|
-| 1  | Analysis Type                 | `(-a|-b|-t|-e)`               | -a = compute all metrics<br> -b = compute net blockage only<br> -t = compute trigger space only<br> -r = compute route distance only | yes       | none    |
+| 1  | Analysis Type                 | `(-a\|-b\|-t\|-e)`               | -a = compute all metrics<br> -b = compute net blockage only<br> -t = compute trigger space only<br> -r = compute route distance only | yes       | none    |
 | 2  | Top Module Name               | `-m <top module name>`        | string                                                                                                                               | yes       | none    |
 | 3  | GDS2 File                     | `--gds=<filename>`            | filename                                                                                                                             | yes       | none    |
 | 4  | Metal Stack (BEOL) LEF File   | `--ms_lef=<filename>`         | filename                                                                                                                             | yes       | none    |
