@@ -177,11 +177,11 @@ class LEF:
 									is_fill_cell = False
 							if "SIZE" in line:
 								size_line_list = line.split(' ')
-								if std_cell_name not in self.standard_cells and CLASS:
-									if is_fill_cell:
-										self.fill_cells[std_cell_name] = StandardCell(std_cell_name, float(size_line_list[1]) * self.database_units, float(size_line_list[-1]) * self.database_units)
-									else:
-										self.standard_cells[std_cell_name] = StandardCell(std_cell_name, float(size_line_list[1]) * self.database_units, float(size_line_list[-1]) * self.database_units)
+								if not is_fill_cell and std_cell_name not in self.standard_cells:
+									self.standard_cells[std_cell_name] = StandardCell(std_cell_name, float(size_line_list[1]) * self.database_units, float(size_line_list[-1]) * self.database_units)
+								elif is_fill_cell and std_cell_name not in self.fill_cells:
+									self.fill_cells[std_cell_name] = StandardCell(std_cell_name, float(size_line_list[1]) * self.database_units, float(size_line_list[-1]) * self.database_units)
+										
 							line = stream.next().rstrip(' ;\n').lstrip()
 		
 		# Close LEF File
