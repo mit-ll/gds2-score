@@ -83,7 +83,8 @@ Unfortunately, the `python-gdsii` package is somewhat outdated and has a bug tha
 
 ## Run from Command Line
 
-```python score.py (-b|-t|-r|-a) [-v] [-h]
+```
+python score.py (-b|-t|-r|-a) [-v] [-h]
 		-m    <top module>
 		--gds=<gds2 file>
 		--ms_lef=<metal stack LEF file>
