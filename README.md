@@ -10,23 +10,22 @@ GDS2-Score is an extensible framework that enables IC designers to quantify the 
 
 GDS2-Score takes as input the following:
 
-|    | Input                         | Command Line Flag           | Type/Description                                                                                                         | Required? | Default |
-|----|-------------------------------|-----------------------------|--------------------------------------------------------------------------------------------------------------------------|-----------|---------|
-| 1  | Analysis Type                 | (-a|-b|-t|-e)               | -a = compute all metrics -b = compute net blockage only -t = compute trigger space only -r = compute route distance only | yes       | none    |
-| 2  | Top Module Name               | -m <top module name>        | string                                                                                                                   | yes       | none    |
-| 3  | GDS2 File                     | --gds=<filename>            | filename                                                                                                                 | yes       | none    |
-| 4  | Metal Stack (BEOL) LEF File   | --ms_lef=<filename>         | filename                                                                                                                 | yes       | none    |
-| 5  | Standard Cell (FEOL) LEF File | --sc_lef=<filename>         | filename                                                                                                                 | yes       | none    |
-| 6  | Cadence Layer Map File        | --layer_map=<filename>      | filename                                                                                                                 | yes       | none    |
-| 7  | DEF File                      | --def=<filename>            | filename                                                                                                                 | yes       | none    |
-| 8  | Nemo Dot File                 | --nemo_dot=<filename>       | filename                                                                                                                 | yes       | none    |
-| 9  | Cadence Wire Report           | --wire_rpt=<filename>       | filename                                                                                                                 | yes       | none    |
-| 10 | Net Blockage Algorithm Type   | --nb_type=<0 or 1>          | 0 = Fast Coarse Analysis 1 = Slow Detailed Analysis                                                                      | no        | 1       |
-| 11 | Net Blockage Step Size        | --nb_step=<number>          | unsigned int; Resolution of net blockage  analysis in GDS2 database units                                                | no        | 1       |
-| 12 | Number of Processes           | --num_processes=<number>    | unsigned int; Number of parallel  proccesses to spawn                                                                    | no        | 1       |
-| 13 | Placement Grid Output File    | --place_grid=<filename>.npy | filename (numpy bitmap)                                                                                                  | no        | NULL    |
-| 14 | Custom Module                 | --mod=<custom module name>  | Python module name  (without .py extension)                                                                              | no        | NULL    |
-
+|    | Input                         | Command Line Flag           | Type/Description                                                                                                                         | Required? | Default |
+|----|-------------------------------|-----------------------------|------------------------------------------------------------------------------------------------------------------------------------------|-----------|---------|
+| 1  | Analysis Type                 | (-a|-b|-t|-e)               | -a = compute all metrics<br> -b = compute net blockage only<br> -t = compute trigger space only<br> -r = compute route distance only<br> | yes       | none    |
+| 2  | Top Module Name               | -m <top module name>        | string                                                                                                                                   | yes       | none    |
+| 3  | GDS2 File                     | --gds=<filename>            | filename                                                                                                                                 | yes       | none    |
+| 4  | Metal Stack (BEOL) LEF File   | --ms_lef=<filename>         | filename                                                                                                                                 | yes       | none    |
+| 5  | Standard Cell (FEOL) LEF File | --sc_lef=<filename>         | filename                                                                                                                                 | yes       | none    |
+| 6  | Cadence Layer Map File        | --layer_map=<filename>      | filename                                                                                                                                 | yes       | none    |
+| 7  | DEF File                      | --def=<filename>            | filename                                                                                                                                 | yes       | none    |
+| 8  | Nemo Dot File                 | --nemo_dot=<filename>       | filename                                                                                                                                 | yes       | none    |
+| 9  | Cadence Wire Report           | --wire_rpt=<filename>       | filename                                                                                                                                 | yes       | none    |
+| 10 | Net Blockage Algorithm Type   | --nb_type=<0 or 1>          | 0 = Fast Coarse Analysis 1 = Slow Detailed Analysis                                                                                      | no        | 1       |
+| 11 | Net Blockage Step Size        | --nb_step=<number>          | unsigned int; Resolution of net blockage  analysis in GDS2 database units                                                                | no        | 1       |
+| 12 | Number of Processes           | --num_processes=<number>    | unsigned int; Number of parallel  proccesses to spawn                                                                                    | no        | 1       |
+| 13 | Placement Grid Output File    | --place_grid=<filename>.npy | filename (numpy bitmap)                                                                                                                  | no        | NULL    |
+| 14 | Custom Module                 | --mod=<custom module name>  | Python module name  (without .py extension)                                                                                              | no        | NULL    |
 1. GDS2 file describing an IC layout
 2. DEF file describing an IC layout
 3. technology file(s) used in creating the IC design (in the Library Exchange Format)
