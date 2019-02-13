@@ -6,7 +6,7 @@
 
 ## About
 
-GDS2-Score is a framework that enables IC designers to quantify the resiliency of their physical layouts to fabrication-time attacks. GDS2-Score analyzes physical IC layouts, encoded in the GDS2 file format. The tool is designed to be extensible. Namely, GDS2-Score simply provides an environment that enables the programatic analysis (through the computation of *metrics*) of various circuit structures encoded in a GDS2 file. Three example metrics are included in this release (v1.2) of GDS2-Score. These metrics include: 1) Net Blockage, 2) Trigger Space, and 3) Route Distance. Detailed information on each metric is provided below. Additionally the custom metrics can be developed, as additional Python modules, and executed by the GDS2-Score framework. Details on developing and executing custom GDS2-Scores metrics are listed below
+GDS2-Score is a framework that enables integrated circuit (IC) designers to quantify the resiliency of their physical layouts to fabrication-time attacks, and thus, optimize the overall security of their designs. GDS2-Score analyzes physical IC layouts, encoded in the GDS2 file format. The tool is designed to be extensible. Namely, GDS2-Score simply provides an environment that enables the programatic analysis (through the computation of *metrics*) of various circuit structures encoded in a GDS2 file. Three example metrics are included in this release (v1.2) of GDS2-Score. These metrics include: 1) Net Blockage, 2) Trigger Space, and 3) Route Distance. Detailed information on each metric is provided below. Additionally the custom metrics can be developed, as additional Python modules, and executed by the GDS2-Score framework. Details on developing and executing custom GDS2-Scores metrics are listed below
 
 GDS2-Score takes as input the following:
 
@@ -47,6 +47,8 @@ The net blockage metric quantifies the percentage of surface area of security-cr
 The trigger space metric computes a histogram of open 4-connected regions of all sizes on an IC's placement grid (trigger space histogram). The more large 4-connected open placement regions available, the easier it is for an attacker to locate a space to insert hardware Trojan circuit components at fabrication time. A placement site is considered to be *open* if the site is empty, or if it is occupied by a filler cell. Filler cells, or capacitor cells, are inserted into empty spaces during the last phase of layout by VLSI CAD tools. They can be removed by an attacker without altering the functionality or timing characteristics of the victim IC. Hence, these components are ignored by the trigger space metric.
 
 ### 3. Route Distance
+
+The routing distance metric combines the net blockage and trigger space metrics to comprehensively quantify the fabrication-time attack surface an IC layout. It computes a conservative estimate, i.e., Manhattan distance, for the minimal routing distance between open trigger spaces and all unblocked security critical nets (defined as a overall net blockage < 100%). It cross-references each Manhattan distance with the distribution of net lengths within the entire IC layout. Net length can impact whether or not the Trojan circuit will meet timing constraints and function properly. Understanding where in the distribution of net lengths the Trojan routing falls provides insights into the ability of the Trojan circuit(s) to meet any timing requirements and is an opportunity for outlier-based defenses.
 
 # Development History
 
