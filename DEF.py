@@ -8,7 +8,7 @@ import numpy
 import sys
 
 class DEF:
-	def __init__(self, def_fname, lef_info, fill_cell_names, pg_filename, critical_nets, lef):
+	def __init__(self, def_fname, lef_info, pg_filename, critical_nets, lef):
 		self.database_units           = 0
 		self.die_bbox                 = None
 		self.placement_rows           = []
@@ -18,7 +18,7 @@ class DEF:
 		self.placement_grid_bbox      = None
 
 		# Load DEF files
-		self.load_def_file(def_fname, lef_info, fill_cell_names, critical_nets, lef)
+		self.load_def_file(def_fname, lef_info, lef_info.fill_cells.keys(), critical_nets, lef)
 
 		# Save Placement Grid to File
 		if pg_filename != None:
@@ -101,17 +101,17 @@ class DEF:
 										# Cast to row/col to integers
 										component_col = int(component_col)
 										component_row = int(component_row)
-
-										# Check that component height does not exceed on placement site height
-										curr_placement_site_name  = self.placement_rows[component_row].site_name
-										curr_std_cell_height      = lef_info.standard_cells[curr_std_cell_name].height
-										curr_placement_row_height = lef_info.placement_sites[curr_placement_site_name].dimension.y
-										if curr_std_cell_height != curr_placement_row_height:
-											print "ERROR %s: Component height does not match placement site height (Component Height: %d, Site Height: %d)." % (inspect.stack()[0][3], curr_std_cell_height, curr_placement_row_height)
-											sys.exit(1)
 										
 										# Check if standard cell is a filler cell -> ignore
 										if curr_std_cell_name not in fill_cell_names:
+											# Check that component height does not exceed on placement site height
+											curr_placement_site_name  = self.placement_rows[component_row].site_name
+											curr_std_cell_height      = lef_info.standard_cells[curr_std_cell_name].height
+											curr_placement_row_height = lef_info.placement_sites[curr_placement_site_name].dimension.y
+											if curr_std_cell_height != curr_placement_row_height:
+												print "ERROR %s: Component height does not match placement site height (Component Height: %d, Site Height: %d)." % (inspect.stack()[0][3], curr_std_cell_height, curr_placement_row_height)
+												sys.exit(1)
+											
 											# Check if width of std cell is an integer (i.e. an even multiple of the placement site)
 											curr_std_cell_width = lef_info.standard_cells[curr_std_cell_name].width / lef_info.placement_sites[curr_placement_site_name].dimension.x
 											if not curr_std_cell_width.is_integer():

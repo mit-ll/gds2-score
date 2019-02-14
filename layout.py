@@ -32,7 +32,7 @@ class Layout():
 		self.gdsii_structures    = self.index_gdsii_structures_by_name()
 		self.top_gdsii_structure = self.gdsii_structures[top_name]
 		self.critical_nets       = self.extract_critical_nets_from_gdsii(self.load_dot_file(dot_fname))
-		self.def_info            = DEF(def_fname, self.lef, self.lef.fill_cells.keys(), pg_filename, self.critical_nets, self.lef)
+		self.def_info            = DEF(def_fname, self.lef, pg_filename, self.critical_nets, self.lef)
 		self.net_blockage_step   = nb_step # in database units
 		self.net_blockage_type   = nb_type # 0 for un-constrained; 1 for LEF constrained
 		self.num_processes       = num_processes
