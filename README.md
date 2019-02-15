@@ -41,7 +41,7 @@ GDS2-Score is compatible with Python 2.7.
 
 ### PyPy
 
-GDS2-Score can be significantly accelerated using [PyPy](https://pypy.org/), a JIT compiled version of RPython (an alterternative to CPython). GDS2-Score is compatable with PyPy 4.0.1. Other versions of PyPy are not supported at this time.
+GDS2-Score can be significantly accelerated using [PyPy](https://pypy.org/), a JIT compiled version of RPython (an alterternative to CPython). GDS2-Score is compatable with PyPy 4.0.1. Newer versions of PyPy, may work, but have not been tested this time.
 
 ### VLSI CAD Tools
 
@@ -70,10 +70,30 @@ The routing distance metric combines the net blockage and trigger space metrics 
 
 ## 2. Dependencies
 
-GDS2-Score has only two non-standard Python package dependencies, 1) [python-gdsii](https://pythonhosted.org/python-gdsii/), and 2) [NumPy](http://www.numpy.org/). Both packages can be installed in your Python enviroment using pip:
+GDS2-Score has only two non-standard Python package dependencies, 1) [python-gdsii](https://pythonhosted.org/python-gdsii/), and 2) [NumPy](http://www.numpy.org/).
 
-`pip install python-gdsii`
-`pip install numpy`
+1. The first dependency, [python-gdsii](https://pythonhosted.org/python-gdsii/), can be installed in your Python or PyPy enviroment using pip:
+
+```
+pip install python-gdsii
+```
+
+2. The second dependency, [NumPy](http://www.numpy.org), has different installation instructions depending on if you're using Python or PyPy (v4.0.1):
+
+	A. If you are using a standard distribution of Python, you can install NumPy with pip:
+
+	```
+	pip install numpy
+	```
+
+	B. If you are using PyPy, the above *may* work (i.e. `pip install numpy`) if you are using new version of PyPy (i.e. > 4.0.1), but if not you can install NumPyPy instead (PyPy's version of NumPy), as detailed [here](https://bitbucket.org/pypy/numpy):
+
+	```
+	git clone https://bitbucket.org/pypy/numpy.git
+	cd numpy
+	git checkout pypy-4.0.1
+	pypy setup.py install
+	```
 
 ## 3. Patch `python-gdsii` Package
 
