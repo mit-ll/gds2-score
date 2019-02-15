@@ -97,7 +97,24 @@ pip install python-gdsii
 
 ## 3. Patch `python-gdsii` Package
 
-Unfortunately, the `python-gdsii` package is somewhat outdated and has a bug that requires a simple fix for GDS2-Score to work:
+Unfortunately, the `python-gdsii` package you installed is somewhat outdated and has a bug that requires a simple patch for GDS2-Score to work:
+
+### 1. Navigate to `python-gdsii` package installed above (in PyPy virtualenv):
+
+`cd ~/pypy-4.0.1-linux_x86_64-portable/bin/pypy-venv/site-packages`
+
+### 2. Replace lines 525--528 of record.py with:
+
+```
+		if len(self.data) != 12:
+            raise exceptions.DataSizeError(self.tag)
+        try:
+            return (datetime(self.data[0]+1900, *self.data[1:6]),
+                datetime(self.data[6]+1900, *self.data[7:12]))
+        except ValueError:
+           return (datetime.today(), datetime.today())
+
+```
 
 # User Guide
 
