@@ -72,13 +72,13 @@ The routing distance metric combines the net blockage and trigger space metrics 
 
 GDS2-Score has only two non-standard Python package dependencies, 1) [python-gdsii](https://pythonhosted.org/python-gdsii/), and 2) [NumPy](http://www.numpy.org/).
 
-1. The first dependency, [python-gdsii](https://pythonhosted.org/python-gdsii/), can be installed in your Python or PyPy enviroment using pip:
+**1. The first dependency, [python-gdsii](https://pythonhosted.org/python-gdsii/), can be installed in your Python or PyPy enviroment using pip:**
 
 ```
 pip install python-gdsii
 ```
 
-2. The second dependency, [NumPy](http://www.numpy.org), has different installation instructions depending on if you're using Python or PyPy (v4.0.1):
+**2. The second dependency, [NumPy](http://www.numpy.org), has different installation instructions depending on if you're using Python or PyPy (v4.0.1):**
 
 	A. If you are using a standard distribution of Python, you can install NumPy with pip:
 
