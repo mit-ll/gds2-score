@@ -16,7 +16,7 @@ The GDS2-Score tool is designed to be extensible. This means that GDS2-Score sim
 GDS2-Score has been updated to include two additional example metrics: "trigger space" and "routing_distance". Additionally bugs in the Weiler-Atherton polygon clipping algorithm (implemented in the polygon.py module) were fixed.
 
 ## Cloning the Git Repository
-git clone https://github.com/mit-ll/gds2-score
+git clone <GDS2-Score Repository URL>
 
 ## Running GDS2-Score
 
